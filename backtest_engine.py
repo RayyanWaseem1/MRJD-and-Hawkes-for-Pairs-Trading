@@ -105,7 +105,7 @@ class BacktestEngine:
         # Get hedge ratio
         if hedge_ratio is None:
             if 'hedge_ratio' in spread_df.columns:
-                hedge_ratio_value = spread_df['hedge_ratio'].iloc[0]
+                hedge_ratio_value = spread_df['hedge_ratio'].mean() #gets stable value
                 hedge_ratio = float(hedge_ratio_value) if pd.notna(hedge_ratio_value) else None
             else:
                 print("⚠ Warning: No hedge ratio provided, using 1.0")

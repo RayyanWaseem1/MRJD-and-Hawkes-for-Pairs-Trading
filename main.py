@@ -356,7 +356,7 @@ class SelfExcitingPairsTrading:
         
         # Get hedge ratio from spread_df
         if 'hedge_ratio' in spread_df.columns:
-            hedge_ratio = spread_df['hedge_ratio'].iloc[0]
+            hedge_ratio = spread_df['hedge_ratio'].mean()
         else:
             # Fallback: try to get from spread_df or use default
             print("⚠ Warning: hedge_ratio not found in spread_df, using 1.0")
