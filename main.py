@@ -53,6 +53,7 @@ class SelfExcitingPairsTrading:
         self.backtest_engine = None 
 
         #Data
+        self.cleaned_data = None  # Store cleaned price data
         self.spread_df = None 
         self.jump_df = None 
         self.signals_df = None 
@@ -123,8 +124,8 @@ class SelfExcitingPairsTrading:
             date_columns = cfg.date_columns
         )
 
-        #Clean data
-        cleaned_data = self.data_pipeline.clean_data() 
+        #Clean data and store it
+        self.cleaned_data = self.data_pipeline.clean_data() 
 
         #construct spread 
         self.spread_df = self.data_pipeline.construct_spread(
@@ -336,6 +337,9 @@ class SelfExcitingPairsTrading:
 
         if self.signals_df is None or self.spread_df is None:
             raise ValueError("Backtest requires signals_df and spread_df")
+        
+        if self.cleaned_data is None:
+            raise ValueError("Backtest requires cleaned_data (run _acquire_data first)")
 
         signals_df = self.signals_df
         spread_df = self.spread_df
@@ -346,12 +350,25 @@ class SelfExcitingPairsTrading:
             slippage_bps = cfg.slippage_bps
         )
 
-        #Run backtest with equity prices
+        # Get asset prices from cleaned data
+        asset_a_prices = self.cleaned_data['asset_a']['Close']
+        asset_b_prices = self.cleaned_data['asset_b']['Close']
+        
+        # Get hedge ratio from spread_df
+        if 'hedge_ratio' in spread_df.columns:
+            hedge_ratio = spread_df['hedge_ratio'].iloc[0]
+        else:
+            # Fallback: try to get from spread_df or use default
+            print("⚠ Warning: hedge_ratio not found in spread_df, using 1.0")
+            hedge_ratio = 1.0
+
+        # Run backtest with proper parameters
         self.equity_curve = self.backtest_engine.run_backtest(
             signals_df,
             spread_df,
-            spread_df['asset_a_price'], #XOM
-            spread_df['asset_b_price'] #CVX
+            asset_a_prices,  # XOM prices
+            asset_b_prices,  # CVX prices
+            hedge_ratio=hedge_ratio
         )
 
         #Calculate performance metrics

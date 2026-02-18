@@ -65,154 +65,200 @@ class BacktestEngine:
     def run_backtest(self,
                      signals_df: pd.DataFrame,
                      spread_df: pd.DataFrame,
-                     front_prices: pd.Series,
-                     back_prices: pd.Series) -> pd.DataFrame:
+                     asset_a_prices: pd.Series,
+                     asset_b_prices: pd.Series,
+                     hedge_ratio: Optional[float] = None) -> pd.DataFrame:
         
         """ 
-        Run backtest on trading signals
+        Run backtest on trading signals with proper P&L calculation
+        
+        For equity pairs: 
+        - LONG spread = Long Asset A + Short (hedge_ratio * Asset B)
+        - SHORT spread = Short Asset A + Long (hedge_ratio * Asset B)
 
         Params:
         - signals_df: pd.DataFrame
             - trading signals with position sizing
         - spread_df: pd.DataFrame
-            - spread data
-        - front_prices: pd.Series
-            - front month prices
-        - back_prices: pd.Series
-            - back month prices
+            - spread data (may contain hedge_ratio)
+        - asset_a_prices: pd.Series
+            - Asset A (e.g., XOM) prices
+        - asset_b_prices: pd.Series
+            - Asset B (e.g., CVX) prices
+        - hedge_ratio: float, optional
+            - Hedge ratio (if not in spread_df)
 
         Returns:
         - pd.DataFrame
-            -equity curve and statistics
+            - equity curve and statistics
         """
 
-        print("Running backtest")
+        print("Running backtest...")
 
-        #Aligning the data
+        # Align data
         common_index = signals_df.index.intersection(spread_df.index)
         signals_df = signals_df.loc[common_index]
         spread_df = spread_df.loc[common_index]
-        front_prices = front_prices.loc[common_index]
-        back_prices = back_prices.loc[common_index]
+        asset_a_prices = asset_a_prices.loc[common_index]
+        asset_b_prices = asset_b_prices.loc[common_index]
+
+        # Get hedge ratio
+        if hedge_ratio is None:
+            if 'hedge_ratio' in spread_df.columns:
+                hedge_ratio_value = spread_df['hedge_ratio'].iloc[0]
+                hedge_ratio = float(hedge_ratio_value) if pd.notna(hedge_ratio_value) else None
+            else:
+                print("⚠ Warning: No hedge ratio provided, using 1.0")
+                hedge_ratio = 1.0
+
+        if hedge_ratio is None:
+            print("⚠ Warning: Invalid hedge ratio value, using 1.0")
+            hedge_ratio = 1.0
+        else:
+            hedge_ratio = float(hedge_ratio)
+        
+        print(f"  Using hedge ratio: {hedge_ratio:.4f}")
 
         n = len(signals_df)
 
-        #initializing tracking arrays
+        # Initialize tracking arrays
         equity = np.zeros(n)
         equity[0] = self.initial_capital
         cash = self.initial_capital 
         position = 0 
         position_size = 0 
 
-        #Trade tracking 
+        # Trade tracking 
         entry_date: Optional[pd.Timestamp] = None
-        entry_spread: Optional[float] = None
+        entry_price_a: Optional[float] = None
+        entry_price_b: Optional[float] = None
         entry_lambda: Optional[float] = None
-        max_adverse = 0
-        max_favorable = 0
+        shares_a: float = 0.0
+        shares_b: float = 0.0
+        max_adverse = 0.0
+        max_favorable = 0.0
 
         for i in range(1, n):
             date = signals_df.index[i]
             signal = int(signals_df['signal'].iloc[i])
-            spread_value = float(spread_df['spread'].iloc[i])
             lambda_value = float(signals_df['lambda'].iloc[i])
+            price_a = float(asset_a_prices.iloc[i])
+            price_b = float(asset_b_prices.iloc[i])
 
-            #Check for position opening
+            # Check for position opening
             if position == 0 and signal in [1, -1]:
-                #Entry
+                # Entry
                 position = signal
                 position_size = float(signals_df['position_size'].iloc[i])
                 entry_date = date
-                entry_spread = spread_value 
+                entry_price_a = price_a
+                entry_price_b = price_b
                 entry_lambda = lambda_value 
-                max_adverse = 0 
-                max_favorable = 0 
+                max_adverse = 0.0
+                max_favorable = 0.0
 
-                #Calculating transaction costs for entry 
-                trade_value = abs(position_size) * self.initial_capital 
-                commission = trade_value * self.commission_rate 
-                slippage_cost = trade_value * self.slippage 
+                # Calculate actual share positions
+                # LONG spread (signal=1): Long A, Short B
+                # SHORT spread (signal=-1): Short A, Long B
+                capital_per_leg = abs(position_size) * self.initial_capital / 2
+                
+                shares_a = position * capital_per_leg / price_a
+                shares_b = -position * hedge_ratio * capital_per_leg / price_b
+
+                # Calculate transaction costs for entry (both legs)
+                trade_value_a = abs(shares_a * price_a)
+                trade_value_b = abs(shares_b * price_b)
+                
+                commission = (trade_value_a + trade_value_b) * self.commission_rate 
+                slippage_cost = (trade_value_a + trade_value_b) * self.slippage 
                 cash -= (commission + slippage_cost)
 
-            #Check for position in progress
+            # Check for position in progress
             elif position != 0:
-                if entry_spread is None:
+                if entry_price_a is None or entry_price_b is None:
                     equity[i] = cash
                     continue
 
-                #Track PnL
-                spread_change = spread_value - entry_spread 
-                entry_spread_abs = abs(entry_spread)
-                pnl_pct = position * spread_change / entry_spread_abs if entry_spread_abs != 0 else 0.0
-                pnl = pnl_pct * abs(position_size) * self.initial_capital 
+                # Calculate P&L from actual stock price changes
+                pnl_a = shares_a * (price_a - entry_price_a)
+                pnl_b = shares_b * (price_b - entry_price_b)
+                total_pnl = pnl_a + pnl_b
+                
+                # Calculate percentage return on capital employed
+                capital_employed = abs(position_size) * self.initial_capital
+                pnl_pct = total_pnl / capital_employed if capital_employed > 0 else 0.0
 
-                #Track adverse/favorable excursion
+                # Track adverse/favorable excursion
                 max_adverse = min(max_adverse, pnl_pct)
                 max_favorable = max(max_favorable, pnl_pct)
 
-                #Checking for exit signal
-                if signal == 2: #Close signal
+                # Check for exit signal
+                if signal == 2:  # Close signal
                     assert entry_date is not None and entry_lambda is not None
 
-                    #Exit
-                    trade_value = abs(position_size) * self.initial_capital
-                    commission = trade_value * self.commission_rate
-                    slippage_cost = trade_value * self.slippage
+                    # Exit - calculate transaction costs for both legs
+                    trade_value_a = abs(shares_a * price_a)
+                    trade_value_b = abs(shares_b * price_b)
+                    
+                    commission = (trade_value_a + trade_value_b) * self.commission_rate
+                    slippage_cost = (trade_value_a + trade_value_b) * self.slippage
 
-                    realized_pnl = pnl - (commission + slippage_cost)
+                    realized_pnl = total_pnl - (commission + slippage_cost)
                     cash += realized_pnl 
 
-                    #Record the trade
+                    # Record the trade
                     trade = Trade(
-                        entry_date = entry_date, 
-                        exit_date = date, 
-                        direction = position, 
-                        entry_price = entry_spread,
-                        exit_price = spread_value,
-                        position_size = position_size,
-                        pnl = realized_pnl,
-                        return_pct = pnl_pct * 100,
-                        duration = (date - entry_date).days,
-                        entry_lambda = entry_lambda,
-                        exit_lambda = lambda_value,
-                        max_adverse_excursion = max_adverse * 100,
-                        max_favorable_excursion = max_favorable * 100
+                        entry_date=entry_date, 
+                        exit_date=date, 
+                        direction=position, 
+                        entry_price=entry_price_a,  # Store Asset A entry price
+                        exit_price=price_a,  # Store Asset A exit price
+                        position_size=position_size,
+                        pnl=realized_pnl,
+                        return_pct=pnl_pct * 100,
+                        duration=(date - entry_date).days,
+                        entry_lambda=entry_lambda,
+                        exit_lambda=lambda_value,
+                        max_adverse_excursion=max_adverse * 100,
+                        max_favorable_excursion=max_favorable * 100
                     )
                     self.trades.append(trade)
 
-                    #Reset position
+                    # Reset position
                     position = 0
-                    position_size = 0 
+                    position_size = 0
+                    shares_a = 0.0
+                    shares_b = 0.0
 
-
-            #update Equity
+            # Update Equity
             if position != 0:
-                if entry_spread is None:
+                if entry_price_a is None or entry_price_b is None:
                     equity[i] = cash
                     continue
 
-                spread_change = spread_value - entry_spread 
-                entry_spread_abs = abs(entry_spread)
-                pnl_pct = position * spread_change / entry_spread_abs if entry_spread_abs != 0 else 0.0
-                unrealized_pnl = pnl_pct * abs(position_size) * self.initial_capital
+                # Calculate unrealized P&L from current prices
+                pnl_a = shares_a * (price_a - entry_price_a)
+                pnl_b = shares_b * (price_b - entry_price_b)
+                unrealized_pnl = pnl_a + pnl_b
+                
                 equity[i] = cash + unrealized_pnl 
             else:
                 equity[i] = cash
 
-        #Create equity curve dataframe
+        # Create equity curve dataframe
         self.equity_curve = pd.DataFrame({
             'equity': equity,
             'returns': np.concatenate(([0], np.diff(equity) / equity[:-1])),
             'position': signals_df['position'],
             'spread': spread_df['spread'],
             'lambda': signals_df['lambda']
-        }, index = common_index)
+        }, index=common_index)
 
         n_trades = len(self.trades)
         final_equity = equity[-1]
         total_return = (final_equity / self.initial_capital - 1) * 100
 
-        print(f" Backtest Complete!")
+        print(f"✓ Backtest Complete!")
         print(f"    - Total Trades: {n_trades}")
         print(f"    - Final Equity: ${final_equity:,.2f}")
         print(f"    - Total Return: {total_return:.2f}%")
@@ -652,11 +698,15 @@ if __name__ == "__main__":
         slippage_bps=1.0         # 1 basis point
     )
     
+    # Extract hedge ratio from spread_df
+    hedge_ratio = spread_df['hedge_ratio'].iloc[0] if 'hedge_ratio' in spread_df.columns else 1.0
+    
     equity_curve = engine.run_backtest(
         signals_df, 
         spread_df, 
         asset_a_price, 
-        asset_b_price
+        asset_b_price,
+        hedge_ratio=hedge_ratio
     )
     
     print(f"✓ Backtest complete: {len(equity_curve)} days")
@@ -730,5 +780,5 @@ if __name__ == "__main__":
     print(f"  Max Drawdown: {metrics.get('max_drawdown_pct', 0):.2f}%")
     print(f"  Win Rate: {metrics.get('win_rate_pct', 0):.2f}%")
     print(f"  Total Trades: {metrics.get('total_trades', 0)}")
-    print(f"\n✓ All tests completed successfully!")
+    print(f"\nAll tests completed successfully!")
     print("="*70)
