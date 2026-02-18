@@ -90,7 +90,7 @@ class MRJDConfig:
 class TradingConfig:
     """ Trading signal generation params"""
     #Entry conditions (for daily equity data)
-    z_entry_threshold: float = 0.60 #Spread z-score threshold. 0.6 allows for more frequent entries compared to previous 2.0
+    z_entry_threshold: float = 0.40 #Spread z-score threshold. 0.6 allows for more frequent entries compared to previous 2.0
     lambda_threshold: float = 0.75 #need to filter adequately. Previous value of 5.0 was way too much, didn't filter anything
 
     #Position sizing
