@@ -90,7 +90,7 @@ class MRJDConfig:
 class TradingConfig:
     """ Trading signal generation params"""
     #Entry conditions (for daily equity data)
-    z_entry_threshold: float = 0.40 #Spread z-score threshold. 0.6 allows for more frequent entries compared to previous 2.0
+    z_entry_threshold: float = 0.25 #Spread z-score threshold. 0.6 allows for more frequent entries compared to previous 2.0
     lambda_threshold: float = 0.75 #need to filter adequately. Previous value of 5.0 was way too much, didn't filter anything
 
     #Position sizing
@@ -98,8 +98,8 @@ class TradingConfig:
     scaling_constant: float = 0.1 # c in w_t ∝ Z_t / (1 + c*λ_t)
 
     #Exit conditions
-    z_exit_threshold: float = 0.3
-    max_holding_period: int = 50 #trading days. Previously was 20, but that was too short. Want to match 1.5 x half-life roughly
+    z_exit_threshold: float = 0.2
+    max_holding_period: int = 25 #trading days. Previously was 20, but that was too short. Want to match 1.5 x half-life roughly
     stop_loss_sigma: float = 3.0 #stop loss in std
 
     #Risk management
