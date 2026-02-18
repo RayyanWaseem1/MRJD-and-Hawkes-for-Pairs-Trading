@@ -370,9 +370,9 @@ if __name__ == "__main__":
 
     #Try to load CSV files from multiple possible locations
     csv_paths = [
-        (os.path.join(current_dir, 'OHLCV_XOM.csv'),
-         os.path.join(current_dir, 'OHLCV_CVX.csv')), #script directory
-        ('OHLCV_XOM.csv', 'OHLCV_CVX.csv'), #current directory
+        (os.path.join(current_dir, 'OHLCV_NVDA.csv'),
+         os.path.join(current_dir, 'OHLCV_AMD.csv')), #script directory
+        ('OHLCV_NVDA.csv', 'OHLCV_AMD.csv'), #current directory
     ]
 
     data_loaded = False
@@ -570,7 +570,7 @@ if __name__ == "__main__":
     print("\n" + "="*70)
     print("SUMMARY")
     print("="*70)
-    print(f"\nData: XOM/CVX spread ({len(spread)} days)")
+    print(f"\nData: NVDA/AMD spread ({len(spread)} days)")
     print(f"Date range: {spread.index[0].date()} to {spread.index[-1].date()}")
     print(f"\nSpread Statistics:")
     print(f"  Mean: {mean:.4f}")

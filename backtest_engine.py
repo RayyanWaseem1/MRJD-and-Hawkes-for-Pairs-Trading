@@ -82,9 +82,9 @@ class BacktestEngine:
         - spread_df: pd.DataFrame
             - spread data (may contain hedge_ratio)
         - asset_a_prices: pd.Series
-            - Asset A (e.g., XOM) prices
+            - Asset A (e.g., NVDA) prices
         - asset_b_prices: pd.Series
-            - Asset B (e.g., CVX) prices
+            - Asset B (e.g., AMD) prices
         - hedge_ratio: float, optional
             - Hedge ratio (if not in spread_df)
 
@@ -513,7 +513,7 @@ class BacktestEngine:
 
 if __name__ == "__main__":
     """
-    Test backtesting engine on XOM/CVX equity pairs
+    Test backtesting engine on NVDA/AMD equity pairs
     """
     import sys
     import os
@@ -529,18 +529,18 @@ if __name__ == "__main__":
     from signal_generation import TradingSignals
     
     print("="*70)
-    print("BACKTEST ENGINE TEST - XOM/CVX EQUITY PAIRS")
+    print("BACKTEST ENGINE TEST - NVDA/AMD EQUITY PAIRS")
     print("="*70)
     
     # Initialize data pipeline
-    print("\n[1] Loading XOM/CVX data from CSV files...")
+    print("\n[1] Loading NVDA/AMD data from CSV files...")
     pipeline = EquityPairsDataPipeline()
     
     # Try to load CSV files from multiple possible locations
     csv_paths = [
-        (os.path.join(current_dir, 'OHLCV_XOM.csv'),
-         os.path.join(current_dir, 'OHLCV_CVX.csv')),  # Script directory
-        ('OHLCV_XOM.csv', 'OHLCV_CVX.csv'),  # Current directory
+        (os.path.join(current_dir, 'OHLCV_NVDA.csv'),
+         os.path.join(current_dir, 'OHLCV_AMD.csv')),  # Script directory
+        ('OHLCV_NVDA.csv', 'OHLCV_AMD.csv'),  # Current directory
     ]
     
     data_loaded = False
@@ -772,7 +772,7 @@ if __name__ == "__main__":
     print("\n" + "="*70)
     print("SUMMARY")
     print("="*70)
-    print(f"\nData: XOM/CVX ({len(spread_df)} days)")
+    print(f"\nData: NVDA/AMD ({len(spread_df)} days)")
     print(f"Period: {spread_df.index[0].date()} to {spread_df.index[-1].date()}")
     print(f"\nStrategy Performance:")
     print(f"  Total Return: {metrics.get('total_return_pct', 0):.2f}%")

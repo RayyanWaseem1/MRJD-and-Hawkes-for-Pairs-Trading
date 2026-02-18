@@ -1,0 +1,159 @@
+(venv) (base) rayyanwaseem@Rayyans-MacBook-Pro MRJD-and-Hawkes-for-Pairs-Trading % python main.py
+
+======================================================================
+Self Exciting Pairs Trading System
+NVDA/AMD Equity Pairs Strategy
+======================================================================
+
+ [Step 1/6] Data Acquisition
+----------------------------------------------------------------------
+Loading equity pairs data from the CSV files...
+ Asset A (NVDA): /Users/rayyanwaseem/Desktop/Projects/MRJD-and-Hawkes-for-Pairs-Trading/OHLCV_NVDA.csv
+ Asset B (AMD): /Users/rayyanwaseem/Desktop/Projects/MRJD-and-Hawkes-for-Pairs-Trading/OHLCV_AMD.csv
+Successfully loaded data
+ Asset A (NVDA): 1960 observations
+ Asset B (AMD): 1960 observations
+ Date range: 2018-05-01 00:00:00+00:00 to 2026-02-17 00:00:00+00:00
+Cleaning data...
+ Cleaned data: 1957 observations remaining
+Constructing spread using cointegration method
+Spread constructed with the mean hedge ratio: 0.7231
+Spread range: [-159.8605, 34.2175]
+Spread mean: 2.2513
+Spread std: 9.4931
+
+ Spread Statistics (NVDA/AMD)
+    Mean: 2.2513
+    Std: 9.4931
+    Half-life: 26.01 days
+    Stationary: True
+
+ [Step 2/6] Jump Detection
+----------------------------------------------------------------------
+Using window size: 20 periods
+Detecting jumps using Bipower Variation
+Detected 130 jumps (6.65% of observations)
+
+ Jump Statistics
+ Total Jumps: 130
+    Jump Frequency: 0.0665
+    Clustering coefficient: 0.8769
+
+ [Step 3/6] Hawkes Process Calibration
+----------------------------------------------------------------------
+Fitting Hawkes process using MLE
+ Hawkes parameters estimate: 
+ λ̄ (baseline intensity): 0.0100
+ α (jump impact): 0.4219
+ β_H (decay rate): 0.4375
+ Branching ratio (α/β_H): 0.9643
+
+ Goodness of Fit: 
+ KS p-value: 0.0000
+ Good fit: False
+
+ [Step 4/6] MRJD Model Estimation
+----------------------------------------------------------------------
+Fitting the MRJD model
+ Step 1: Estimating OU params from continous periods
+
+======================================================================
+Critical: MRJD Half Life Mismatch Detected
+======================================================================
+    MRJD estimated half-life: 5.1 days
+    Empirical half-life: 26.0 days
+    Relative error: 80.4%
+    Discrepancy: 20.9 days
+
+ Overiding MRJD kappa with the empirical estimate instead
+
+ Corrected kappa: 0.136210 -> 0.026654
+ Corrected half-life: 5.1 days -> 26.0 days
+======================================================================
+
+ Step 2: Estimating jump distribution
+Step 3: Joint MLE refinement
+MRJD Model Parameters:
+ κ (mean reversion speed): 0.1057
+ θ (long-run mean): 2.2561
+ σ (diffusive volatility): 5.000000
+  μ_J (jump mean): 0.1156
+  σ_J (jump volatility): 0.0010
+
+ Spread Forecast (5 days): 
+ Expected srpead: 3.6433
+ Reversion: 41.06%
+
+ [Step 5/6] Trading Signal Generation
+----------------------------------------------------------------------
+Generating jump-aware trading signals
+Generaged 4 total signals:
+    - Long Entries: 1
+    - Short Entries: 1
+    - Closes: 2
+
+ Signal Quality:
+    Time in Market: 2.25%
+    Entry discipline: 100.00%
+
+ [Step 6/6] Backtesting
+----------------------------------------------------------------------
+Running backtest...
+  Using hedge ratio: 0.7231
+✓ Backtest Complete!
+    - Total Trades: 2
+    - Final Equity: $922,502.84
+    - Total Return: -7.75%
+Calculating performance metrics
+Performance metrics calculated
+Analyzing regime-specific performance
+ Calm regime: 2 trades
+ Volatile regime: 0 trades
+
+======================================================================
+Pipeline Complete - Generating Summary
+======================================================================
+
+======================================================================
+Performance Summary
+======================================================================
+
+ Returns
+    Total Return: -7.75%
+    Annualized Return: -1.03%
+    Volatility (annualized): 4.22%
+
+ Risk-Adjusted Metrics:
+  Sharpe Ratio: -0.699
+  Sortino Ratio: -0.157
+  Calmar Ratio: -0.070
+  Max Drawdown: -14.85%
+
+ Trading Activity:
+  Total Trades: 2
+  Win Rate: 0.00%
+  Profit Factor: 0.00
+  Avg Trade Duration: 32.0 days
+
+ Risk Metrics:
+  Avg MAE: 4.43%
+  Avg MFE: 5.01%
+
+ Model Parameters:
+  MRJD κ (reversion speed): 0.1057
+  MRJD θ (equilibrium): 2.2561
+  Hawkes branching ratio: 0.9643
+
+Saving results to /Users/rayyanwaseem/Desktop/Projects/MRJD-and-Hawkes-for-Pairs-Trading/outputs...
+ Results saved successfully
+
+======================================================================
+✓ PIPELINE EXECUTION COMPLETE
+======================================================================
+
+Next steps:
+1. Review performance metrics in ./outputs/
+2. Analyze trade summary for insights
+3. Iterate on parameters to optimize performance
+4. Test on different asset pairs
+(venv) (base) rayyanwaseem@Rayyans-MacBook-Pro MRJD-and-Hawkes-for-Pairs-Trading % 

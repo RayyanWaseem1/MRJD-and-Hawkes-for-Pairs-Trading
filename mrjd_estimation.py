@@ -183,6 +183,66 @@ class MRJDModel:
         if not result.success:
             print(f"Warning: OU optimization did not converge")
 
+        #calculating MRJD estimate half-life from optimized kappa 
+        kappa_mrjd = result.x[0]
+        half_life_mrjd = np.log(2) / kappa_mrjd 
+
+        #Calculating empirical half-life using AR(1) regression on the full spread
+        #Not just non-jump periods so that we can capture true mean reversion rate 
+        spread_lag = spread.shift(1).dropna() 
+        spread_diff = spread.diff().dropna()
+        common_idx = spread_lag.index.intersection(spread_diff.index)
+
+        if len(common_idx) > 10:
+            try:
+                #Ar(1) regression: Δy_t = β * y_{t-1}
+                #half-life: -log(2) / β
+
+                beta_empirical = np.polyfit(spread_lag.loc[common_idx], spread_diff.loc[common_idx], 1)[0]
+
+                if beta_empirical < 0:
+                    #mean reverting process
+                    half_life_empirical = -np.log(2) / beta_empirical 
+                else:
+                    #non stationary 
+                    half_life_empirical = np.inf
+                    print(" Warning: spread is not mean reverting: (Beta >= 0)")
+
+                #Checking for large discrepencies (>50% difference)
+                if np.isfinite(half_life_empirical) and half_life_empirical > 0:
+                    relative_error = abs(half_life_mrjd - half_life_empirical) / half_life_empirical 
+
+                    if relative_error > 0.5: #which is more than a 50% difference
+                        print("\n" + "=" * 70)
+                        print("Critical: MRJD Half Life Mismatch Detected")
+                        print("=" * 70)
+                        print(f"    MRJD estimated half-life: {half_life_mrjd:.1f} days")
+                        print(f"    Empirical half-life: {half_life_empirical:.1f} days")
+                        print(f"    Relative error: {relative_error * 100:.1f}%")
+                        print(f"    Discrepancy: {abs(half_life_mrjd - half_life_empirical):.1f} days")
+                        print("\n Overiding MRJD kappa with the empirical estimate instead")
+
+                        #overriding with empirical kappa estimate 
+                        kappa_empirical = np.log(2) / half_life_empirical 
+
+                        #update result
+                        result.x[0] = kappa_empirical 
+
+                        print(f"\n Corrected kappa: {kappa_mrjd:.6f} -> {kappa_empirical:.6f}")
+                        print(f" Corrected half-life: {half_life_mrjd:.1f} days -> {half_life_empirical:.1f} days")
+                        print("=" * 70 + "\n")
+                    else:
+                        #If a good fit, just report it normally
+                        print(f"\n MRJD Half life Validation Passed")
+                        print(f"    MRJD estimated: {half_life_mrjd:.1f} days")
+                        print(f"    Empirical: {half_life_empirical:.1f} days")
+                        print(f"    Error: {relative_error * 100:.1f}% (acceptable)\n")
+
+            except Exception as e:
+                print(f"Warning: could not validate the MRJD half-life: {str(e)}")
+        else:
+            print("Warning: Insufficient data for MRJD validation")
+
         return {
             'kappa': result.x[0],
             'theta': result.x[1],
@@ -474,7 +534,7 @@ class MRJDModel:
 
 if __name__ == "__main__":
     """
-    Test MRJD model estimation on XOM/CVX equity pairs
+    Test MRJD model estimation on NVDA/AMD equity pairs
     """
     import sys
     import os
@@ -488,18 +548,18 @@ if __name__ == "__main__":
     from jump_detector import JumpDetector
     
     print("="*70)
-    print("MRJD MODEL ESTIMATION TEST - XOM/CVX EQUITY PAIRS")
+    print("MRJD MODEL ESTIMATION TEST - NVDA/AMD EQUITY PAIRS")
     print("="*70)
     
     # Initialize data pipeline
-    print("\n[1] Loading XOM/CVX data from CSV files...")
+    print("\n[1] Loading NVDA/AMD data from CSV files...")
     pipeline = EquityPairsDataPipeline()
     
     # Try to load CSV files from multiple possible locations
     csv_paths = [
-        (os.path.join(current_dir, 'OHLCV_XOM.csv'),
-         os.path.join(current_dir, 'OHLCV_CVX.csv')),  # Script directory
-        ('OHLCV_XOM.csv', 'OHLCV_CVX.csv'),  # Current directory
+        (os.path.join(current_dir, 'OHLCV_NVDA.csv'),
+         os.path.join(current_dir, 'OHLCV_AMD.csv')),  # Script directory
+        ('OHLCV_NVDA.csv', 'OHLCV_AMD.csv'),  # Current directory
     ]
     
     data_loaded = False
@@ -706,7 +766,7 @@ if __name__ == "__main__":
     print("\n" + "="*70)
     print("SUMMARY")
     print("="*70)
-    print(f"\nData: XOM/CVX spread ({len(spread)} days)")
+    print(f"\nData: NVDA/AMD spread ({len(spread)} days)")
     print(f"Date range: {spread.index[0].date()} to {spread.index[-1].date()}")
     print(f"\nMRJD Model:")
     print(f"  Mean reversion speed: κ = {estimated_params['kappa']:.4f} (half-life {half_life:.2f} days)")

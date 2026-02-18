@@ -12,13 +12,13 @@ PROJECT_ROOT = Path(__file__).resolve().parent
 @dataclass
 class DataConfig:
     """ Data acquisition and processing params"""
-    #Equity pairs (XOM/CVX - Energy Sector)
-    asset_a_symbol: str = "XOM" #Exxon Mobil
-    asset_b_symbol: str = "CVX" #Chevron 
+    #Equity pairs (NVDA/AMD - Energy Sector)
+    asset_a_symbol: str = "NVDA" #Exxon Mobil
+    asset_b_symbol: str = "AMD" #Chevron 
 
     #CSV file paths 
-    asset_a_csv: str = str(PROJECT_ROOT / "OHLCV_XOM.csv")
-    asset_b_csv: str = str(PROJECT_ROOT / "OHLCV_CVX.csv")
+    asset_a_csv: str = str(PROJECT_ROOT / "OHLCV_NVDA.csv")
+    asset_b_csv: str = str(PROJECT_ROOT / "OHLCV_AMD.csv")
 
     #Data params
     frequency: str = "1d" #Daily data
@@ -26,7 +26,7 @@ class DataConfig:
 
     #Spread construction
     hedge_ratio_method: str = 'cointegration' # or regression
-    lookback_period: int = 60 #Days for hedge ratio estimation 
+    lookback_period: int = 30 #Days for hedge ratio estimation. Changed to 30 from 60 to be more adaptive
 
 @dataclass 
 class JumpDetectionConfig:
@@ -36,10 +36,10 @@ class JumpDetectionConfig:
 
     #Bipower variation params (for daily data)
     window_size: int = 20 #1 month of trading days
-    significance_level: float = 0.01
+    significance_level: float = 0.05 #Catches 2sigma+ jumps compared to 0.01 which only catches 3sigma+ jumps. Relaxes the jump detection parameters from before. 
 
     #Thrshold based detection
-    threshold_sigma: float = 4.0 #standard deviations
+    threshold_sigma: float = 3.0 #standard deviations
 
     #Jump size filtering
     min_jump_size: float = 0.01 #Minimum relative jump size 
@@ -90,7 +90,7 @@ class MRJDConfig:
 class TradingConfig:
     """ Trading signal generation params"""
     #Entry conditions (for daily equity data)
-    z_entry_threshold: float = 2.0 #Spread z-score threshold 
+    z_entry_threshold: float = 1.0 #Spread z-score threshold. 1.0 allows for more frequent entries compared to previous 2.0
     lambda_threshold: float = 5.0 #max jump intensity for entry
 
     #Position sizing
@@ -98,9 +98,9 @@ class TradingConfig:
     scaling_constant: float = 0.1 # c in w_t ∝ Z_t / (1 + c*λ_t)
 
     #Exit conditions
-    z_exit_threshold: float = 0.5
-    max_holding_period: int = 20 #trading days
-    stop_loss_sigma: float = 4.0 #stop loss in std
+    z_exit_threshold: float = 0.3
+    max_holding_period: int = 150 #trading days. Previously was 20, but that was too short. Want to match 1.5 x half-life roughly
+    stop_loss_sigma: float = 3.0 #stop loss in std
 
     #Risk management
     max_drawdown_threshold: float = 0.15 #15% max drawdown
