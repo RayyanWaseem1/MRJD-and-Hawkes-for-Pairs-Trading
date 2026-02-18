@@ -91,7 +91,7 @@ class TradingConfig:
     """ Trading signal generation params"""
     #Entry conditions (for daily equity data)
     z_entry_threshold: float = 1.0 #Spread z-score threshold. 1.0 allows for more frequent entries compared to previous 2.0
-    lambda_threshold: float = 5.0 #max jump intensity for entry
+    lambda_threshold: float = 0.15 #need to filter adequately. Previous value of 5.0 was way too much, didn't filter anything
 
     #Position sizing
     max_position_size: float = 1.0
@@ -99,7 +99,7 @@ class TradingConfig:
 
     #Exit conditions
     z_exit_threshold: float = 0.3
-    max_holding_period: int = 150 #trading days. Previously was 20, but that was too short. Want to match 1.5 x half-life roughly
+    max_holding_period: int = 50 #trading days. Previously was 20, but that was too short. Want to match 1.5 x half-life roughly
     stop_loss_sigma: float = 3.0 #stop loss in std
 
     #Risk management

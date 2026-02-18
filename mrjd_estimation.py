@@ -76,11 +76,12 @@ class MRJDModel:
         )
 
         #Step 3: Joint MLE refinement
-        print("Step 3: Joint MLE refinement")
-        if method == 'MLE':
-            refined_params = self._joint_mle(spread, jump_indicator, dt)
-        else:
-            refined_params = {**self.ou_params, **self.jump_params}
+        print(" Step 3: Joint MLE refinement")
+        print("Warning: Skipping joint MLE to preserve the validated kappa")
+        print(" (Joint MLE tends to overfit and revert to the incorrect parameters)")
+        #Always use the separate estimates to preserve validated kappa from Step 1
+
+        refined_params = {**self.ou_params, **self.jump_params}
 
         self.params = refined_params
         self.fitted = True 
