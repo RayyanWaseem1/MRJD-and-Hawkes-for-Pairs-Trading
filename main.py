@@ -140,7 +140,7 @@ class SelfExcitingPairsTrading:
         print(f"\n Spread Statistics (XOM/CVX)")
         print(f"    Mean: {stats['mean']:.4f}")
         print(f"    Std: {stats['std']:.4f}")
-        print(f"    Half-life: {stats['half-life']:.2f} days")
+        print(f"    Half-life: {stats['half_life']:.2f} days")
         print(f"    Stationary: {stats['is_stationary']}")
 
         self.results['spread_stats'] = stats 
@@ -194,7 +194,15 @@ class SelfExcitingPairsTrading:
 
         #Extracting jump times
         jump_times = jump_detector.extract_jump_times(jump_df)
-        T = (jump_df.index[-1] - jump_df.index[0]).days 
+        if isinstance(jump_df.index, pd.DatetimeIndex):
+            T = (jump_df.index[-1] - jump_df.index[0]).total_seconds() / (24 * 3600)
+        else:
+            index_values = jump_df.index.to_numpy()
+            if np.issubdtype(index_values.dtype, np.number):
+                T = float(index_values[-1] - index_values[0])
+            else:
+                T = float(len(jump_df) - 1)
+        T = max(T, 1.0)
 
         if len(jump_times) < 2:
             print("Warning: Insufficient jumps for Hawkes calibration")

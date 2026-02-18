@@ -66,10 +66,21 @@ class EquityPairsDataPipeline:
             asset_a = pd.read_csv(asset_a_path)
 
             #handling date column
-            if date_columns in asset_a.columns:
+            date_col_a = date_columns if date_columns in asset_a.columns else None
+            if date_col_a is None:
+                cols_lower_a = {str(col).lower(): col for col in asset_a.columns}
+                date_col_a = (
+                    cols_lower_a.get(str(date_columns).lower())
+                    or cols_lower_a.get('ts_event')
+                    or cols_lower_a.get('date')
+                )
+
+            if date_col_a is not None:
                 if parse_dates:
-                    asset_a[date_columns] = pd.to_datetime(asset_a[date_columns])
-                asset_a = asset_a.set_index(date_columns)
+                    asset_a[date_col_a] = pd.to_datetime(asset_a[date_col_a], errors='coerce')
+                asset_a = asset_a.set_index(date_col_a)
+            else:
+                print(f"Warning: No date column found for Asset A; using integer index")
 
             #ensure proper column names (case-insensitive)
             asset_a.columns = [col.capitalize() for col in asset_a.columns]
@@ -78,10 +89,21 @@ class EquityPairsDataPipeline:
             asset_b = pd.read_csv(asset_b_path)
 
             #handling date column
-            if date_columns in asset_b.columns:
+            date_col_b = date_columns if date_columns in asset_b.columns else None
+            if date_col_b is None:
+                cols_lower_b = {str(col).lower(): col for col in asset_b.columns}
+                date_col_b = (
+                    cols_lower_b.get(str(date_columns).lower())
+                    or cols_lower_b.get('ts_event')
+                    or cols_lower_b.get('date')
+                )
+
+            if date_col_b is not None:
                 if parse_dates:
-                    asset_b[date_columns] = pd.to_datetime(asset_b[date_columns])
-                asset_b = asset_b.set_index(date_columns)
+                    asset_b[date_col_b] = pd.to_datetime(asset_b[date_col_b], errors='coerce')
+                asset_b = asset_b.set_index(date_col_b)
+            else:
+                print(f"Warning: No date column found for Asset B; using integer index")
 
             asset_b.columns = [col.capitalize() for col in asset_b.columns]
 

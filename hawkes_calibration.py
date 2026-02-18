@@ -69,7 +69,7 @@ class HawkesProcess:
 
         if n_jumps < 2:
             print("Not enough jumps to fit the Hawkes process")
-            return {'lambda_bar': 0, 'alpha': 0, 'beta_H': 1.0}
+            return {'lambda_bar': 0, 'alpha': 0, 'beta': 1.0, 'beta_H': 1.0}
         
         #Initial parameter guesses
         if initial_params is None:
@@ -79,7 +79,7 @@ class HawkesProcess:
         else:
             lambda_bar_init = initial_params.get('lambda_bar', n_jumps / T)
             alpha_init = initial_params.get('alpha',  0.5)
-            beta_init = initial_params.get('beta_H', 2.0)
+            beta_init = initial_params.get('beta', initial_params.get('beta_H', 2.0))
 
         x0 = np.array([lambda_bar_init, alpha_init, beta_init])
 
@@ -93,6 +93,7 @@ class HawkesProcess:
         self.params = {
             'lambda_bar': result['lambda_bar'],
             'alpha': result['alpha'],
+            'beta': result['beta'],
             'beta_H': result['beta']
         }
 
@@ -102,8 +103,8 @@ class HawkesProcess:
         print(f" Hawkes parameters estimate: ")
         print(f" λ̄ (baseline intensity): {self.params['lambda_bar']:.4f}")
         print(f" α (jump impact): {self.params['alpha']:.4f}")
-        print(f" β_H (decay rate): {self.params['beta_H']:.4f}")
-        print(f" Branching ratio (α/β_H): {self.params['alpha']/self.params['beta_H']:.4f}")
+        print(f" β_H (decay rate): {self.params['beta']:.4f}")
+        print(f" Branching ratio (α/β_H): {self.params['alpha']/self.params['beta']:.4f}")
 
         return self.params
     
@@ -318,7 +319,7 @@ class HawkesProcess:
         intensity_path = np.zeros(len(time_grid))
 
         for i, t in enumerate(time_grid):
-            past_jumps = jump_times[jump_times , t]
+            past_jumps = jump_times[jump_times < t]
             intensity_path[i] = self._compute_intensity_at_time(
                 t, past_jumps, lambda_bar, alpha, beta
             )

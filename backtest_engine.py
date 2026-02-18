@@ -252,7 +252,7 @@ class BacktestEngine:
 
         #Sharpe Ratio 
         excess_returns = returns - risk_free_rate / 252
-        sharpe_ratio = np.sqrt(252) * excess_returns.mean() / returns.std if returns_std > 0 else 0 
+        sharpe_ratio = np.sqrt(252) * excess_returns.mean() / returns_std if returns_std > 0 else 0 
 
         #Sortino Ratio 
         downside_returns = returns[returns < 0]

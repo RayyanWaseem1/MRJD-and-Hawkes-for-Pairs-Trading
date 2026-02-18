@@ -233,12 +233,24 @@ class JumpDetector:
         """
 
         jump_mask = jump_df['jump_indicator'] == 1
-        jump_times = jump_df.index[jump_mask]
+        jump_positions = np.flatnonzero(jump_mask.to_numpy())
 
-        #Convert ot numeric (days since start)
-        start_time = jump_df.index[0]
-        jump_times_numeric = (jump_times - start_time).days + \
-            (jump_times - start_time).seconds / (24 * 3600)
+        if len(jump_positions) == 0:
+            return np.array([], dtype=float)
+
+        index = jump_df.index
+
+        #Convert to numeric time (days since start)
+        if isinstance(index, pd.DatetimeIndex):
+            start_time = index[0]
+            jump_times = index[jump_positions]
+            jump_times_numeric = (jump_times - start_time).total_seconds() / (24 * 3600)
+        else:
+            index_values = index.to_numpy()
+            if np.issubdtype(index_values.dtype, np.number):
+                jump_times_numeric = index_values[jump_positions].astype(float) - float(index_values[0])
+            else:
+                jump_times_numeric = jump_positions.astype(float)
         
         return np.asarray(jump_times_numeric, dtype=float)
     

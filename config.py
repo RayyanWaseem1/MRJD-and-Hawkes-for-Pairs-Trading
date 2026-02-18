@@ -22,7 +22,7 @@ class DataConfig:
 
     #Data params
     frequency: str = "1d" #Daily data
-    date_columns: str = "Date" #column name for dates in the csv
+    date_columns: str = "ts_event" #column name for dates in the csv
 
     #Spread construction
     hedge_ratio_method: str = 'cointegration' # or regression
