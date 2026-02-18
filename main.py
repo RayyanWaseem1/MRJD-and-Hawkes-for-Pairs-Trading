@@ -398,24 +398,24 @@ class SelfExcitingPairsTrading:
         print(f"    Annualized Return: {perf['annualized_return_pct']:.2f}%")
         print(f"    Volatility (annualized): {perf['annualized_volatility_pct']:.2f}%")
 
-        print(f"\n⚡ Risk-Adjusted Metrics:")
+        print(f"\n Risk-Adjusted Metrics:")
         print(f"  Sharpe Ratio: {perf['sharpe_ratio']:.3f}")
         print(f"  Sortino Ratio: {perf['sortino_ratio']:.3f}")
         print(f"  Calmar Ratio: {perf['calmar_ratio']:.3f}")
         print(f"  Max Drawdown: {perf['max_drawdown_pct']:.2f}%")
         
-        print(f"\n💼 Trading Activity:")
+        print(f"\n Trading Activity:")
         print(f"  Total Trades: {perf['total_trades']}")
         print(f"  Win Rate: {perf['win_rate_pct']:.2f}%")
         print(f"  Profit Factor: {perf['profit_factor']:.2f}")
         print(f"  Avg Trade Duration: {perf['avg_trade_duration_days']:.1f} days")
         
-        print(f"\n🎯 Risk Metrics:")
+        print(f"\n Risk Metrics:")
         print(f"  Avg MAE: {perf['avg_max_adverse_excursion_pct']:.2f}%")
         print(f"  Avg MFE: {perf['avg_max_favorable_excursion_pct']:.2f}%")
         
         # Model parameters
-        print(f"\n🔬 Model Parameters:")
+        print(f"\n Model Parameters:")
         print(f"  MRJD κ (reversion speed): {self.mrjd_params['kappa']:.4f}")
         print(f"  MRJD θ (equilibrium): {self.mrjd_params['theta']:.4f}")
         print(f"  Hawkes branching ratio: {self.hawkes_params['alpha']/self.hawkes_params['beta']:.4f}")
@@ -455,7 +455,7 @@ class SelfExcitingPairsTrading:
         # Save signals
         signals_df.to_csv(f'{output_dir}/trading_signals.csv')
         
-        print("✓ Results saved successfully")
+        print(" Results saved successfully")
 
 
 def main():
