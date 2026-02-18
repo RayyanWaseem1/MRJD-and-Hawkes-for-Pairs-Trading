@@ -6,6 +6,7 @@ import numpy as np
 import pandas as pd
 from typing import Tuple, Optional, Dict
 from datetime import datetime
+from pathlib import Path
 import warnings
 warnings.filterwarnings('ignore')
 
@@ -15,7 +16,7 @@ class EquityPairsDataPipeline:
 
     """
 
-    def __init__(self, asset_a_path: str = None, asset_b_path: str = None):
+    def __init__(self, asset_a_path: Optional[str] = None, asset_b_path: Optional[str] = None):
         """
         Initialize data pipeline
 
@@ -31,8 +32,8 @@ class EquityPairsDataPipeline:
         self.data = {}
 
     def load_from_csv(self,
-                      asset_a_path: str = None,
-                      asset_b_path: str = None,
+                      asset_a_path: Optional[str] = None,
+                      asset_b_path: Optional[str] = None,
                       date_columns: str = 'Date',
                       parse_dates: bool = True) -> Dict[str, pd.DataFrame]:
         """
@@ -52,6 +53,9 @@ class EquityPairsDataPipeline:
         """
         asset_a_path = asset_a_path or self.asset_a_path
         asset_b_path = asset_b_path or self.asset_b_path
+
+        if asset_a_path is None or asset_b_path is None:
+            raise ValueError("Both asset_a_path and asset_b_path must be provided")
 
         print(f"Loading equity pairs data from the CSV files...")
         print(f" Asset A (XOM): {asset_a_path}")
@@ -348,13 +352,14 @@ if __name__ == "__main__":
 
     #initialize pipelife
     pipeline = EquityPairsDataPipeline()
+    current_dir = Path(__file__).resolve().parent
 
     #try to load CSV files
     try:
         #load data
         data = pipeline.load_from_csv(
-            asset_a_path = '/Users/rayyanwaseem/Desktop/Projects/MRJD-and-Hawkes-for-Pairs-Trading/OHLCV_XOM.csv',
-            asset_b_path = '/Users/rayyanwaseem/Desktop/Projects/MRJD-and-Hawkes-for-Pairs-Trading/OHLCV_CVX.csv'
+            asset_a_path = str(current_dir / 'OHLCV_XOM.csv'),
+            asset_b_path = str(current_dir / 'OHLCV_CVX.csv')
         )
 
         #Clean data
@@ -381,7 +386,7 @@ if __name__ == "__main__":
 
     except FileNotFoundError:
         print("\n CSV not found")
-        print("Please ensure OHLCV_XOM.csv and OHLCV_CVX.dsc are in correct path")
+        print("Please ensure OHLCV_XOM.csv and OHLCV_CVX.csv are in correct path")
     except Exception as e:
         print(f"\n Error: {str(e)}")
 
