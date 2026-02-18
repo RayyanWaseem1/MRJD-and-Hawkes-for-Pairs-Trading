@@ -66,8 +66,8 @@ class JumpDetector:
         )
 
         #Tripower quarticity (for variance of test statistic)
-        mu_1 = 2**(1/2) * gamma_func(1) / gamma_func(0.5) #E[|Z|]
-        TP = n * (mu_1**(-3)) * abs_returns.rolling(window = window).apply(
+        mu_4_3 = 2**(2/3) * gamma_func(5/6) / gamma_func(0.5) #E[|Z|]
+        TP = n * (mu_4_3**(-3)) * abs_returns.rolling(window = window).apply(
             lambda x: np.sum(x[:-2]**(4/3) * x[1:-1]**(4/3) * x[2:]**(4/3)), raw = True
         )
 

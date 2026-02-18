@@ -140,7 +140,10 @@ class HawkesProcess:
                 return 1e10
             
             #ensure stability (branching ratio < 1)
-            if alpha > beta: 
+            if alpha >= beta: 
+                return 1e10
+            branching_ratio = alpha / beta
+            if branching_ratio > 0.85:
                 return 1e10
             
             n = len(jump_times)
@@ -158,14 +161,15 @@ class HawkesProcess:
             #Second term: integral of intensity
             #For exponential kernel: ∫λ(s)ds = λ̄*T + α*n - α*∑e^(-β(T-t_i))
 
-            integral = lambda_bar * T + alpha * n 
+            integral = lambda_bar * T
             for t_i in jump_times:
-                integral -= (alpha / beta) * (1 - np.exp(-beta * (T - t_i)))
+                integral += (alpha / beta) * (1 - np.exp(-beta * (T - t_i)))
 
             return -(log_intensity_sum - integral)
         
         #Bounds for parameters
-        bounds = [(1e-5, 100), (1e-5, 10), (1e-5, 10)]
+        bounds = [(0.001, 0.5), (0.01, 2.0), (0.1, 5.0)]
+        #[λ̄: 0.1-50%] [α: moderate] [β: days-weeks decay]
 
         #optimize
         result = minimize(
