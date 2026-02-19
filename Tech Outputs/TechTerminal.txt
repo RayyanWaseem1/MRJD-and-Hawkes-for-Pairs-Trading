@@ -1,11 +1,11 @@
 (venv) (base) rayyanwaseem@Rayyans-MacBook-Pro MRJD-and-Hawkes-for-Pairs-Trading % python main.py
 
 ======================================================================
-Self Exciting Pairs Trading System
-NVDA/AMD Equity Pairs Strategy
+Self-Exciting Pairs Trading System V3
+NVDA/AMD Equity Pairs Strategy (Dollar-Neutral)
 ======================================================================
 
- [Step 1/6] Data Acquisition
+ [Step 1/8] Data Acquisition
 ----------------------------------------------------------------------
 Loading equity pairs data from the CSV files...
  Asset A (NVDA): /Users/rayyanwaseem/Desktop/Projects/MRJD-and-Hawkes-for-Pairs-Trading/OHLCV_NVDA.csv
@@ -28,31 +28,77 @@ Spread std: 9.4931
     Half-life: 26.01 days
     Stationary: True
 
- [Step 2/6] Jump Detection
+ [Step 2/8] Pair Validation
+----------------------------------------------------------------------
+
+======================================================================
+PAIR VALIDATION
+======================================================================
+
+1. Stationarity Test (ADF):
+   ADF Statistic: -7.2964
+   P-value: 0.0000
+   Stationary: ✓ YES
+
+2. Mean Reversion Half-Life:
+   Half-life: 26.0 days
+   Acceptable range: 5-60 days
+   Within range: ✓ YES
+
+3. Mean Stability Check:
+   Long-term mean drift: 0.2461
+   Stable mean: ✓ YES
+
+4. Spread Range Analysis:
+   Range: 194.0781
+   Standard deviation: 9.4931
+   Range in std units: 20.4
+   Reasonable range (<10 std): ✗ NO (extreme moves)
+
+5. Recent vs Historical Mean:
+   Overall mean: 2.2513
+   Recent 1yr mean: 2.2670
+   Shift in std: 0.00
+   No recent regime change: ✓ YES
+
+----------------------------------------------------------------------
+OVERALL ASSESSMENT:
+⚠ PAIR HAS ISSUES - TRADING NOT RECOMMENDED
+
+Issues detected:
+  - Spread has extreme moves (20.4 std)
+======================================================================
+
+⚠ WARNING: Pair validation failed!
+Continuing anyway for educational purposes...
+In production, you should choose a different pair.
+
+
+ [Step 3/8] Jump Detection
 ----------------------------------------------------------------------
 Using window size: 20 periods
 Detecting jumps using Bipower Variation
-Detected 130 jumps (6.65% of observations)
+Detected 157 jumps (8.03% of observations)
 
  Jump Statistics
- Total Jumps: 130
-    Jump Frequency: 0.0665
-    Clustering coefficient: 0.8769
+    Total Jumps: 157
+    Jump Frequency: 0.0803
+    Clustering coefficient: 0.8790
 
- [Step 3/6] Hawkes Process Calibration
+ [Step 4/8] Hawkes Process Calibration
 ----------------------------------------------------------------------
 Fitting Hawkes process using MLE
  Hawkes parameters estimate: 
- λ̄ (baseline intensity): 0.0100
- α (jump impact): 0.4219
- β_H (decay rate): 0.4375
- Branching ratio (α/β_H): 0.9643
+ λ̄ (baseline intensity): 0.0074
+ α (jump impact): 0.2187
+ β_H (decay rate): 0.2607
+ Branching ratio (α/β_H): 0.8388
 
- Goodness of Fit: 
- KS p-value: 0.0000
- Good fit: False
+ Jump Intensity Statistics:
+    Mean λ: 0.051554
+    90th percentile: 0.128061
 
- [Step 4/6] MRJD Model Estimation
+ [Step 5/8] MRJD Model Estimation
 ----------------------------------------------------------------------
 Fitting the MRJD model
  Step 1: Estimating OU params from continous periods
@@ -60,55 +106,95 @@ Fitting the MRJD model
 ======================================================================
 Critical: MRJD Half Life Mismatch Detected
 ======================================================================
-    MRJD estimated half-life: 5.1 days
+    MRJD estimated half-life: 5.6 days
     Empirical half-life: 26.0 days
-    Relative error: 80.4%
-    Discrepancy: 20.9 days
+    Relative error: 78.6%
+    Discrepancy: 20.4 days
 
  Overiding MRJD kappa with the empirical estimate instead
 
- Corrected kappa: 0.136210 -> 0.026654
- Corrected half-life: 5.1 days -> 26.0 days
+ Corrected kappa: 0.124461 -> 0.026654
+ Corrected half-life: 5.6 days -> 26.0 days
 ======================================================================
 
  Step 2: Estimating jump distribution
-Step 3: Joint MLE refinement
+ Step 3: Joint MLE refinement
+Warning: Skipping joint MLE to preserve the validated kappa
+ (Joint MLE tends to overfit and revert to the incorrect parameters)
 MRJD Model Parameters:
- κ (mean reversion speed): 0.1057
- θ (long-run mean): 2.2561
+ κ (mean reversion speed): 0.0267
+ θ (long-run mean): 2.2783
  σ (diffusive volatility): 5.000000
-  μ_J (jump mean): 0.1156
-  σ_J (jump volatility): 0.0010
+  μ_J (jump mean): 0.0783
+  σ_J (jump volatility): 0.3203
 
- Spread Forecast (5 days): 
- Expected srpead: 3.6433
- Reversion: 41.06%
-
- [Step 5/6] Trading Signal Generation
+ [Step 6/8] Signal Generation Diagnostics
 ----------------------------------------------------------------------
-Generating jump-aware trading signals
-Generaged 4 total signals:
-    - Long Entries: 1
-    - Short Entries: 1
-    - Closes: 2
+
+ Z-Score Comparison:
+    Empirical Z-score range: [-5.14, 4.30]
+    Empirical Z-score std: 1.35
+
+======================================================================
+SIGNAL GENERATION DIAGNOSTICS
+======================================================================
+
+Total observations: 1957
+
+Z-Score Statistics:
+  mean: -0.0297
+  std: 1.3450
+  min: -5.1351
+  max: 4.2997
+  pct_above_entry: 11.1395
+  pct_below_neg_entry: 12.6214
+
+Lambda (Jump Intensity) Statistics:
+  mean: 0.051554
+  std: 0.134825
+  min: 0.007419
+  max: 0.644880
+  pct_below_threshold: 89.371487
+
+Entry Opportunities:
+  long_signals_possible: 215
+  short_signals_possible: 206
+  total_opportunities: 421
+  pct_of_data: 21.51
+
+Recommended Thresholds (based on data):
+  z_entry: 2.0176
+  lambda_threshold: 0.0094
+======================================================================
+
+ [Step 7/8] Trading Signal Generation
+----------------------------------------------------------------------
+Generating improved jump-aware trading signals
+Generated 117 total signals:
+    - Long Entries: 30
+    - Short Entries: 29
+    - Closes: 58
 
  Signal Quality:
-    Time in Market: 2.25%
-    Entry discipline: 100.00%
+    Time in Market: 49.62%
+    Entry Discipline: 90.54%
 
- [Step 6/6] Backtesting
+ [Step 8/8] Backtesting (Dollar-Neutral)
 ----------------------------------------------------------------------
-Running backtest...
-  Using hedge ratio: 0.7231
+Running backtest (V2 - Dollar Neutral)...
+  Hedge ratio (for spread construction): 0.7231
+  Position sizing: Dollar-neutral (equal $ per leg)
+  Max position: 25% of capital
+  Stop loss: 5.0%
 ✓ Backtest Complete!
-    - Total Trades: 2
-    - Final Equity: $922,502.84
-    - Total Return: -7.75%
+    - Total Trades: 59
+    - Final Equity: $789,338.51
+    - Total Return: -21.07%
+    - Exit reasons: {'signal': 32, 'stop_loss': 22, 'profit_target': 5}
 Calculating performance metrics
 Performance metrics calculated
-Analyzing regime-specific performance
- Calm regime: 2 trades
- Volatile regime: 0 trades
+ Calm regime: 53 trades
+ Volatile regime: 6 trades
 
 ======================================================================
 Pipeline Complete - Generating Summary
@@ -119,41 +205,34 @@ Performance Summary
 ======================================================================
 
  Returns
-    Total Return: -7.75%
-    Annualized Return: -1.03%
-    Volatility (annualized): 4.22%
+    Total Return: -21.07%
+    Annualized Return: -3.00%
+    Volatility (annualized): 5.15%
 
  Risk-Adjusted Metrics:
-  Sharpe Ratio: -0.699
-  Sortino Ratio: -0.157
-  Calmar Ratio: -0.070
-  Max Drawdown: -14.85%
+    Sharpe Ratio: -0.954
+    Sortino Ratio: -0.555
+    Max Drawdown: -24.46%
 
  Trading Activity:
-  Total Trades: 2
-  Win Rate: 0.00%
-  Profit Factor: 0.00
-  Avg Trade Duration: 32.0 days
+    Total Trades: 59
+    Win Rate: 40.68%
+    Profit Factor: 0.52
+    Avg Trade Duration: 18.7 days
 
- Risk Metrics:
-  Avg MAE: 4.43%
-  Avg MFE: 5.01%
+ Key Fixes Applied:
+    ✓ Dollar-neutral positions
+    ✓ P&L-based stop loss (5%)
+    ✓ Conservative position sizing (25% max)
 
- Model Parameters:
-  MRJD κ (reversion speed): 0.1057
-  MRJD θ (equilibrium): 2.2561
-  Hawkes branching ratio: 0.9643
+ ⚠ PAIR QUALITY WARNING:
+    This pair has structural issues.
+    Consider testing with XOM/CVX or other stable pairs.
 
-Saving results to /Users/rayyanwaseem/Desktop/Projects/MRJD-and-Hawkes-for-Pairs-Trading/outputs...
- Results saved successfully
+Saving results to /Users/rayyanwaseem/Desktop/Projects/MRJD-and-Hawkes-for-Pairs-Trading/outputs_v3...
+✓ Results saved successfully
 
 ======================================================================
-✓ PIPELINE EXECUTION COMPLETE
+✓ PIPELINE EXECUTION COMPLETE (V3)
 ======================================================================
-
-Next steps:
-1. Review performance metrics in ./outputs/
-2. Analyze trade summary for insights
-3. Iterate on parameters to optimize performance
-4. Test on different asset pairs
 (venv) (base) rayyanwaseem@Rayyans-MacBook-Pro MRJD-and-Hawkes-for-Pairs-Trading % 

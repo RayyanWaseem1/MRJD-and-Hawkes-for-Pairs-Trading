@@ -1,2 +1,0 @@
-total_return_pct,annualized_return_pct,annualized_volatility_pct,sharpe_ratio,sortino_ratio,max_drawdown_pct,calmar_ratio,total_trades,win_rate_pct,avg_win,avg_loss,profit_factor,avg_trade_duration_days,max_trade_duration_days,avg_max_adverse_excursion_pct,avg_max_favorable_excursion_pct
--1.2003034777798072,-0.15537556580587086,1.6050355745589355,-1.3349729359475755,-0.33506761832275717,-4.629307795246791,-0.03356345541884361,3,33.33333333333333,1935.3841235214647,-6836.516264234686,0.1415475403493479,29.333333333333332,37,1.7090381558515324,5.731668149371154
