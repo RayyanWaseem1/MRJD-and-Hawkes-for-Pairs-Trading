@@ -1,0 +1,226 @@
+(venv) (base) rayyanwaseem@Rayyans-MacBook-Pro MRJD-and-Hawkes-for-Pairs-Trading % python main.py
+
+======================================================================
+Self-Exciting Pairs Trading System V3
+CVX/XOM Equity Pairs Strategy (Dollar-Neutral)
+======================================================================
+
+ [Step 1/8] Data Acquisition
+----------------------------------------------------------------------
+Loading equity pairs data from the CSV files...
+ Asset A (CVX): /Users/rayyanwaseem/Desktop/Projects/MRJD-and-Hawkes-for-Pairs-Trading/OHLCV_CVX.csv
+ Asset B (XOM): /Users/rayyanwaseem/Desktop/Projects/MRJD-and-Hawkes-for-Pairs-Trading/OHLCV_XOM.csv
+Successfully loaded data
+ Asset A (CVX): 1958 observations
+ Asset B (XOM): 1958 observations
+ Date range: 2018-05-01 00:00:00+00:00 to 2026-02-12 00:00:00+00:00
+Cleaning data...
+ Cleaned data: 1957 observations remaining
+Constructing spread using cointegration method
+Spread constructed with the mean hedge ratio: 0.7427
+Spread range: [-4.7784, 6.5533]
+Spread mean: 1.6080
+Spread std: 1.5968
+
+ Spread Statistics (CVX/XOM)
+    Mean: 1.6080
+    Std: 1.5968
+    Half-life: 47.19 days
+    Stationary: True
+
+ [Step 2/8] Pair Validation
+----------------------------------------------------------------------
+
+======================================================================
+PAIR VALIDATION
+======================================================================
+
+1. Stationarity Test (ADF):
+   ADF Statistic: -9.3938
+   P-value: 0.0000
+   Stationary: ✓ YES
+
+2. Mean Reversion Half-Life:
+   Half-life: 47.2 days
+   Acceptable range: 5-60 days
+   Within range: ✓ YES
+
+3. Mean Stability Check:
+   Long-term mean drift: 0.2072
+   Stable mean: ✓ YES
+
+4. Spread Range Analysis:
+   Range: 11.3317
+   Standard deviation: 1.5968
+   Range in std units: 7.1
+   Reasonable range (<10 std): ✓ YES
+
+5. Recent vs Historical Mean:
+   Overall mean: 1.6080
+   Recent 1yr mean: 1.4677
+   Shift in std: 0.09
+   No recent regime change: ✓ YES
+
+----------------------------------------------------------------------
+OVERALL ASSESSMENT:
+✓ PAIR IS SUITABLE FOR MEAN-REVERSION TRADING
+======================================================================
+
+ [Step 3/8] Jump Detection
+----------------------------------------------------------------------
+Using window size: 20 periods
+Detecting jumps using Bipower Variation
+Detected 140 jumps (7.16% of observations)
+
+ Jump Statistics
+    Total Jumps: 140
+    Jump Frequency: 0.0716
+    Clustering coefficient: 0.8786
+
+ [Step 4/8] Hawkes Process Calibration
+----------------------------------------------------------------------
+Fitting Hawkes process using MLE
+ Hawkes parameters estimate: 
+ λ̄ (baseline intensity): 0.0063
+ α (jump impact): 0.2027
+ β_H (decay rate): 0.2434
+ Branching ratio (α/β_H): 0.8326
+
+ Jump Intensity Statistics:
+    Mean λ: 0.045365
+    90th percentile: 0.076405
+
+ [Step 5/8] MRJD Model Estimation
+----------------------------------------------------------------------
+Fitting the MRJD model
+ Step 1: Estimating OU params from continous periods
+
+======================================================================
+Critical: MRJD Half Life Mismatch Detected
+======================================================================
+    MRJD estimated half-life: 0.2 days
+    Empirical half-life: 47.2 days
+    Relative error: 99.7%
+    Discrepancy: 47.0 days
+
+ Overiding MRJD kappa with the empirical estimate instead
+
+ Corrected kappa: 4.365425 -> 0.014699
+ Corrected half-life: 0.2 days -> 47.2 days
+======================================================================
+
+ Step 2: Estimating jump distribution
+ Step 3: Joint MLE refinement
+Warning: Skipping joint MLE to preserve the validated kappa
+ (Joint MLE tends to overfit and revert to the incorrect parameters)
+MRJD Model Parameters:
+ κ (mean reversion speed): 0.0147
+ θ (long-run mean): 1.5858
+ σ (diffusive volatility): 4.752352
+  μ_J (jump mean): 0.0838
+  σ_J (jump volatility): 0.2651
+
+ [Step 6/8] Signal Generation Diagnostics
+----------------------------------------------------------------------
+
+ Z-Score Comparison:
+    Empirical Z-score range: [-5.23, 3.62]
+    Empirical Z-score std: 1.28
+
+======================================================================
+SIGNAL GENERATION DIAGNOSTICS
+======================================================================
+
+Total observations: 1957
+
+Z-Score Statistics:
+  mean: -0.0409
+  std: 1.2808
+  min: -5.2253
+  max: 3.6191
+  pct_above_entry: 11.0373
+  pct_below_neg_entry: 13.3878
+
+Lambda (Jump Intensity) Statistics:
+  mean: 0.045365
+  std: 0.127107
+  min: 0.006308
+  max: 0.638227
+  pct_below_threshold: 90.495657
+
+Entry Opportunities:
+  long_signals_possible: 245
+  short_signals_possible: 199
+  total_opportunities: 444
+  pct_of_data: 22.69
+
+Recommended Thresholds (based on data):
+  z_entry: 1.9211
+  lambda_threshold: 0.0071
+======================================================================
+
+ [Step 7/8] Trading Signal Generation
+----------------------------------------------------------------------
+Generating improved jump-aware trading signals
+Generated 104 total signals:
+    - Long Entries: 28
+    - Short Entries: 24
+    - Closes: 52
+
+ Signal Quality:
+    Time in Market: 46.65%
+    Entry Discipline: 92.89%
+
+ [Step 8/8] Backtesting (Dollar-Neutral)
+----------------------------------------------------------------------
+Running backtest (V2 - Dollar Neutral)...
+  Hedge ratio (for spread construction): 0.7427
+  Position sizing: Dollar-neutral (equal $ per leg)
+  Max position: 25% of capital
+  Stop loss: 5.0%
+✓ Backtest Complete!
+    - Total Trades: 52
+    - Final Equity: $1,060,293.27
+    - Total Return: 6.03%
+    - Exit reasons: {'signal': 52}
+Calculating performance metrics
+Performance metrics calculated
+ Calm regime: 44 trades
+ Volatile regime: 8 trades
+
+======================================================================
+Pipeline Complete - Generating Summary
+======================================================================
+
+======================================================================
+Performance Summary
+======================================================================
+
+ Returns
+    Total Return: 6.03%
+    Annualized Return: 0.76%
+    Volatility (annualized): 1.36%
+
+ Risk-Adjusted Metrics:
+    Sharpe Ratio: -0.907
+    Sortino Ratio: -1.026
+    Max Drawdown: -1.61%
+
+ Trading Activity:
+    Total Trades: 52
+    Win Rate: 55.77%
+    Profit Factor: 1.86
+    Avg Trade Duration: 25.5 days
+
+ Key Fixes Applied:
+    ✓ Dollar-neutral positions
+    ✓ P&L-based stop loss (5%)
+    ✓ Conservative position sizing (25% max)
+
+Saving results to /Users/rayyanwaseem/Desktop/Projects/MRJD-and-Hawkes-for-Pairs-Trading/outputs_v3...
+✓ Results saved successfully
+
+======================================================================
+✓ PIPELINE EXECUTION COMPLETE (V3)
+======================================================================
+(venv) (base) rayyanwaseem@Rayyans-MacBook-Pro MRJD-and-Hawkes-for-Pairs-Trading % 

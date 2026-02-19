@@ -175,7 +175,7 @@ class SelfExcitingPairsTradingV3:
 
         print("\n" + "=" * 70)
         print("Self-Exciting Pairs Trading System V3")
-        print("NVDA/AMD Equity Pairs Strategy (Dollar-Neutral)")
+        print("SPY/IVV Equity Pairs Strategy (Dollar-Neutral)")
         print("=" * 70)
 
         # Step 1: Data Acquisition
@@ -260,7 +260,7 @@ class SelfExcitingPairsTradingV3:
             self.spread_df['spread']
         )
 
-        print(f"\n Spread Statistics (NVDA/AMD)")
+        print(f"\n Spread Statistics (SPY/IVV)")
         print(f"    Mean: {stats['mean']:.4f}")
         print(f"    Std: {stats['std']:.4f}")
         print(f"    Half-life: {stats['half_life']:.2f} days")
@@ -507,7 +507,7 @@ class SelfExcitingPairsTradingV3:
         if not self.pair_validation.get('is_tradeable', True):
             print(f"\n ⚠ PAIR QUALITY WARNING:")
             print(f"    This pair has structural issues.")
-            print(f"    Consider testing with XOM/CVX or other stable pairs.")
+            print(f"    Consider testing with IVV/SPY or other stable pairs.")
         
     def save_results(self, output_dir: Optional[str] = None):
         """Save results"""

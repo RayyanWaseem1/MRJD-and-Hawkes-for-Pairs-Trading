@@ -19,10 +19,10 @@ PROJECT_ROOT = Path(__file__).resolve().parent
 @dataclass
 class DataConfig:
     """Data acquisition and processing params"""
-    asset_a_symbol: str = "NVDA"
-    asset_b_symbol: str = "AMD"
-    asset_a_csv: str = str(PROJECT_ROOT / "OHLCV_NVDA.csv")
-    asset_b_csv: str = str(PROJECT_ROOT / "OHLCV_AMD.csv")
+    asset_a_symbol: str = "SPY"
+    asset_b_symbol: str = "IVV"
+    asset_a_csv: str = str(PROJECT_ROOT / "OHLCV_SPY.csv")
+    asset_b_csv: str = str(PROJECT_ROOT / "OHLCV_IVV.csv")
     frequency: str = "1d"
     date_columns: str = "ts_event"
     hedge_ratio_method: str = 'cointegration'

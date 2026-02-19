@@ -474,7 +474,7 @@ class HawkesProcess:
     
 if __name__ == "__main__":
     """
-    Test Hawkes process calibration on NVDA/AMD equity pairs
+    Test Hawkes process calibration on SPY/IVV equity pairs
     """
     import sys
     import os
@@ -489,18 +489,18 @@ if __name__ == "__main__":
     from jump_detector import JumpDetector
     
     print("="*70)
-    print("HAWKES PROCESS CALIBRATION TEST - NVDA/AMD EQUITY PAIRS")
+    print("HAWKES PROCESS CALIBRATION TEST - SPY/IVV EQUITY PAIRS")
     print("="*70)
     
     # Initialize data pipeline
-    print("\n[1] Loading NVDA/AMD data from CSV files...")
+    print("\n[1] Loading SPY/IVV data from CSV files...")
     pipeline = EquityPairsDataPipeline()
     
     # Try to load CSV files from multiple possible locations
     csv_paths = [
-        (os.path.join(current_dir, 'OHLCV_NVDA.csv'),
-         os.path.join(current_dir, 'OHLCV_AMD.csv')),  # Script directory
-        ('OHLCV_NVDA.csv', 'OHLCV_AMD.csv'),  # Current directory
+        (os.path.join(current_dir, 'OHLCV_SPY.csv'),
+         os.path.join(current_dir, 'OHLCV_IVV.csv')),  # Script directory
+        ('OHLCV_SPY.csv', 'OHLCV_IVV.csv'),  # Current directory
     ]
     
     data_loaded = False
@@ -588,7 +588,7 @@ if __name__ == "__main__":
     if n_jumps < 2:
         print("\n⚠ Warning: Too few jumps for reliable Hawkes calibration")
         print(f"  Minimum 2 jumps required, found only {n_jumps}")
-        print("  This is actually good - shows stable NVDA/AMD relationship!")
+        print("  This is actually good - shows stable SPY/IVV relationship!")
         
         # Still fit with dummy parameters for demonstration
         hawkes = HawkesProcess()
@@ -656,7 +656,7 @@ if __name__ == "__main__":
                    color='red', s=100, marker='x', zorder=5, 
                    label=f'Detected Jumps (n={n_jumps})')
     axes[0].set_ylabel('Spread')
-    axes[0].set_title('NVDA/AMD Spread with Detected Jumps', fontsize=14, fontweight='bold')
+    axes[0].set_title('SPY/IVV Spread with Detected Jumps', fontsize=14, fontweight='bold')
     axes[0].legend(loc='upper right')
     axes[0].grid(True, alpha=0.3)
     
@@ -707,7 +707,7 @@ if __name__ == "__main__":
     print("\n" + "="*70)
     print("SUMMARY")
     print("="*70)
-    print(f"\nData: NVDA/AMD spread ({len(spread_df)} days)")
+    print(f"\nData: SPY/IVV spread ({len(spread_df)} days)")
     print(f"Date range: {spread_df.index[0].date()} to {spread_df.index[-1].date()}")
     print(f"\nJump Detection:")
     print(f"  Total jumps: {n_jumps}")

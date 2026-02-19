@@ -1,0 +1,2 @@
+is_tradeable,is_stationary,adf_pvalue,half_life,half_life_ok,stable_mean,mean_drift,range_in_std,reasonable_range,no_regime_change,mean_shift
+True,True,6.453567917723762e-16,47.19179403857496,True,True,0.20723435868471302,7.096344509695843,True,True,0.08785030176442503
