@@ -474,7 +474,7 @@ class HawkesProcess:
     
 if __name__ == "__main__":
     """
-    Test Hawkes process calibration on SPY/IVV equity pairs
+    Test Hawkes process calibration on GDX/GLD equity pairs
     """
     import sys
     import os
@@ -489,18 +489,18 @@ if __name__ == "__main__":
     from jump_detector import JumpDetector
     
     print("="*70)
-    print("HAWKES PROCESS CALIBRATION TEST - SPY/IVV EQUITY PAIRS")
+    print("HAWKES PROCESS CALIBRATION TEST - GDX/GLD EQUITY PAIRS")
     print("="*70)
     
     # Initialize data pipeline
-    print("\n[1] Loading SPY/IVV data from CSV files...")
+    print("\n[1] Loading GDX/GLD data from CSV files...")
     pipeline = EquityPairsDataPipeline()
     
     # Try to load CSV files from multiple possible locations
     csv_paths = [
-        (os.path.join(current_dir, 'OHLCV_SPY.csv'),
-         os.path.join(current_dir, 'OHLCV_IVV.csv')),  # Script directory
-        ('OHLCV_SPY.csv', 'OHLCV_IVV.csv'),  # Current directory
+        (os.path.join(current_dir, 'OHLCV_GDX.csv'),
+         os.path.join(current_dir, 'OHLCV_GLD.csv')),  # Script directory
+        ('OHLCV_GDX.csv', 'OHLCV_GLD.csv'),  # Current directory
     ]
     
     data_loaded = False
@@ -515,7 +515,7 @@ if __name__ == "__main__":
                 continue
     
     if not data_loaded:
-        print("✗ Could not find CSV files. Testing with simulated data instead...")
+        print("Could not find CSV files. Testing with simulated data instead...")
         print("\n" + "="*70)
         print("SIMULATED DATA TEST")
         print("="*70)
@@ -533,7 +533,7 @@ if __name__ == "__main__":
         T = 100
         simulated_jumps = hawkes.simulate(T, **true_params)
         
-        print(f"\n✓ Simulated {len(simulated_jumps)} jumps over period T={T}")
+        print(f"\nSimulated {len(simulated_jumps)} jumps over period T={T}")
         
         # Fit to simulated data
         print("\nFitting Hawkes process to simulated data...")
@@ -583,12 +583,12 @@ if __name__ == "__main__":
     jump_times_numeric = (jump_times - spread_df.index[0]).days.values
     
     n_jumps = len(jump_times)
-    print(f"✓ Detected {n_jumps} jumps ({100*n_jumps/len(returns):.2f}%)")
+    print(f"Detected {n_jumps} jumps ({100*n_jumps/len(returns):.2f}%)")
     
     if n_jumps < 2:
-        print("\n⚠ Warning: Too few jumps for reliable Hawkes calibration")
+        print("\nWarning: Too few jumps for reliable Hawkes calibration")
         print(f"  Minimum 2 jumps required, found only {n_jumps}")
-        print("  This is actually good - shows stable SPY/IVV relationship!")
+        print("  This is actually good - shows stable GDX/GLD relationship!")
         
         # Still fit with dummy parameters for demonstration
         hawkes = HawkesProcess()
@@ -597,7 +597,7 @@ if __name__ == "__main__":
             'alpha': 0.1,
             'beta': 1.0
         }
-        print("\n✓ Using baseline Hawkes parameters (minimal self-excitation)")
+        print("\nUsing baseline Hawkes parameters (minimal self-excitation)")
         sys.exit(0)
     
     # Fit Hawkes process to real jump times
@@ -609,19 +609,19 @@ if __name__ == "__main__":
     try:
         params = hawkes.fit(jump_times_numeric, T, method='MLE')
         
-        print(f"\n✓ Hawkes Process Parameters (Real Data):")
+        print(f"\nHawkes Process Parameters (Real Data):")
         print(f"  λ̄ (baseline):    {params['lambda_bar']:.6f}")
         print(f"  α (excitation):  {params['alpha']:.6f}")
         print(f"  β (decay):       {params['beta']:.6f}")
         print(f"  Branching ratio: {hawkes.branching_ratio():.6f}")
         
         if hawkes.branching_ratio() >= 1.0:
-            print("  ⚠ WARNING: Branching ratio ≥ 1 (explosive process)")
+            print("  WARNING: Branching ratio ≥ 1 (explosive process)")
         else:
-            print("  ✓ Stationary process (branching ratio < 1)")
+            print("  Stationary process (branching ratio < 1)")
         
     except Exception as e:
-        print(f"✗ Fitting failed: {str(e)}")
+        print(f"Fitting failed: {str(e)}")
         print("  This can happen with very sparse jumps")
         sys.exit(1)
     
@@ -641,7 +641,7 @@ if __name__ == "__main__":
                                       alpha=params['alpha'],
                                       beta=params['beta'])
     
-    print(f"✓ Simulated {len(simulated_jumps)} jumps over next {T_future} days")
+    print(f"  Simulated {len(simulated_jumps)} jumps over next {T_future} days")
     print(f"  Expected jumps per year: {len(simulated_jumps)}")
     print(f"  Average inter-jump time: {T_future/max(1, len(simulated_jumps)):.1f} days")
     
@@ -656,7 +656,7 @@ if __name__ == "__main__":
                    color='red', s=100, marker='x', zorder=5, 
                    label=f'Detected Jumps (n={n_jumps})')
     axes[0].set_ylabel('Spread')
-    axes[0].set_title('SPY/IVV Spread with Detected Jumps', fontsize=14, fontweight='bold')
+    axes[0].set_title('GDX/GLD Spread with Detected Jumps', fontsize=14, fontweight='bold')
     axes[0].legend(loc='upper right')
     axes[0].grid(True, alpha=0.3)
     
@@ -698,8 +698,10 @@ if __name__ == "__main__":
     
     plt.tight_layout()
     
-    # Save figure
-    output_path = 'hawkes_calibration_test_xom_cvx.png'
+    # Save figure to the same folder used by performance metrics
+    output_dir = os.path.join(current_dir, 'outputs')
+    os.makedirs(output_dir, exist_ok=True)
+    output_path = os.path.join(output_dir, 'hawkes_calibration_test_xom_cvx.png')
     plt.savefig(output_path, dpi=300, bbox_inches='tight')
     print(f"✓ Visualization saved: {output_path}")
     
@@ -707,7 +709,7 @@ if __name__ == "__main__":
     print("\n" + "="*70)
     print("SUMMARY")
     print("="*70)
-    print(f"\nData: SPY/IVV spread ({len(spread_df)} days)")
+    print(f"\nData: GDX/GLD spread ({len(spread_df)} days)")
     print(f"Date range: {spread_df.index[0].date()} to {spread_df.index[-1].date()}")
     print(f"\nJump Detection:")
     print(f"  Total jumps: {n_jumps}")
@@ -720,5 +722,5 @@ if __name__ == "__main__":
     print(f"\nGoodness of Fit:")
     print(f"  KS p-value: {gof['ks_pvalue']:.4f}")
     print(f"  Fit quality: {'Good ✓' if gof['is_good_fit'] else 'Poor ✗'}")
-    print(f"\n✓ All tests completed successfully!")
+    print(f"\nAll tests completed successfully!")
     print("="*70)

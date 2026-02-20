@@ -1,11 +1,11 @@
 (venv) (base) rayyanwaseem@Rayyans-MacBook-Pro MRJD-and-Hawkes-for-Pairs-Trading % python main.py
 
 ======================================================================
-Self-Exciting Pairs Trading System V3
+Self-Exciting Pairs Trading System
 NVDA/AMD Equity Pairs Strategy (Dollar-Neutral)
 ======================================================================
 
- [Step 1/8] Data Acquisition
+ [Step 1/9] Data Acquisition
 ----------------------------------------------------------------------
 Loading equity pairs data from the CSV files...
  Asset A (NVDA): /Users/rayyanwaseem/Desktop/Projects/MRJD-and-Hawkes-for-Pairs-Trading/OHLCV_NVDA.csv
@@ -28,7 +28,7 @@ Spread std: 9.4931
     Half-life: 26.01 days
     Stationary: True
 
- [Step 2/8] Pair Validation
+ [Step 2/9] Pair Validation
 ----------------------------------------------------------------------
 
 ======================================================================
@@ -38,44 +38,43 @@ PAIR VALIDATION
 1. Stationarity Test (ADF):
    ADF Statistic: -7.2964
    P-value: 0.0000
-   Stationary: ✓ YES
+   Stationary:  YES
 
 2. Mean Reversion Half-Life:
    Half-life: 26.0 days
    Acceptable range: 5-60 days
-   Within range: ✓ YES
+   Within range:  YES
 
 3. Mean Stability Check:
    Long-term mean drift: 0.2461
-   Stable mean: ✓ YES
+   Stable mean:  YES
 
 4. Spread Range Analysis:
    Range: 194.0781
-   Standard deviation: 9.4931
    Range in std units: 20.4
-   Reasonable range (<10 std): ✗ NO (extreme moves)
+   Reasonable range (<10 std):  NO (extreme moves)
 
 5. Recent vs Historical Mean:
    Overall mean: 2.2513
    Recent 1yr mean: 2.2670
    Shift in std: 0.00
-   No recent regime change: ✓ YES
+   No recent regime change:  YES
 
 ----------------------------------------------------------------------
 OVERALL ASSESSMENT:
-⚠ PAIR HAS ISSUES - TRADING NOT RECOMMENDED
+ PAIR HAS ISSUES - TRADING NOT RECOMMENDED
 
 Issues detected:
   - Spread has extreme moves (20.4 std)
 ======================================================================
 
 ⚠ WARNING: Pair validation failed!
-Continuing anyway for educational purposes...
-In production, you should choose a different pair.
+Continuing anyway for analysis...
 
-
- [Step 3/8] Jump Detection
+ [Step 3/9] Jump Detection
 ----------------------------------------------------------------------
+Detecting jumps using Bipower Variation
+Detected 157 jumps (8.03% of observations)
 Using window size: 20 periods
 Detecting jumps using Bipower Variation
 Detected 157 jumps (8.03% of observations)
@@ -85,8 +84,14 @@ Detected 157 jumps (8.03% of observations)
     Jump Frequency: 0.0803
     Clustering coefficient: 0.8790
 
- [Step 4/8] Hawkes Process Calibration
+ [Step 4/9] Hawkes Process Calibration
 ----------------------------------------------------------------------
+Fitting Hawkes process using MLE
+ Hawkes parameters estimate: 
+ λ̄ (baseline intensity): 0.0074
+ α (jump impact): 0.2187
+ β_H (decay rate): 0.2607
+ Branching ratio (α/β_H): 0.8388
 Fitting Hawkes process using MLE
  Hawkes parameters estimate: 
  λ̄ (baseline intensity): 0.0074
@@ -98,8 +103,34 @@ Fitting Hawkes process using MLE
     Mean λ: 0.051554
     90th percentile: 0.128061
 
- [Step 5/8] MRJD Model Estimation
+ [Step 5/9] Hawkes Suitability Analysis
 ----------------------------------------------------------------------
+
+======================================================================
+HAWKES SUITABILITY ANALYSIS
+======================================================================
+
+1. Jump Frequency: 8.0%
+   MODERATE - Hawkes can help with regime detection
+
+2. Branching Ratio (α/β): 0.839
+   GOOD - Strong jump clustering, Hawkes very useful
+
+3. λ Coefficient of Variation: 2.62
+   HIGH - Strong regime variation, Hawkes valuable
+
+4. Time in Elevated State: 11.5%
+   GOOD - Meaningful time in elevated regimes
+
+----------------------------------------------------------------------
+OVERALL HAWKES SUITABILITY SCORE: 0.88/1.00
+RECOMMENDATION: EXCELLENT - Hawkes should significantly improve timing
+======================================================================
+
+ [Step 6/9] MRJD Model Estimation
+----------------------------------------------------------------------
+Fitting the MRJD model
+ Step 1: Estimating OU params from continous periods
 Fitting the MRJD model
  Step 1: Estimating OU params from continous periods
 
@@ -127,8 +158,17 @@ MRJD Model Parameters:
  σ (diffusive volatility): 5.000000
   μ_J (jump mean): 0.0783
   σ_J (jump volatility): 0.3203
+ Step 2: Estimating jump distribution
+ Step 3: Joint MLE refinement
+Warning: Skipping joint MLE to preserve the validated kappa
+MRJD Model Parameters:
+ κ (mean reversion speed): 0.0267
+ θ (long-run mean): 2.2783
+ σ (diffusive volatility): 5.000000
+  μ_J (jump mean): 0.0783
+  σ_J (jump volatility): 0.3203
 
- [Step 6/8] Signal Generation Diagnostics
+ [Step 7/9] Signal Generation Diagnostics
 ----------------------------------------------------------------------
 
  Z-Score Comparison:
@@ -146,55 +186,81 @@ Z-Score Statistics:
   std: 1.3450
   min: -5.1351
   max: 4.2997
-  pct_above_entry: 11.1395
-  pct_below_neg_entry: 12.6214
+  pct_above_entry: 6.0807
+  pct_below_neg_entry: 6.3362
 
 Lambda (Jump Intensity) Statistics:
   mean: 0.051554
   std: 0.134825
   min: 0.007419
   max: 0.644880
-  pct_below_threshold: 89.371487
+  pct_below_threshold: 90.700051
 
 Entry Opportunities:
-  long_signals_possible: 215
-  short_signals_possible: 206
-  total_opportunities: 421
-  pct_of_data: 21.51
+  long_signals_possible: 108
+  short_signals_possible: 114
+  total_opportunities: 222
+  pct_of_data: 11.34
 
 Recommended Thresholds (based on data):
   z_entry: 2.0176
   lambda_threshold: 0.0094
 ======================================================================
 
- [Step 7/8] Trading Signal Generation
+ [Step 8/9] Trading Signal Generation
 ----------------------------------------------------------------------
 Generating improved jump-aware trading signals
-Generated 117 total signals:
-    - Long Entries: 30
-    - Short Entries: 29
-    - Closes: 58
+  Using full Hawkes regime detection
+  Half-life calibration:
+    Spread half-life: 26.0 days
+    Min hold period: 13 days
+    Target hold: 20 days
+    Max hold period: 39 days
+Generating optimized Hawkes-aware trading signals...
+  Half-life calibration:
+    Spread half-life: 26.0 days
+    Min hold period: 13 days
+    Target hold: 20 days
+    Max hold period: 39 days
+  λ percentiles: p25=0.0074, p75=0.0076, p90=0.1281
+Generated 16 total signals:
+    - Long Entries: 5
+    - Short Entries: 3
+    - Closes: 8
+
+  Hawkes Filtering Impact:
+    Entries blocked by CRISIS regime: 5
+    Entries blocked by λ not decaying: 174
+    Exits triggered by regime escalation: 1
 
  Signal Quality:
-    Time in Market: 49.62%
-    Entry Discipline: 90.54%
+    Time in Market: 6.80%
+    Entry Discipline: 62.50%
 
- [Step 8/8] Backtesting (Dollar-Neutral)
+ [Step 9/9] Backtesting (Trailing Stops)
 ----------------------------------------------------------------------
-Running backtest (V2 - Dollar Neutral)...
+Running backtest...
   Hedge ratio (for spread construction): 0.7231
   Position sizing: Dollar-neutral (equal $ per leg)
   Max position: 25% of capital
-  Stop loss: 5.0%
-✓ Backtest Complete!
-    - Total Trades: 59
-    - Final Equity: $789,338.51
-    - Total Return: -21.07%
-    - Exit reasons: {'signal': 32, 'stop_loss': 22, 'profit_target': 5}
-Calculating performance metrics
+  Stop loss: 3.0%
+  Trailing stop: 1.5%
+  Backtest half-life: 26.0 days
+Running backtest
+  Hedge ratio (spread construction): 0.7231
+  Position sizing: Dollar-neutral
+  Max position: 25%
+  Hard stop: 3.0%
+  Trailing stop: 1.5% (activates at 1.0%)
+  Profit target: 6.0%
+Backtest Complete!
+    - Total Trades: 8
+    - Final Equity: $989,043.11
+    - Total Return: -1.10%
+    - Exit reasons: {'signal': 3, 'stop_loss': 2, 'trailing_stop': 3}
 Performance metrics calculated
- Calm regime: 53 trades
- Volatile regime: 6 trades
+ Calm regime: 4 trades
+ Volatile regime: 4 trades
 
 ======================================================================
 Pipeline Complete - Generating Summary
@@ -205,34 +271,45 @@ Performance Summary
 ======================================================================
 
  Returns
-    Total Return: -21.07%
-    Annualized Return: -3.00%
-    Volatility (annualized): 5.15%
+    Total Return: -1.10%
+    Annualized Return: -0.14%
+    Volatility (annualized): 0.49%
 
  Risk-Adjusted Metrics:
-    Sharpe Ratio: -0.954
-    Sortino Ratio: -0.555
-    Max Drawdown: -24.46%
+    Sharpe Ratio: -4.338
+    Sortino Ratio: -0.868
+    Max Drawdown: -1.33%
 
  Trading Activity:
-    Total Trades: 59
-    Win Rate: 40.68%
-    Profit Factor: 0.52
-    Avg Trade Duration: 18.7 days
+    Total Trades: 8
+    Win Rate: 62.50%
+    Profit Factor: 0.44
+    Avg Trade Duration: 11.5 days
+    Expected Value/Trade: -0.350%
 
- Key Fixes Applied:
-    ✓ Dollar-neutral positions
-    ✓ P&L-based stop loss (5%)
-    ✓ Conservative position sizing (25% max)
+ Key Optimizations Applied:
+    Dollar-neutral positions
+    Half-life aware exits (26.0d)
+    Trailing stop losses (1.5%)
+    Hawkes regime detection: True
 
- ⚠ PAIR QUALITY WARNING:
+ Exit Reason Breakdown:
+    signal: 3 trades, 66.7% win rate
+    stop_loss: 2 trades, 0.0% win rate
+    trailing_stop: 3 trades, 100.0% win rate
+
+ Hawkes Utilization:
+    Suitability Score: 0.88/1.00
+    Recommendation: EXCELLENT - Hawkes should significantly improve timing
+
+ PAIR QUALITY WARNING:
     This pair has structural issues.
-    Consider testing with XOM/CVX or other stable pairs.
 
-Saving results to /Users/rayyanwaseem/Desktop/Projects/MRJD-and-Hawkes-for-Pairs-Trading/outputs_v3...
-✓ Results saved successfully
+Saving results to /Users/rayyanwaseem/Desktop/Projects/MRJD-and-Hawkes-for-Pairs-Trading/outputs...
+Saved jump visualization: /Users/rayyanwaseem/Desktop/Projects/MRJD-and-Hawkes-for-Pairs-Trading/outputs/jump_detection.png
+Saved Hawkes visualization: /Users/rayyanwaseem/Desktop/Projects/MRJD-and-Hawkes-for-Pairs-Trading/outputs/hawkes_intensity.png
+Results saved successfully
 
 ======================================================================
-✓ PIPELINE EXECUTION COMPLETE (V3)
+PIPELINE EXECUTION COMPLETE
 ======================================================================
-(venv) (base) rayyanwaseem@Rayyans-MacBook-Pro MRJD-and-Hawkes-for-Pairs-Trading % 

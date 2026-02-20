@@ -1,5 +1,5 @@
 """
-Data pipeline for loading equity pairs (SPY and IVV)
+Data pipeline for loading equity pairs (GDX and GLD)
 """
 
 import numpy as np
@@ -12,7 +12,7 @@ warnings.filterwarnings('ignore')
 
 class EquityPairsDataPipeline:
     """
-    Data preprocessing for equity pairs (SPY and IVV)
+    Data preprocessing for equity pairs (GDX and GLD)
 
     """
 
@@ -58,11 +58,11 @@ class EquityPairsDataPipeline:
             raise ValueError("Both asset_a_path and asset_b_path must be provided")
 
         print(f"Loading equity pairs data from the CSV files...")
-        print(f" Asset A (SPY): {asset_a_path}")
-        print(f" Asset B (IVV): {asset_b_path}")
+        print(f" Asset A (GDX): {asset_a_path}")
+        print(f" Asset B (GLD): {asset_b_path}")
 
         try:
-            #loading Asset A (SPY)
+            #loading Asset A (GDX)
             asset_a = pd.read_csv(asset_a_path)
 
             #handling date column
@@ -85,7 +85,7 @@ class EquityPairsDataPipeline:
             #ensure proper column names (case-insensitive)
             asset_a.columns = [col.capitalize() for col in asset_a.columns]
 
-            #loading Asset B (IVV)
+            #loading Asset B (GLD)
             asset_b = pd.read_csv(asset_b_path)
 
             #handling date column
@@ -121,8 +121,8 @@ class EquityPairsDataPipeline:
             }
 
             print("Successfully loaded data")
-            print(f" Asset A (SPY): {len(asset_a)} observations")
-            print(f" Asset B (IVV): {len(asset_b)} observations")
+            print(f" Asset A (GDX): {len(asset_a)} observations")
+            print(f" Asset B (GLD): {len(asset_b)} observations")
             print(f" Date range: {asset_a.index[0]} to {asset_a.index[-1]}")
 
             return self.data
@@ -253,9 +253,9 @@ class EquityPairsDataPipeline:
 
         Params:
         -asset_a: pd.Series
-            -Asset A prices (SPY)
+            -Asset A prices (GDX)
         -asset_b: pd.Series
-            -Asset B prices (IVV)
+            -Asset B prices (GLD)
         -lookback: int
             -rolling window size (in days)
 
@@ -289,9 +289,9 @@ class EquityPairsDataPipeline:
 
         Params:
         - asset_a: pd.Series
-            -Asset A prices (SPY)
+            -Asset A prices (GDX)
         - asset_b: pd.Series
-            - Asset B prices (IVV)
+            - Asset B prices (GLD)
         - lookback: int
             - rolling window size
 
@@ -369,7 +369,7 @@ class EquityPairsDataPipeline:
 if __name__ == "__main__":
     #testing the equity pairs pipeline 
     print("=" * 70)
-    print("Equity Pairs Data Pipeline Test (SPY/IVV)")
+    print("Equity Pairs Data Pipeline Test (GDX/GLD)")
     print("="*70)
 
     #initialize pipelife
@@ -380,8 +380,8 @@ if __name__ == "__main__":
     try:
         #load data
         data = pipeline.load_from_csv(
-            asset_a_path = str(current_dir / 'OHLCV_SPY.csv'),
-            asset_b_path = str(current_dir / 'OHLCV_IVV.csv')
+            asset_a_path = str(current_dir / 'OHLCV_GDX.csv'),
+            asset_b_path = str(current_dir / 'OHLCV_GLD.csv')
         )
 
         #Clean data
@@ -394,7 +394,7 @@ if __name__ == "__main__":
         stats = pipeline.calculate_spread_statistics(spread_df['spread'])
 
         print("\n" + "=" * 70)
-        print("Spread Statistics (SPY/IVV)")
+        print("Spread Statistics (GDX/GLD)")
         print("=" * 70)
 
         for key, value in stats.items():
@@ -408,7 +408,7 @@ if __name__ == "__main__":
 
     except FileNotFoundError:
         print("\n CSV not found")
-        print("Please ensure OHLCV_SPY.csv and OHLCV_IVV.csv are in correct path")
+        print("Please ensure OHLCV_GDX.csv and OHLCV_GLD.csv are in correct path")
     except Exception as e:
         print(f"\n Error: {str(e)}")
 

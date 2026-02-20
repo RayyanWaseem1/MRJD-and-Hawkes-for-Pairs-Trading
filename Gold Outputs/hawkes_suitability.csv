@@ -1,0 +1,2 @@
+overall_score,jump_frequency,branching_ratio,lambda_cv,time_elevated,recommendation,use_hawkes_regimes
+0.75,0.013775510204081633,0.6975510464777505,4.890355874849182,1.0,GOOD - Hawkes useful for regime detection and filtering,True

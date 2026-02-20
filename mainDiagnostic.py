@@ -67,7 +67,7 @@ class SelfExcitingPairsTrading:
 
         print("\n" + "=" * 70)
         print("Self Exciting Pairs Trading System")
-        print("SPY/IVV Equity Pairs Strategy")
+        print("GDX/GLD Equity Pairs Strategy")
         print("=" * 70)
 
         #Step 1: Data Acquisition
@@ -138,7 +138,7 @@ class SelfExcitingPairsTrading:
             self.spread_df['spread']
         )
 
-        print(f"\n Spread Statistics (SPY/IVV)")
+        print(f"\n Spread Statistics (GDX/GLD)")
         print(f"    Mean: {stats['mean']:.4f}")
         print(f"    Std: {stats['std']:.4f}")
         print(f"    Half-life: {stats['half_life']:.2f} days")
@@ -417,8 +417,8 @@ class SelfExcitingPairsTrading:
         self.equity_curve = self.backtest_engine.run_backtest(
             signals_df,
             spread_df,
-            asset_a_prices,  # SPY prices
-            asset_b_prices,  # IVV prices
+            asset_a_prices,  # GDX prices
+            asset_b_prices,  # GLD prices
             hedge_ratio=hedge_ratio
         )
 

@@ -535,7 +535,7 @@ class MRJDModel:
 
 if __name__ == "__main__":
     """
-    Test MRJD model estimation on SPY/IVV equity pairs
+    Test MRJD model estimation on GDX/GLD equity pairs
     """
     import sys
     import os
@@ -549,18 +549,18 @@ if __name__ == "__main__":
     from jump_detector import JumpDetector
     
     print("="*70)
-    print("MRJD MODEL ESTIMATION TEST - SPY/IVV EQUITY PAIRS")
+    print("MRJD MODEL ESTIMATION TEST - GDX/GLD EQUITY PAIRS")
     print("="*70)
     
     # Initialize data pipeline
-    print("\n[1] Loading SPY/IVV data from CSV files...")
+    print("\n[1] Loading GDX/GLD data from CSV files...")
     pipeline = EquityPairsDataPipeline()
     
     # Try to load CSV files from multiple possible locations
     csv_paths = [
-        (os.path.join(current_dir, 'OHLCV_SPY.csv'),
-         os.path.join(current_dir, 'OHLCV_IVV.csv')),  # Script directory
-        ('OHLCV_SPY.csv', 'OHLCV_IVV.csv'),  # Current directory
+        (os.path.join(current_dir, 'OHLCV_GDX.csv'),
+         os.path.join(current_dir, 'OHLCV_GLD.csv')),  # Script directory
+        ('OHLCV_GDX.csv', 'OHLCV_GLD.csv'),  # Current directory
     ]
     
     data_loaded = False
@@ -767,7 +767,7 @@ if __name__ == "__main__":
     print("\n" + "="*70)
     print("SUMMARY")
     print("="*70)
-    print(f"\nData: SPY/IVV spread ({len(spread)} days)")
+    print(f"\nData: GDX/GLD spread ({len(spread)} days)")
     print(f"Date range: {spread.index[0].date()} to {spread.index[-1].date()}")
     print(f"\nMRJD Model:")
     print(f"  Mean reversion speed: κ = {estimated_params['kappa']:.4f} (half-life {half_life:.2f} days)")
