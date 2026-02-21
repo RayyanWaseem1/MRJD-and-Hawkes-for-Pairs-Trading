@@ -564,4 +564,4 @@ if __name__ == "__main__":
         else:
             print(f"  {k}: {v}")
     
-    print("\n✓ Test complete!")
+    print("\n Test complete!")

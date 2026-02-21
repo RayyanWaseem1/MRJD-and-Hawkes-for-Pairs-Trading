@@ -23,106 +23,142 @@ My project differs from this literature by applying Hawkes modeling to daily fre
 ## Jump Detection and Mean-Reverting Jump Diffusion
 The detection of jumps in asset returns has been extensively studied following the development of bipower variation and related realized volatility estimators. Bipower variation, introduced by Barndorff-Nielsen and Shephard (2006), exploits the fact that the product of adjacent absolute returns scales differently under continous diffusion versus jump components. This test has become a standard for separating jumps from continous price variation and forms the foundation of my jump detection methodology. 
 
-Mean-reverting jump diffusion models extend the classical Ornstein-Uhlenbeck process to incorporate discrete jumps, providing a more realistic representation of spread dynamics in pairs trading. The general form equation of the MRJD process is given by: 
+Mean-reverting jump diffusion models extend the classical Ornstein-Uhlenbeck process to incorporate discrete jumps, providing a more realistic representation of spread dynamics in pairs trading. The general form equation of the MRJD process is given by:
 
-$dSt​=κ(θ−St​)dt+σdWt​+Jt​dNt​$
+$$
+dS_t = \kappa(\theta - S_t)\,dt + \sigma\,dW_t + J_t\,dN_t
+$$
 
-where κ represents the speed of mean reversion, θ is the long-run equilibrium level, σ captures diffusive volatility, Jt​ is the random jump size, and Nt​ is a counting process governing jump arrivals. The innovation in my approach is to model Nt​ not as a simple Poisson process but as a Hawkes process with time-varying intensity.
+where $\kappa$ represents the speed of mean reversion, $\theta$ is the long-run equilibrium level, $\sigma$ captures diffusive volatility, $J_t$ is the random jump size, and $N_t$ is a counting process governing jump arrivals. The innovation in my approach is to model $N_t$ not as a simple Poisson process but as a Hawkes process with time-varying intensity.
 
 ## Pairs Trading and Statistical Arbitrage 
 Pairs trading has a long history in quantitative finance. The application of cointegration methods to pairs trading provides a rigorous statistical foundation for identifying tradeable relationships. When two assets are cointegrated, their prices share a common stochastic trend, and any deviation from the equilibrium relationship is expected to be only temporary. However, as my results demonstrate, statistical cointegration is necessary, but not a sufficient condition for profitable trading. The edge must be large enough to survive the transaction costs and must not be arbitraged away by any competing strategies. 
 
 # Mathematical Framework 
 ## The Hawkes Process
-I began with a formal definition of the Hawkes self-exciting point process. Let *Nt​* denote a counting process representing the cumulative number of jumps up to time *t*. The Hawkes process is characterized by a conditional intensity function λ(t)\lambda(t)
-*λ(t)* that depends on the history of the process: 
+I began with a formal definition of the Hawkes self-exciting point process. Let $N_t$ denote a counting process representing the cumulative number of jumps up to time $t$. The Hawkes process is characterized by a conditional intensity function $\lambda(t)$ that depends on the history of the process:
 
-$λ(t)=λ0​+ti​<t∑​ϕ(t−ti​)$
+$$
+\lambda(t) = \lambda_0 + \sum_{t_i < t} \phi(t - t_i)
+$$
 
-where λ0​>0 is the baseline intensity representing the rate of "exogenous" events, and ϕ(⋅) is the excitation kernel that captures how past events influence current intensity. I adopted the exponential kernel specifications:
+where $\lambda_0 > 0$ is the baseline intensity representing the rate of "exogenous" events, and $\phi(\cdot)$ is the excitation kernel that captures how past events influence current intensity. I adopted the exponential kernel specification:
 
-$ϕ(s)=αe−βs,s>0$
+$$
+\phi(s) = \alpha e^{-\beta s}, \quad s > 0
+$$
 
-where α>0 is the jump impact parameter representing the instantaneous increase in intensity following a jump, and β>0 is the decay rate controlling how quickly the excitation effect dissipates. 
+where $\alpha > 0$ is the jump impact parameter representing the instantaneous increase in intensity following a jump, and $\beta > 0$ is the decay rate controlling how quickly the excitation effect dissipates.
 
 The complete intensity function under the exponential kernel is therefore:
 
-$λ(t)=λ0​+αti​<t∑​e−β(t−ti​)$
+$$
+\lambda(t) = \lambda_0 + \alpha \sum_{t_i < t} e^{-\beta(t - t_i)}
+$$
 
-This specification admits a convenient recursive representation. Definining the auxiliary process: 
+This specification admits a convenient recursive representation. Defining the auxiliary process:
 
-$Rt​=ti​<t∑​e−β(t−ti​)$
+$$
+R_t = \sum_{t_i < t} e^{-\beta(t - t_i)}
+$$
 
-Then $λ(t)=λ0+αRt$ and between jumps *Rt​* decays exponentially: $dRt​=−βRt​dt$. At each jump time *ti​*, we have $Rti+​​=Rti−​​+1$.
+Then $\lambda(t) = \lambda_0 + \alpha R_t$ and between jumps $R_t$ decays exponentially:
 
-The branching ratio, defined as $n∗=α/β$ plays a crucial role in the process dynamics. This quantity represents the expected number of "offspring" events triggered by each "parent" event. When $n∗<1$, the process is subcritical and stationary, with finite expected intensity. When $n∗≥1$, the process becomes critical or supercritical, with explosive behavior. Empirically, I observed branching ratios in the range 0.7-0.9 in the equity pairs that I tested on, indicating strong but subcritical self-excitation. 
+$$
+dR_t = -\beta R_t\,dt
+$$
+
+At each jump time $t_i$, we have $R_{t_i^+} = R_{t_i^-} + 1$.
+
+The branching ratio, defined as $n^* = \alpha/\beta$, plays a crucial role in the process dynamics. This quantity represents the expected number of "offspring" events triggered by each "parent" event. When $n^* < 1$, the process is subcritical and stationary, with finite expected intensity. When $n^* \geq 1$, the process becomes critical or supercritical, with explosive behavior. Empirically, I observed branching ratios in the range 0.7-0.9 in the equity pairs that I tested on, indicating strong but subcritical self-excitation.
 
 ## Maximum Likelihood Estimation
-The parameters *θ=(λ0​,α,β)* are estimated via maximum likelihood. Given a sequence of jump times *{t1​,t2​,…,tn​}* observed over the interval [0, T], the log likelihood function is: 
+The parameters $\theta = (\lambda_0, \alpha, \beta)$ are estimated via maximum likelihood. Given a sequence of jump times $\{t_1, t_2, \ldots, t_n\}$ observed over the interval $[0, T]$, the log-likelihood function is:
 
-$ℓ(θ)=i=1∑n​logλ(ti​)−∫0T​λ(s)ds$
+$$
+\ell(\theta) = \sum_{i=1}^{n} \log \lambda(t_i) - \int_0^T \lambda(s)\,ds
+$$
 
-The first term rewards high intensity at observed event times, while the second term penalizes high intensity in the absence of events. For the exponential kernel, the compensator integral admits a closed form: 
+The first term rewards high intensity at observed event times, while the second term penalizes high intensity in the absence of events. For the exponential kernel, the compensator integral admits a closed form:
 
-$∫0T​λ(s)ds=λ0​T+βα​i=1∑n​(1−e−β(T−ti​))$
+$$
+\int_0^T \lambda(s)\,ds = \lambda_0 T + \frac{\alpha}{\beta}\sum_{i=1}^{n}\left(1 - e^{-\beta(T - t_i)}\right)
+$$
 
-I optimized this likelihood numerically using the *L-BFGS-B* algorithm with bounds to ensure λ0​,α,β>0 and α<β (to ensure stationarity).
+I optimized this likelihood numerically using the `L-BFGS-B` algorithm with bounds to ensure $\lambda_0, \alpha, \beta > 0$ and $\alpha < \beta$ (to ensure stationarity).
 
 ## Mean-Reverting Jump Diffusion
-The spread between two cointegrated assets evolves according to a mean-reverting jump diffusion process. Let *St* denote the log-spread, defined as: 
+The spread between two cointegrated assets evolves according to a mean-reverting jump diffusion process. Let $S_t$ denote the log-spread, defined as:
 
-$St​=logPtA​−h⋅logPtB$
+$$
+S_t = \log P_t^A - h \log P_t^B
+$$
 
-Where PtA​ and PtB​ are the prices of the two assets and h is the cointegration hedge ratio estimated via ordinary least squares on the log prices.
+where $P_t^A$ and $P_t^B$ are the prices of the two assets and $h$ is the cointegration hedge ratio estimated via ordinary least squares on the log prices.
 
-The dynamics of St are modeled as: 
+The dynamics of $S_t$ are modeled as:
 
-$dSt​=κ(θ−St​)dt+σdWt​+Jt​dNt​$
+$$
+dS_t = \kappa(\theta - S_t)\,dt + \sigma\,dW_t + J_t\,dN_t
+$$
 
-The first term represents mean reversion toward the equilibrium level *θ* at speed *κ*. The second term captures continous Brownian fluctuations with volatility *σ*. The third term introduces discrete jumps of random size $Jt​∼N(μJ​,σJ2​)$, arriving according to the counting process *Nt*.
+The first term represents mean reversion toward the equilibrium level $\theta$ at speed $\kappa$. The second term captures continous Brownian fluctuations with volatility $\sigma$. The third term introduces discrete jumps of random size $J_t \sim \mathcal{N}(\mu_J, \sigma_J^2)$, arriving according to the counting process $N_t$.
 
-The half-life of mean reversion, a key quantity for calibrating trading horizons, is given by: 
+The half-life of mean reversion, a key quantity for calibrating trading horizons, is given by:
 
-$t1/2​=κln2​$
+$$
+t_{1/2} = \frac{\ln 2}{\kappa}
+$$
 
 This represents the expected time for the spread to move halfway from its current level back toward equilibrium. My empirical estimates yield half-lives ranging from 20 to 50 days across different pairs, which has direct implications for optimal holding periods. 
 
 ## Integration of Hawkes and MRJD
-The innovation of my framework was to replace the standard Poisson assumption for *Nt* with a Hawkes process. This would create a feedback mechanism: when the spread experiences a large jump, the intensity of future jumps increase temporarily, capturing the intuition that volatility begets volatility. 
+The innovation of my framework was to replace the standard Poisson assumption for $N_t$ with a Hawkes process. This would create a feedback mechanism: when the spread experiences a large jump, the intensity of future jumps increase temporarily, capturing the intuition that volatility begets volatility.
 
 I tried exploiting this structure for trading by conditioning on the current intensity level. Defining the regime indicator as: 
 
-$$\text{Regime}(t) = \begin{cases}
-\text{CALM} & \text{if } \lambda(t) < \lambda_{25} \
-\text{NORMAL} & \text{if } \lambda_{25} \leq \lambda(t) < \lambda_{75} \
-\text{ELEVATED} & \text{if } \lambda_{75} \leq \lambda(t) < \lambda_{90} \
-\text{CRISIS} & \text{if } \lambda(t) \geq \lambda_{90}
-\end{cases}$$
+$$
+\text{Regime}(t)=
+\begin{cases}
+\text{CALM} & \text{if } \lambda(t) < \lambda_{25} \\
+\text{NORMAL} & \text{if } \lambda_{25} \le \lambda(t) < \lambda_{75} \\
+\text{ELEVATED} & \text{if } \lambda_{75} \le \lambda(t) < \lambda_{90} \\
+\text{CRISIS} & \text{if } \lambda(t) \ge \lambda_{90}
+\end{cases}
+$$
 
-where *λp​* denotes the p-th percentile of the empirical intensity distribution.
+where $\lambda_p$ denotes the $p$-th percentile of the empirical intensity distribution.
 
-The trading logic incorporated this regime information in several ways. Entry thresholds are adjusted upward during elevated and crisis regimes, requiring larger deviations before initializing positions. I also implemented a "lambda decay" filter that permitted entry only when the intensity began declining. This was defined as  as:
+The trading logic incorporated this regime information in several ways. Entry thresholds are adjusted upward during elevated and crisis regimes, requiring larger deviations before initializing positions. I also implemented a "lambda decay" filter that permitted entry only when the intensity began declining. This was defined as:
 
-$λ(t)−max⁡s∈[t−5,t]λ(s)/max⁡s∈[t−5,t]λ(s) < −0.15$
+$$
+\frac{\lambda(t) - \max_{s \in [t-5, t]} \lambda(s)}{\max_{s \in [t-5, t]} \lambda(s)} < -0.15
+$$
 
 This condition ensured that I entered positions only after the intensity had falled at least 15% from its recent peak, avoiding entry during any active jump cascades. 
 
 ## Z-Score Signal Generation
-Trading signals were generated based on the empirical z-score of the spread, defined as: 
+Trading signals were generated based on the empirical z-score of the spread, defined as:
 
-$zt​=​St​−Sˉt(L)​​ / σ^t(L)$
+$$
+z_t = \frac{S_t - \bar{S}_t(L)}{\hat{\sigma}_t(L)}
+$$
 
-where *Sˉt(L)*​ and *σ^t(L)* are the rolling mean and standard deviation computed over a lookback window of L = 60 trading days. 
+where $\bar{S}_t(L)$ and $\hat{\sigma}_t(L)$ are the rolling mean and standard deviation computed over a lookback window of $L = 60$ trading days.
 
-Entry signals are generated when |*zt*| exceeds a regime-adjusted threshold, Specifically, for a position to be initiated, it requires:
+Entry signals are generated when $|z_t|$ exceeds a regime-adjusted threshold. Specifically, for a position to be initiated, it requires:
 
-$∣zt​∣>zentry​×Regime Multiplier$
+$$
+|z_t| > z_{\text{entry}} \times \text{Regime Multiplier}
+$$
 
 where the regime multipliers are 0.85 for CALM, 1.0 for NORMAL, 1.25 for ELEVATED, and positions are prohibited in CRISIS regimes. 
 
-Exit signals were generated when mean reversion was substantially completed according to: 
+Exit signals were generated when mean reversion was substantially completed according to:
 
-$∣zt​∣<zexit​$
+$$
+|z_t| < z_{\text{exit}}
+$$
 
 or when the position had been held beyond the regime-adjusted maximum holding period, computed as a multiple of the spread's half-life.
 
@@ -141,30 +177,37 @@ The empirical analysis deployed daily closing prices for five equity pairs repre
 - The fifth pair, NVDA/AMD, represents two semiconductor companies competing in similar markets. While statistically cointegrated over portions of the sample, this pair exhibits sstructural breaks due to NVIDIA's dominant position in AI related chips. 
 
 ## Cointegration Testing and Spread Construction
-For each pair, I verified cointegration using the Augmented Dickey-Fuller test of the log-spread. Let $ptA=log⁡PtA$ and $ptB=log⁡PtB$. The cointegration relationship was estimated by:
+For each pair, I verified cointegration using the Augmented Dickey-Fuller test of the log-spread. Let $p_t^A = \log P_t^A$ and $p_t^B = \log P_t^B$. The cointegration relationship was estimated by:
 
-$ptA​=c+h⋅ptB​+ϵt​$
+$$
+p_t^A = c + h\,p_t^B + \epsilon_t
+$$
 
-via ordinary least squares (OLS) and test the residuals ϵ^t​ for stationarity. A rejection of the null hypothesis at the 5% level was required for the pair to be considered cointegrated. 
+via ordinary least squares (OLS), and I tested the residuals $\hat{\epsilon}_t$ for stationarity. A rejection of the null hypothesis at the 5% level was required for the pair to be considered cointegrated.
 
-The spread was then constructed as $St​=ptA​−h^⋅ptB​$, where *h^* is the estimated hedge ratio. For improved stability, I employed a rolling window estimation of the hedge ratio with a 252-day lookback. Although, this had minimal impact on the results.
+The spread was then constructed as $S_t = p_t^A - \hat{h}\,p_t^B$, where $\hat{h}$ is the estimated hedge ratio. For improved stability, I employed a rolling window estimation of the hedge ratio with a 252-day lookback. Although, this had minimal impact on the results.
 
 ## Jump Detection Procedure
-We detect jumps in the spread returns using the bipower variation test. Let $rt=St−St−1$ denote the daily spread return. The realized variance and bipower variation over a rolling window of length *W = 20* days are computed as:
+We detect jumps in the spread returns using the bipower variation test. Let $r_t = S_t - S_{t-1}$ denote the daily spread return. The realized variance and bipower variation over a rolling window of length $W = 20$ days are computed as:
 
-$RVt​=i=0∑W−1​rt−i2​$
+$$
+RV_t = \sum_{i=0}^{W-1} r_{t-i}^2
+$$
 
+$$
+BV_t = \frac{\pi}{2} \sum_{i=0}^{W-2} |r_{t-i}|\,|r_{t-i-1}|
+$$
 
-$BVt=π2∑i=0W−2∣rt−i∣⋅∣rt−i−1∣$
+Under the null hypothesis of no jumps, $RV_t - BV_t$ converges to zero in probability. Day $t$ was flagged as containing a jump if:
 
-Under the null hypothesis of no jmps, RVt - BVt converges to zero in probability. Day *t* was flagged as containing a jump if: 
+$$
+\frac{RV_t - BV_t}{\sqrt{V_{qq}}} > \Phi^{-1}(1 - \alpha/2)
+$$
 
-$​​RVt​−BVt / sqrt(Vqq) ​​>Φ−1(1−α/2)$
-
-where Vqq is a consistent estimator of the asymptotic variance and *α = 0.01* is the significance level.
+where $V_{qq}$ is a consistent estimator of the asymptotic variance and $\alpha = 0.01$ is the significance level.
 
 ## Backtesting Protocol
-The backtesting engine implemented a dollar-neutral position sizing, wherein each leg of the pairs trade receives equal dollar exposure regardless of the hedge ratio. For a position of total size *K*, I allocated *K/2* dollars long to asset A and *K/2* dollars short to asset B (or vice versa for short spread position). 
+The backtesting engine implemented a dollar-neutral position sizing, wherein each leg of the pairs trade receives equal dollar exposure regardless of the hedge ratio. For a position of total size $K$, I allocated $K/2$ dollars long to asset A and $K/2$ dollars short to asset B (or vice versa for short spread position).
 
 The transaction costs were modeled as a combination of commission (1 basis point per transaction) and slippage (0.5 basis points per transaction).
 
@@ -201,7 +244,7 @@ Table 4 examines the impact of Hawkes-based filtering on signal generation
 Table 4: Hawkes Filtering Impact
 ![alt text](<Screenshot 2026-02-20 at 8.25.48 PM.png>)
 
-The *λ* decay filter proved to be the most restrictive, blocking about 80-207 potential entries per pair. While this aggressive filtering was intended to avoid entry during volatility cascaces, it ultimately resulted in the elimination of nearly all trading opportunities for low-jump frequency pairs. The GDX/GLD pair is completely blocked from trading, while GS/MS retains only 5 trades over an 8-year period. 
+The $\lambda$ decay filter proved to be the most restrictive, blocking about 80-207 potential entries per pair. While this aggressive filtering was intended to avoid entry during volatility cascaces, it ultimately resulted in the elimination of nearly all trading opportunities for low-jump frequency pairs. The GDX/GLD pair is completely blocked from trading, while GS/MS retains only 5 trades over an 8-year period. 
 
 # Analysis and Discussion
 ## Fundamental Disconnect: Statistical Predictability vs Economic Profitability
@@ -214,9 +257,9 @@ However, statistical predictability of jump timing does not imply predictability
 This observation suggests that the Hawkes framewor, while valuable for risk management and volatility forecasting, may not be the appropriate tool for generating trading signals. A more promising approach might combine the Hawkes intensity modeling with directional forecasts based on other signals, using the Hawkes output for position sizing and risk management rather than entry timing. 
 
 ## The Over-Filtering Problem
-My implementation of regime-based filtering demonstrates a classic trade-off in systematic trading: filters that successfully avoid bad trades often also eliminate good trades. The λ decay requirement, that intensity must have fallen from 15% from its recent peak before entry, was motivated by the intuition that we should avoid entering positions during active volatility cascacdes. In practice, this filter blocked the majority of trading opportunities, with blocking rates exceeding 80% for most pairs. 
+My implementation of regime-based filtering demonstrates a classic trade-off in systematic trading: filters that successfully avoid bad trades often also eliminate good trades. The $\lambda$ decay requirement, that intensity must have fallen from 15% from its recent peak before entry, was motivated by the intuition that we should avoid entering positions during active volatility cascacdes. In practice, this filter blocked the majority of trading opportunities, with blocking rates exceeding 80% for most pairs. 
 
-The problem is particularly apparent for low-jump frequency pairs. When jumps are rare, the intensity process spends most of its time at or near the baseline level with minimal variation. In this regime, the λ decay condition became almost impossible to satisfy, as there was no meaningful "peak" from which to decay. The GDX/GLD case is illustrative: with only 27 jumps over 1,961 trading days (1.4% frequency), the intensity distribution is essentially degenerate, and the Hawkes model provides no useful information beyond what a simple Poission assumption would have yielded. 
+The problem is particularly apparent for low-jump frequency pairs. When jumps are rare, the intensity process spends most of its time at or near the baseline level with minimal variation. In this regime, the $\lambda$ decay condition became almost impossible to satisfy, as there was no meaningful "peak" from which to decay. The GDX/GLD case is illustrative: with only 27 jumps over 1,961 trading days (1.4% frequency), the intensity distribution is essentially degenerate, and the Hawkes model provides no useful information beyond what a simple Poission assumption would have yielded. 
 
 This finding led me to implement adaptive filtering, wherein Hawkes-based constraints are relaxed for pairs with jump frequencies below 5% or degenerate intensity distributions. While this adjustment allowed trades to be generated, it effectively concedes that the Hawkes framework was inapplicable for these pairs, reducing the strategy to a simple z-score mean reversion approach. 
 
@@ -235,7 +278,7 @@ First, the Hawkes process successfully captures jump clustering in equity pair s
 
 Second, despite accurate modeling of jump dynamics, the strategy failed to generate risk-adjusted returns exceeding the risk-free rate. The best-performing pair (XOM/CVX) achieves an annualized return of 0.11% against a risk-free rate of approximately 2%, yielding a Sharpe ratio of -2.95.
 
-Third, the Hawkes-based filtering mechanism, while conceptually sound, proved to be considerably over-restrictive in practice. The λ decay requirement blocks the majority of potential trades, and for low-jump-frequency pairs, the intensity distribution is degenerate, rendering the Hawkes modeling inapplicable. 
+Third, the Hawkes-based filtering mechanism, while conceptually sound, proved to be considerably over-restrictive in practice. The $\lambda$ decay requirement blocks the majority of potential trades, and for low-jump-frequency pairs, the intensity distribution is degenerate, rendering the Hawkes modeling inapplicable. 
 
 Fourth, transaction costs represent the binding constraint on strategy profitability. With round-trip costs of approximately 6 basis points and average gross returns pre trade below this level, the strategy destroys value in expectation. 
 
