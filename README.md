@@ -26,7 +26,7 @@ The detection of jumps in asset returns has been extensively studied following t
 Mean-reverting jump diffusion models extend the classical Ornstein-Uhlenbeck process to incorporate discrete jumps, providing a more realistic representation of spread dynamics in pairs trading. The general form equation of the MRJD process is given by:
 
 $$
-dS_t = \kappa(\theta - S_t)\dt+\sigma\dW_t+J_t\dN_t
+dS_t = \kappa(\theta - S_t)\,\mathrm{d}t + \sigma\,\mathrm{d}W_t + J_t\,\mathrm{d}N_t
 $$
 
 where $\kappa$ represents the speed of mean reversion, $\theta$ is the long-run equilibrium level, $\sigma$ captures diffusive volatility, $J_t$ is the random jump size, and $N_t$ is a counting process governing jump arrivals. The innovation in my approach is to model $N_t$ not as a simple Poisson process but as a Hawkes process with time-varying intensity.
@@ -99,7 +99,7 @@ where $P_t^A$ and $P_t^B$ are the prices of the two assets and $h$ is the cointe
 The dynamics of $S_t$ are modeled as:
 
 $$
-dS_t = \kappa(\theta - S_t)\dt+\sigma\dW_t+J_t\dN_t
+dS_t = \kappa(\theta - S_t)\,\mathrm{d}t + \sigma\,\mathrm{d}W_t + J_t\,\mathrm{d}N_t
 $$
 
 The first term represents mean reversion toward the equilibrium level $\theta$ at speed $\kappa$. The second term captures continous Brownian fluctuations with volatility $\sigma$. The third term introduces discrete jumps of random size $J_t \sim \mathcal{N}(\mu_J, \sigma_J^2)$, arriving according to the counting process $N_t$.
