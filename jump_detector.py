@@ -395,7 +395,7 @@ class JumpDetector:
 
 if __name__ == "__main__":
     """
-    Test jump detection on GDX/GLD equity pairs
+    Test jump detection on CVX/XOM equity pairs
     """
 
     import sys 
@@ -410,18 +410,18 @@ if __name__ == "__main__":
     import matplotlib.pyplot as plt 
 
     print("=" * 70)
-    print("Jump Detection Test - GDX/GLD Equity Paris")
+    print("Jump Detection Test - CVX/XOM Equity Pairs")
     print("=" * 70)
 
     #Initializing data pipeline
-    print("\n [1] Loading GDX/GLD data from CSV files")
+    print("\n [1] Loading CVX/XOM data from CSV files")
     pipeline = EquityPairsDataPipeline()
 
     #Try to load CSV files from multiple possible locations
     csv_paths = [
-        (os.path.join(current_dir, 'OHLCV_GDX.csv'),
-         os.path.join(current_dir, 'OHLCV_GLD.csv')), #script directory
-        ('OHLCV_GDX.csv', 'OHLCV_GLD.csv'), #current dir
+        (os.path.join(current_dir, 'OHLCV_CVX.csv'),
+         os.path.join(current_dir, 'OHLCV_XOM.csv')), #script directory
+        ('OHLCV_CVX.csv', 'OHLCV_XOM.csv'), #current dir
     ]
 
     data_loaded = False
@@ -521,7 +521,7 @@ if __name__ == "__main__":
     # Plot 1: Spread
     axes[0].plot(spread_df.index, spread_df['spread'], linewidth=1, color='blue')
     axes[0].set_ylabel('Spread (log scale)')
-    axes[0].set_title('GDX/GLD Spread (Log Prices)', fontsize=14, fontweight='bold')
+    axes[0].set_title('CVX/XOM Spread (Log Prices)', fontsize=14, fontweight='bold')
     axes[0].grid(True, alpha=0.3)
     
     # Plot 2: Returns with Bipower Variation jumps
@@ -581,7 +581,7 @@ if __name__ == "__main__":
     print("\n" + "="*70)
     print("SUMMARY")
     print("="*70)
-    print(f"\nData: {len(returns)} daily returns (GDX/GLD spread)")
+    print(f"\nData: {len(returns)} daily returns (CVX/XOM spread)")
     print(f"Date range: {returns.index[0].date()} to {returns.index[-1].date()}")
     print(f"\nJump Detection Results:")
     print(f"  Bipower Variation: {bpv_stats['n_jumps']} jumps ({bpv_stats['jump_frequency']*100:.2f}%)")

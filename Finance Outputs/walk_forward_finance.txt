@@ -1,0 +1,3212 @@
+Saving terminal output to: /Users/rayyanwaseem/Desktop/Projects/MRJD-and-Hawkes-for-Pairs-Trading/walk_forward_output.txt
+
+======================================================================
+WALK-FORWARD BACKTESTING ENGINE
+  Min training: 504 days (~2 years)
+  Rebalance frequency: quarterly
+======================================================================
+Loading equity pairs data from the CSV files...
+ Asset A (GS): /Users/rayyanwaseem/Desktop/Projects/MRJD-and-Hawkes-for-Pairs-Trading/OHLCV_GS.csv
+ Asset B (MS): /Users/rayyanwaseem/Desktop/Projects/MRJD-and-Hawkes-for-Pairs-Trading/OHLCV_MS.csv
+Successfully loaded data
+ Asset A (GS): 1960 observations
+ Asset B (MS): 1960 observations
+ Date range: 2018-05-01 00:00:00+00:00 to 2026-02-17 00:00:00+00:00
+Cleaning data...
+ Cleaned data: 1959 observations remaining
+Constructing spread using cointegration method
+Spread constructed with the mean hedge ratio: 0.8718
+Spread range: [-4.4738, 6.2567]
+Spread mean: 2.0095
+Spread std: 1.4915
+
+ Spread Statistics (GS/MS)
+    Mean: 2.0095
+    Std: 1.4915
+    Half-life: 50.50 days
+    Stationary: True
+
+Full dataset: 2018-05-02 → 2026-02-17  (1959 obs)
+
+Rebalancing dates: 23 quarters
+  First rebalance: 2020-06-30
+  Last  rebalance: 2025-12-31
+
+--- Quarter 1/23 ---
+  Train: ≤ 2020-06-30  (545 obs)
+  Eval : 2020-07-01 → 2020-09-30  (64 obs)
+
+ Training slice: 545 observations
+ [1/5] Pair Validation
+
+======================================================================
+PAIR VALIDATION
+======================================================================
+
+1. Stationarity Test (ADF):
+   ADF Statistic: -3.9849
+   P-value: 0.0015
+   Stationary:  YES
+
+2. Mean Reversion Half-Life:
+   Half-life: 58.7 days
+   Acceptable range: 5-60 days
+   Within range:  YES
+
+3. Mean Stability Check:
+   Long-term mean drift: 0.1587
+   Stable mean:  YES
+
+4. Spread Range Analysis:
+   Range: 9.5885
+   Range in std units: 5.6
+   Reasonable range (<10 std):  YES
+
+5. Recent vs Historical Mean:
+   Overall mean: 2.0091
+   Recent 1yr mean: 1.8514
+   Shift in std: 0.09
+   No recent regime change:  YES
+
+----------------------------------------------------------------------
+OVERALL ASSESSMENT:
+ PAIR IS SUITABLE FOR MEAN-REVERSION TRADING
+======================================================================
+ [2/5] Jump Detection
+Detecting jumps using Bipower Variation
+Detected 76 jumps (13.97% of observations)
+ [3/5] Hawkes Calibration
+Fitting Hawkes process using MLE
+ Hawkes parameters estimate: 
+ λ̄ (baseline intensity): 0.0088
+ α (jump impact): 0.1499
+ β_H (decay rate): 0.1765
+ Branching ratio (α/β_H): 0.8493
+ [4/5] Hawkes Suitability
+
+======================================================================
+HAWKES SUITABILITY ANALYSIS
+======================================================================
+
+1. Jump Frequency: 14.0%
+   GOOD - Sufficient jumps for meaningful Hawkes modeling
+
+2. Branching Ratio (α/β): 0.849
+   GOOD - Strong jump clustering, Hawkes very useful
+
+3. λ Coefficient of Variation: 1.93
+   HIGH - Strong regime variation, Hawkes valuable
+
+4. Time in Elevated State: 15.0%
+   GOOD - Meaningful time in elevated regimes
+
+----------------------------------------------------------------------
+OVERALL HAWKES SUITABILITY SCORE: 0.95/1.00
+RECOMMENDATION: EXCELLENT - Hawkes should significantly improve timing
+======================================================================
+ [5/5] MRJD estimation
+Fitting the MRJD model
+ Step 1: Estimating OU params from continous periods
+
+======================================================================
+Critical: MRJD Half Life Mismatch Detected
+======================================================================
+    MRJD estimated half-life: 0.2 days
+    Empirical half-life: 58.6 days
+    Relative error: 99.7%
+    Discrepancy: 58.5 days
+
+ Overiding MRJD kappa with the empirical estimate instead
+
+ Corrected kappa: 4.308242 -> 0.011824
+ Corrected half-life: 0.2 days -> 58.6 days
+======================================================================
+
+ Step 2: Estimating jump distribution
+ Step 3: Joint MLE refinement
+Warning: Skipping joint MLE to preserve the validated kappa
+ (Joint MLE tends to overfit and revert to the incorrect parameters)
+MRJD Model Parameters:
+ κ (mean reversion speed): 0.0118
+ θ (long-run mean): 2.1337
+ σ (diffusive volatility): 4.420840
+  μ_J (jump mean): 0.0383
+  σ_J (jump volatility): 0.3778
+Detecting jumps using Bipower Variation
+Detected 75 jumps (12.34% of observations)
+
+ Evaluating period: Q1 OOS (2020-07-01 → 2020-09-30)
+  Half-life calibration:
+    Spread half-life: 58.7 days
+    Min hold period: 29 days
+    Target hold: 46 days
+    Max hold period: 88 days
+Generating trading signals (RELAXED filtering)...
+  LOW JUMP PAIR: 0.0% frequency -> Hawkes filtering relaxed
+  λ percentiles: p25=0.0088, p75=0.0396, p90=0.4127
+Generated 1 total signals:
+    - Long Entries: 0
+    - Short Entries: 1
+    - Closes: 0
+
+  Hawkes Filtering Impact:
+    Entries blocked by CRISIS regime: 0
+    Entries blocked by λ not decaying: 0
+    Exits triggered by regime escalation: 0
+  Backtest half-life: 58.7 days
+Running backtest
+  Hedge ratio (spread construction): 0.7003
+  Position sizing: Dollar-neutral
+  Max position: 25%
+  Hard stop: 3.0%
+  Trailing stop: 1.5% (activates at 1.0%)
+  Profit target: 6.0%
+Backtest Complete!
+    - Total Trades: 0
+    - Final Equity: $993,580.57
+    - Total Return: -0.64%
+Performance metrics calculated
+
+--- Quarter 2/23 ---
+  Train: ≤ 2020-09-30  (609 obs)
+  Eval : 2020-10-01 → 2020-12-31  (64 obs)
+
+ Training slice: 609 observations
+ [1/5] Pair Validation
+
+======================================================================
+PAIR VALIDATION
+======================================================================
+
+1. Stationarity Test (ADF):
+   ADF Statistic: -4.1722
+   P-value: 0.0007
+   Stationary:  YES
+
+2. Mean Reversion Half-Life:
+   Half-life: 57.6 days
+   Acceptable range: 5-60 days
+   Within range:  YES
+
+3. Mean Stability Check:
+   Long-term mean drift: 0.1858
+   Stable mean:  YES
+
+4. Spread Range Analysis:
+   Range: 9.5885
+   Range in std units: 5.9
+   Reasonable range (<10 std):  YES
+
+5. Recent vs Historical Mean:
+   Overall mean: 2.0681
+   Recent 1yr mean: 2.3460
+   Shift in std: 0.17
+   No recent regime change:  YES
+
+----------------------------------------------------------------------
+OVERALL ASSESSMENT:
+ PAIR IS SUITABLE FOR MEAN-REVERSION TRADING
+======================================================================
+ [2/5] Jump Detection
+Detecting jumps using Bipower Variation
+Detected 75 jumps (12.34% of observations)
+ [3/5] Hawkes Calibration
+Fitting Hawkes process using MLE
+ Hawkes parameters estimate: 
+ λ̄ (baseline intensity): 0.0091
+ α (jump impact): 0.1651
+ β_H (decay rate): 0.1946
+ Branching ratio (α/β_H): 0.8486
+ [4/5] Hawkes Suitability
+
+======================================================================
+HAWKES SUITABILITY ANALYSIS
+======================================================================
+
+1. Jump Frequency: 12.3%
+   GOOD - Sufficient jumps for meaningful Hawkes modeling
+
+2. Branching Ratio (α/β): 0.849
+   GOOD - Strong jump clustering, Hawkes very useful
+
+3. λ Coefficient of Variation: 2.06
+   HIGH - Strong regime variation, Hawkes valuable
+
+4. Time in Elevated State: 13.3%
+   GOOD - Meaningful time in elevated regimes
+
+----------------------------------------------------------------------
+OVERALL HAWKES SUITABILITY SCORE: 0.95/1.00
+RECOMMENDATION: EXCELLENT - Hawkes should significantly improve timing
+======================================================================
+ [5/5] MRJD estimation
+Fitting the MRJD model
+ Step 1: Estimating OU params from continous periods
+
+======================================================================
+Critical: MRJD Half Life Mismatch Detected
+======================================================================
+    MRJD estimated half-life: 0.2 days
+    Empirical half-life: 57.5 days
+    Relative error: 99.7%
+    Discrepancy: 57.4 days
+
+ Overiding MRJD kappa with the empirical estimate instead
+
+ Corrected kappa: 4.438148 -> 0.012046
+ Corrected half-life: 0.2 days -> 57.5 days
+======================================================================
+
+ Step 2: Estimating jump distribution
+ Step 3: Joint MLE refinement
+Warning: Skipping joint MLE to preserve the validated kappa
+ (Joint MLE tends to overfit and revert to the incorrect parameters)
+MRJD Model Parameters:
+ κ (mean reversion speed): 0.0120
+ θ (long-run mean): 2.2380
+ σ (diffusive volatility): 4.252136
+  μ_J (jump mean): 0.0392
+  σ_J (jump volatility): 0.3803
+Detecting jumps using Bipower Variation
+Detected 74 jumps (11.01% of observations)
+
+ Evaluating period: Q2 OOS (2020-10-01 → 2020-12-31)
+  Half-life calibration:
+    Spread half-life: 57.6 days
+    Min hold period: 28 days
+    Target hold: 46 days
+    Max hold period: 86 days
+Generating trading signals (RELAXED filtering)...
+  LOW JUMP PAIR: 0.0% frequency -> Hawkes filtering relaxed
+  λ percentiles: p25=0.0091, p75=0.0223, p90=0.3515
+Generated 3 total signals:
+    - Long Entries: 1
+    - Short Entries: 1
+    - Closes: 1
+
+  Hawkes Filtering Impact:
+    Entries blocked by CRISIS regime: 0
+    Entries blocked by λ not decaying: 0
+    Exits triggered by regime escalation: 0
+  Backtest half-life: 57.6 days
+Running backtest
+  Hedge ratio (spread construction): 0.7004
+  Position sizing: Dollar-neutral
+  Max position: 25%
+  Hard stop: 3.0%
+  Trailing stop: 1.5% (activates at 1.0%)
+  Profit target: 6.0%
+Backtest Complete!
+    - Total Trades: 1
+    - Final Equity: $1,011,253.94
+    - Total Return: 1.13%
+    - Exit reasons: {'signal': 1}
+Performance metrics calculated
+
+--- Quarter 3/23 ---
+  Train: ≤ 2020-12-31  (673 obs)
+  Eval : 2021-01-04 → 2021-03-31  (61 obs)
+
+ Training slice: 673 observations
+ [1/5] Pair Validation
+
+======================================================================
+PAIR VALIDATION
+======================================================================
+
+1. Stationarity Test (ADF):
+   ADF Statistic: -4.3609
+   P-value: 0.0003
+   Stationary:  YES
+
+2. Mean Reversion Half-Life:
+   Half-life: 57.1 days
+   Acceptable range: 5-60 days
+   Within range:  YES
+
+3. Mean Stability Check:
+   Long-term mean drift: 0.2106
+   Stable mean:  YES
+
+4. Spread Range Analysis:
+   Range: 9.5885
+   Range in std units: 6.1
+   Reasonable range (<10 std):  YES
+
+5. Recent vs Historical Mean:
+   Overall mean: 2.1149
+   Recent 1yr mean: 2.3534
+   Shift in std: 0.15
+   No recent regime change:  YES
+
+----------------------------------------------------------------------
+OVERALL ASSESSMENT:
+ PAIR IS SUITABLE FOR MEAN-REVERSION TRADING
+======================================================================
+ [2/5] Jump Detection
+Detecting jumps using Bipower Variation
+Detected 74 jumps (11.01% of observations)
+ [3/5] Hawkes Calibration
+Fitting Hawkes process using MLE
+ Hawkes parameters estimate: 
+ λ̄ (baseline intensity): 0.0066
+ α (jump impact): 0.1766
+ β_H (decay rate): 0.2078
+ Branching ratio (α/β_H): 0.8497
+ [4/5] Hawkes Suitability
+
+======================================================================
+HAWKES SUITABILITY ANALYSIS
+======================================================================
+
+1. Jump Frequency: 11.0%
+   MODERATE - Hawkes can help with regime detection
+
+2. Branching Ratio (α/β): 0.850
+   GOOD - Strong jump clustering, Hawkes very useful
+
+3. λ Coefficient of Variation: 2.28
+   HIGH - Strong regime variation, Hawkes valuable
+
+4. Time in Elevated State: 12.2%
+   GOOD - Meaningful time in elevated regimes
+
+----------------------------------------------------------------------
+OVERALL HAWKES SUITABILITY SCORE: 0.88/1.00
+RECOMMENDATION: EXCELLENT - Hawkes should significantly improve timing
+======================================================================
+ [5/5] MRJD estimation
+Fitting the MRJD model
+ Step 1: Estimating OU params from continous periods
+
+======================================================================
+Critical: MRJD Half Life Mismatch Detected
+======================================================================
+    MRJD estimated half-life: 0.2 days
+    Empirical half-life: 57.0 days
+    Relative error: 99.7%
+    Discrepancy: 56.9 days
+
+ Overiding MRJD kappa with the empirical estimate instead
+
+ Corrected kappa: 4.292777 -> 0.012157
+ Corrected half-life: 0.2 days -> 57.0 days
+======================================================================
+
+ Step 2: Estimating jump distribution
+ Step 3: Joint MLE refinement
+Warning: Skipping joint MLE to preserve the validated kappa
+ (Joint MLE tends to overfit and revert to the incorrect parameters)
+MRJD Model Parameters:
+ κ (mean reversion speed): 0.0122
+ θ (long-run mean): 2.1646
+ σ (diffusive volatility): 3.995374
+  μ_J (jump mean): 0.0308
+  σ_J (jump volatility): 0.3758
+Detecting jumps using Bipower Variation
+Detected 74 jumps (10.10% of observations)
+
+ Evaluating period: Q3 OOS (2021-01-04 → 2021-03-31)
+  Half-life calibration:
+    Spread half-life: 57.1 days
+    Min hold period: 28 days
+    Target hold: 45 days
+    Max hold period: 85 days
+Generating trading signals (RELAXED filtering)...
+  LOW JUMP PAIR: 0.0% frequency -> Hawkes filtering relaxed
+  λ percentiles: p25=0.0066, p75=0.0101, p90=0.3098
+Generated 3 total signals:
+    - Long Entries: 1
+    - Short Entries: 1
+    - Closes: 1
+
+  Hawkes Filtering Impact:
+    Entries blocked by CRISIS regime: 0
+    Entries blocked by λ not decaying: 0
+    Exits triggered by regime escalation: 0
+  Backtest half-life: 57.1 days
+Running backtest
+  Hedge ratio (spread construction): 1.1069
+  Position sizing: Dollar-neutral
+  Max position: 25%
+  Hard stop: 3.0%
+  Trailing stop: 1.5% (activates at 1.0%)
+  Profit target: 6.0%
+Backtest Complete!
+    - Total Trades: 1
+    - Final Equity: $1,000,023.40
+    - Total Return: 0.00%
+    - Exit reasons: {'trailing_stop': 1}
+Performance metrics calculated
+
+--- Quarter 4/23 ---
+  Train: ≤ 2021-03-31  (734 obs)
+  Eval : 2021-04-01 → 2021-06-30  (63 obs)
+
+ Training slice: 734 observations
+ [1/5] Pair Validation
+
+======================================================================
+PAIR VALIDATION
+======================================================================
+
+1. Stationarity Test (ADF):
+   ADF Statistic: -4.5144
+   P-value: 0.0002
+   Stationary:  YES
+
+2. Mean Reversion Half-Life:
+   Half-life: 58.2 days
+   Acceptable range: 5-60 days
+   Within range:  YES
+
+3. Mean Stability Check:
+   Long-term mean drift: 0.2097
+   Stable mean:  YES
+
+4. Spread Range Analysis:
+   Range: 9.5885
+   Range in std units: 6.2
+   Reasonable range (<10 std):  YES
+
+5. Recent vs Historical Mean:
+   Overall mean: 2.0170
+   Recent 1yr mean: 2.0221
+   Shift in std: 0.00
+   No recent regime change:  YES
+
+----------------------------------------------------------------------
+OVERALL ASSESSMENT:
+ PAIR IS SUITABLE FOR MEAN-REVERSION TRADING
+======================================================================
+ [2/5] Jump Detection
+Detecting jumps using Bipower Variation
+Detected 74 jumps (10.10% of observations)
+ [3/5] Hawkes Calibration
+Fitting Hawkes process using MLE
+ Hawkes parameters estimate: 
+ λ̄ (baseline intensity): 0.0068
+ α (jump impact): 0.1748
+ β_H (decay rate): 0.2059
+ Branching ratio (α/β_H): 0.8488
+ [4/5] Hawkes Suitability
+
+======================================================================
+HAWKES SUITABILITY ANALYSIS
+======================================================================
+
+1. Jump Frequency: 10.1%
+   MODERATE - Hawkes can help with regime detection
+
+2. Branching Ratio (α/β): 0.849
+   GOOD - Strong jump clustering, Hawkes very useful
+
+3. λ Coefficient of Variation: 2.36
+   HIGH - Strong regime variation, Hawkes valuable
+
+4. Time in Elevated State: 12.0%
+   GOOD - Meaningful time in elevated regimes
+
+----------------------------------------------------------------------
+OVERALL HAWKES SUITABILITY SCORE: 0.88/1.00
+RECOMMENDATION: EXCELLENT - Hawkes should significantly improve timing
+======================================================================
+ [5/5] MRJD estimation
+Fitting the MRJD model
+ Step 1: Estimating OU params from continous periods
+
+======================================================================
+Critical: MRJD Half Life Mismatch Detected
+======================================================================
+    MRJD estimated half-life: 0.2 days
+    Empirical half-life: 58.1 days
+    Relative error: 99.7%
+    Discrepancy: 57.9 days
+
+ Overiding MRJD kappa with the empirical estimate instead
+
+ Corrected kappa: 4.040414 -> 0.011929
+ Corrected half-life: 0.2 days -> 58.1 days
+======================================================================
+
+ Step 2: Estimating jump distribution
+ Step 3: Joint MLE refinement
+Warning: Skipping joint MLE to preserve the validated kappa
+ (Joint MLE tends to overfit and revert to the incorrect parameters)
+MRJD Model Parameters:
+ κ (mean reversion speed): 0.0119
+ θ (long-run mean): 2.0503
+ σ (diffusive volatility): 3.858603
+  μ_J (jump mean): 0.0308
+  σ_J (jump volatility): 0.3758
+Detecting jumps using Bipower Variation
+Detected 58 jumps (7.29% of observations)
+
+ Evaluating period: Q4 OOS (2021-04-01 → 2021-06-30)
+  Half-life calibration:
+    Spread half-life: 58.2 days
+    Min hold period: 29 days
+    Target hold: 46 days
+    Max hold period: 87 days
+Generating trading signals (RELAXED filtering)...
+  LOW JUMP PAIR: 0.0% frequency -> Hawkes filtering relaxed
+  λ percentiles: p25=0.0068, p75=0.0087, p90=0.2649
+Generated 2 total signals:
+    - Long Entries: 0
+    - Short Entries: 1
+    - Closes: 1
+
+  Hawkes Filtering Impact:
+    Entries blocked by CRISIS regime: 0
+    Entries blocked by λ not decaying: 0
+    Exits triggered by regime escalation: 0
+  Backtest half-life: 58.2 days
+Running backtest
+  Hedge ratio (spread construction): 0.8649
+  Position sizing: Dollar-neutral
+  Max position: 25%
+  Hard stop: 3.0%
+  Trailing stop: 1.5% (activates at 1.0%)
+  Profit target: 6.0%
+Backtest Complete!
+    - Total Trades: 1
+    - Final Equity: $997,492.56
+    - Total Return: -0.25%
+    - Exit reasons: {'signal': 1}
+Performance metrics calculated
+
+--- Quarter 5/23 ---
+  Train: ≤ 2021-06-30  (797 obs)
+  Eval : 2021-07-01 → 2021-09-30  (64 obs)
+
+ Training slice: 797 observations
+ [1/5] Pair Validation
+
+======================================================================
+PAIR VALIDATION
+======================================================================
+
+1. Stationarity Test (ADF):
+   ADF Statistic: -4.7206
+   P-value: 0.0001
+   Stationary:  YES
+
+2. Mean Reversion Half-Life:
+   Half-life: 57.3 days
+   Acceptable range: 5-60 days
+   Within range:  YES
+
+3. Mean Stability Check:
+   Long-term mean drift: 0.2050
+   Stable mean:  YES
+
+4. Spread Range Analysis:
+   Range: 9.5885
+   Range in std units: 6.5
+   Reasonable range (<10 std):  YES
+
+5. Recent vs Historical Mean:
+   Overall mean: 2.0180
+   Recent 1yr mean: 2.0374
+   Shift in std: 0.01
+   No recent regime change:  YES
+
+----------------------------------------------------------------------
+OVERALL ASSESSMENT:
+ PAIR IS SUITABLE FOR MEAN-REVERSION TRADING
+======================================================================
+ [2/5] Jump Detection
+Detecting jumps using Bipower Variation
+Detected 58 jumps (7.29% of observations)
+ [3/5] Hawkes Calibration
+Fitting Hawkes process using MLE
+ Hawkes parameters estimate: 
+ λ̄ (baseline intensity): 0.0062
+ α (jump impact): 0.1710
+ β_H (decay rate): 0.2021
+ Branching ratio (α/β_H): 0.8464
+ [4/5] Hawkes Suitability
+
+======================================================================
+HAWKES SUITABILITY ANALYSIS
+======================================================================
+
+1. Jump Frequency: 7.3%
+   MODERATE - Hawkes can help with regime detection
+
+2. Branching Ratio (α/β): 0.846
+   GOOD - Strong jump clustering, Hawkes very useful
+
+3. λ Coefficient of Variation: 2.60
+   HIGH - Strong regime variation, Hawkes valuable
+
+4. Time in Elevated State: 12.8%
+   GOOD - Meaningful time in elevated regimes
+
+----------------------------------------------------------------------
+OVERALL HAWKES SUITABILITY SCORE: 0.88/1.00
+RECOMMENDATION: EXCELLENT - Hawkes should significantly improve timing
+======================================================================
+ [5/5] MRJD estimation
+Fitting the MRJD model
+ Step 1: Estimating OU params from continous periods
+
+======================================================================
+Critical: MRJD Half Life Mismatch Detected
+======================================================================
+    MRJD estimated half-life: 0.2 days
+    Empirical half-life: 57.3 days
+    Relative error: 99.7%
+    Discrepancy: 57.1 days
+
+ Overiding MRJD kappa with the empirical estimate instead
+
+ Corrected kappa: 4.334886 -> 0.012099
+ Corrected half-life: 0.2 days -> 57.3 days
+======================================================================
+
+ Step 2: Estimating jump distribution
+ Step 3: Joint MLE refinement
+Warning: Skipping joint MLE to preserve the validated kappa
+ (Joint MLE tends to overfit and revert to the incorrect parameters)
+MRJD Model Parameters:
+ κ (mean reversion speed): 0.0121
+ θ (long-run mean): 2.0794
+ σ (diffusive volatility): 3.804582
+  μ_J (jump mean): 0.0351
+  σ_J (jump volatility): 0.4177
+Detecting jumps using Bipower Variation
+Detected 57 jumps (6.63% of observations)
+
+ Evaluating period: Q5 OOS (2021-07-01 → 2021-09-30)
+  Half-life calibration:
+    Spread half-life: 57.3 days
+    Min hold period: 28 days
+    Target hold: 45 days
+    Max hold period: 86 days
+Generating trading signals (RELAXED filtering)...
+  LOW JUMP PAIR: 1.6% frequency -> Hawkes filtering relaxed
+  λ percentiles: p25=0.0062, p75=0.0070, p90=0.1107
+Generated 3 total signals:
+    - Long Entries: 1
+    - Short Entries: 1
+    - Closes: 1
+
+  Hawkes Filtering Impact:
+    Entries blocked by CRISIS regime: 0
+    Entries blocked by λ not decaying: 0
+    Exits triggered by regime escalation: 0
+  Backtest half-life: 57.3 days
+Running backtest
+  Hedge ratio (spread construction): 0.8890
+  Position sizing: Dollar-neutral
+  Max position: 25%
+  Hard stop: 3.0%
+  Trailing stop: 1.5% (activates at 1.0%)
+  Profit target: 6.0%
+Backtest Complete!
+    - Total Trades: 1
+    - Final Equity: $998,825.22
+    - Total Return: -0.12%
+    - Exit reasons: {'signal': 1}
+Performance metrics calculated
+
+--- Quarter 6/23 ---
+  Train: ≤ 2021-09-30  (861 obs)
+  Eval : 2021-10-01 → 2021-12-31  (64 obs)
+
+ Training slice: 861 observations
+ [1/5] Pair Validation
+
+======================================================================
+PAIR VALIDATION
+======================================================================
+
+1. Stationarity Test (ADF):
+   ADF Statistic: -4.8557
+   P-value: 0.0000
+   Stationary:  YES
+
+2. Mean Reversion Half-Life:
+   Half-life: 62.2 days
+   Acceptable range: 5-60 days
+   Within range:  NO
+
+3. Mean Stability Check:
+   Long-term mean drift: 0.1956
+   Stable mean:  YES
+
+4. Spread Range Analysis:
+   Range: 9.5885
+   Range in std units: 6.5
+   Reasonable range (<10 std):  YES
+
+5. Recent vs Historical Mean:
+   Overall mean: 2.0075
+   Recent 1yr mean: 1.8610
+   Shift in std: 0.10
+   No recent regime change:  YES
+
+----------------------------------------------------------------------
+OVERALL ASSESSMENT:
+ PAIR HAS ISSUES - TRADING NOT RECOMMENDED
+
+Issues detected:
+  - Half-life (62.2d) outside acceptable range
+======================================================================
+ [2/5] Jump Detection
+Detecting jumps using Bipower Variation
+Detected 57 jumps (6.63% of observations)
+ [3/5] Hawkes Calibration
+Fitting Hawkes process using MLE
+ Hawkes parameters estimate: 
+ λ̄ (baseline intensity): 0.0074
+ α (jump impact): 0.1483
+ β_H (decay rate): 0.1761
+ Branching ratio (α/β_H): 0.8418
+ [4/5] Hawkes Suitability
+
+======================================================================
+HAWKES SUITABILITY ANALYSIS
+======================================================================
+
+1. Jump Frequency: 6.6%
+   LOW - Not enough jumps for Hawkes to add value
+
+2. Branching Ratio (α/β): 0.842
+   GOOD - Strong jump clustering, Hawkes very useful
+
+3. λ Coefficient of Variation: 2.61
+   HIGH - Strong regime variation, Hawkes valuable
+
+4. Time in Elevated State: 13.6%
+   GOOD - Meaningful time in elevated regimes
+
+----------------------------------------------------------------------
+OVERALL HAWKES SUITABILITY SCORE: 0.80/1.00
+RECOMMENDATION: GOOD - Hawkes useful for regime detection and filtering
+======================================================================
+ [5/5] MRJD estimation
+Fitting the MRJD model
+ Step 1: Estimating OU params from continous periods
+
+======================================================================
+Critical: MRJD Half Life Mismatch Detected
+======================================================================
+    MRJD estimated half-life: 0.2 days
+    Empirical half-life: 62.1 days
+    Relative error: 99.7%
+    Discrepancy: 61.9 days
+
+ Overiding MRJD kappa with the empirical estimate instead
+
+ Corrected kappa: 3.646880 -> 0.011163
+ Corrected half-life: 0.2 days -> 62.1 days
+======================================================================
+
+ Step 2: Estimating jump distribution
+ Step 3: Joint MLE refinement
+Warning: Skipping joint MLE to preserve the validated kappa
+ (Joint MLE tends to overfit and revert to the incorrect parameters)
+MRJD Model Parameters:
+ κ (mean reversion speed): 0.0112
+ θ (long-run mean): 1.8894
+ σ (diffusive volatility): 3.683406
+  μ_J (jump mean): 0.0184
+  σ_J (jump volatility): 0.4216
+Detecting jumps using Bipower Variation
+Detected 74 jumps (8.01% of observations)
+
+ Evaluating period: Q6 OOS (2021-10-01 → 2021-12-31)
+  Half-life calibration:
+    Spread half-life: 62.2 days
+    Min hold period: 31 days
+    Target hold: 49 days
+    Max hold period: 93 days
+Generating trading signals (RELAXED filtering)...
+  λ percentiles: p25=0.0074, p75=0.0085, p90=0.0807
+Generated 0 total signals:
+    - Long Entries: 0
+    - Short Entries: 0
+    - Closes: 0
+
+  Hawkes Filtering Impact:
+    Entries blocked by CRISIS regime: 0
+    Entries blocked by λ not decaying: 0
+    Exits triggered by regime escalation: 0
+  Backtest half-life: 62.2 days
+Running backtest
+  Hedge ratio (spread construction): 1.1220
+  Position sizing: Dollar-neutral
+  Max position: 25%
+  Hard stop: 3.0%
+  Trailing stop: 1.5% (activates at 1.0%)
+  Profit target: 6.0%
+Backtest Complete!
+    - Total Trades: 0
+    - Final Equity: $1,000,000.00
+    - Total Return: 0.00%
+Performance metrics calculated
+
+--- Quarter 7/23 ---
+  Train: ≤ 2021-12-31  (925 obs)
+  Eval : 2022-01-03 → 2022-03-31  (62 obs)
+
+ Training slice: 925 observations
+ [1/5] Pair Validation
+
+======================================================================
+PAIR VALIDATION
+======================================================================
+
+1. Stationarity Test (ADF):
+   ADF Statistic: -4.9970
+   P-value: 0.0000
+   Stationary:  YES
+
+2. Mean Reversion Half-Life:
+   Half-life: 55.7 days
+   Acceptable range: 5-60 days
+   Within range:  YES
+
+3. Mean Stability Check:
+   Long-term mean drift: 0.2052
+   Stable mean:  YES
+
+4. Spread Range Analysis:
+   Range: 9.5885
+   Range in std units: 6.6
+   Reasonable range (<10 std):  YES
+
+5. Recent vs Historical Mean:
+   Overall mean: 1.9252
+   Recent 1yr mean: 1.4185
+   Shift in std: 0.35
+   No recent regime change:  YES
+
+----------------------------------------------------------------------
+OVERALL ASSESSMENT:
+ PAIR IS SUITABLE FOR MEAN-REVERSION TRADING
+======================================================================
+ [2/5] Jump Detection
+Detecting jumps using Bipower Variation
+Detected 74 jumps (8.01% of observations)
+ [3/5] Hawkes Calibration
+Fitting Hawkes process using MLE
+ Hawkes parameters estimate: 
+ λ̄ (baseline intensity): 0.0077
+ α (jump impact): 0.1615
+ β_H (decay rate): 0.1901
+ Branching ratio (α/β_H): 0.8496
+ [4/5] Hawkes Suitability
+
+======================================================================
+HAWKES SUITABILITY ANALYSIS
+======================================================================
+
+1. Jump Frequency: 8.0%
+   MODERATE - Hawkes can help with regime detection
+
+2. Branching Ratio (α/β): 0.850
+   GOOD - Strong jump clustering, Hawkes very useful
+
+3. λ Coefficient of Variation: 2.45
+   HIGH - Strong regime variation, Hawkes valuable
+
+4. Time in Elevated State: 12.6%
+   GOOD - Meaningful time in elevated regimes
+
+----------------------------------------------------------------------
+OVERALL HAWKES SUITABILITY SCORE: 0.88/1.00
+RECOMMENDATION: EXCELLENT - Hawkes should significantly improve timing
+======================================================================
+ [5/5] MRJD estimation
+Fitting the MRJD model
+ Step 1: Estimating OU params from continous periods
+
+======================================================================
+Critical: MRJD Half Life Mismatch Detected
+======================================================================
+    MRJD estimated half-life: 0.2 days
+    Empirical half-life: 55.6 days
+    Relative error: 99.7%
+    Discrepancy: 55.5 days
+
+ Overiding MRJD kappa with the empirical estimate instead
+
+ Corrected kappa: 3.993539 -> 0.012459
+ Corrected half-life: 0.2 days -> 55.6 days
+======================================================================
+
+ Step 2: Estimating jump distribution
+ Step 3: Joint MLE refinement
+Warning: Skipping joint MLE to preserve the validated kappa
+ (Joint MLE tends to overfit and revert to the incorrect parameters)
+MRJD Model Parameters:
+ κ (mean reversion speed): 0.0125
+ θ (long-run mean): 1.9889
+ σ (diffusive volatility): 3.701993
+  μ_J (jump mean): 0.0256
+  σ_J (jump volatility): 0.3815
+Detecting jumps using Bipower Variation
+Detected 72 jumps (7.30% of observations)
+
+ Evaluating period: Q7 OOS (2022-01-03 → 2022-03-31)
+  Half-life calibration:
+    Spread half-life: 55.7 days
+    Min hold period: 27 days
+    Target hold: 44 days
+    Max hold period: 83 days
+Generating trading signals (RELAXED filtering)...
+  LOW JUMP PAIR: 0.0% frequency -> Hawkes filtering relaxed
+  λ percentiles: p25=0.0077, p75=0.0108, p90=0.1412
+Generated 1 total signals:
+    - Long Entries: 0
+    - Short Entries: 1
+    - Closes: 0
+
+  Hawkes Filtering Impact:
+    Entries blocked by CRISIS regime: 0
+    Entries blocked by λ not decaying: 0
+    Exits triggered by regime escalation: 0
+  Backtest half-life: 55.7 days
+Running backtest
+  Hedge ratio (spread construction): 0.7575
+  Position sizing: Dollar-neutral
+  Max position: 25%
+  Hard stop: 3.0%
+  Trailing stop: 1.5% (activates at 1.0%)
+  Profit target: 6.0%
+Backtest Complete!
+    - Total Trades: 1
+    - Final Equity: $1,015,835.35
+    - Total Return: 1.58%
+    - Exit reasons: {'profit_target': 1}
+Performance metrics calculated
+
+--- Quarter 8/23 ---
+  Train: ≤ 2022-03-31  (987 obs)
+  Eval : 2022-04-01 → 2022-06-30  (62 obs)
+
+ Training slice: 987 observations
+ [1/5] Pair Validation
+
+======================================================================
+PAIR VALIDATION
+======================================================================
+
+1. Stationarity Test (ADF):
+   ADF Statistic: -5.0513
+   P-value: 0.0000
+   Stationary:  YES
+
+2. Mean Reversion Half-Life:
+   Half-life: 56.7 days
+   Acceptable range: 5-60 days
+   Within range:  YES
+
+3. Mean Stability Check:
+   Long-term mean drift: 0.2140
+   Stable mean:  YES
+
+4. Spread Range Analysis:
+   Range: 9.5885
+   Range in std units: 6.7
+   Reasonable range (<10 std):  YES
+
+5. Recent vs Historical Mean:
+   Overall mean: 1.9547
+   Recent 1yr mean: 1.7736
+   Shift in std: 0.13
+   No recent regime change:  YES
+
+----------------------------------------------------------------------
+OVERALL ASSESSMENT:
+ PAIR IS SUITABLE FOR MEAN-REVERSION TRADING
+======================================================================
+ [2/5] Jump Detection
+Detecting jumps using Bipower Variation
+Detected 72 jumps (7.30% of observations)
+ [3/5] Hawkes Calibration
+Fitting Hawkes process using MLE
+ Hawkes parameters estimate: 
+ λ̄ (baseline intensity): 0.0062
+ α (jump impact): 0.1546
+ β_H (decay rate): 0.1820
+ Branching ratio (α/β_H): 0.8492
+ [4/5] Hawkes Suitability
+
+======================================================================
+HAWKES SUITABILITY ANALYSIS
+======================================================================
+
+1. Jump Frequency: 7.3%
+   MODERATE - Hawkes can help with regime detection
+
+2. Branching Ratio (α/β): 0.849
+   GOOD - Strong jump clustering, Hawkes very useful
+
+3. λ Coefficient of Variation: 2.64
+   HIGH - Strong regime variation, Hawkes valuable
+
+4. Time in Elevated State: 12.3%
+   GOOD - Meaningful time in elevated regimes
+
+----------------------------------------------------------------------
+OVERALL HAWKES SUITABILITY SCORE: 0.88/1.00
+RECOMMENDATION: EXCELLENT - Hawkes should significantly improve timing
+======================================================================
+ [5/5] MRJD estimation
+Fitting the MRJD model
+ Step 1: Estimating OU params from continous periods
+
+======================================================================
+Critical: MRJD Half Life Mismatch Detected
+======================================================================
+    MRJD estimated half-life: 0.2 days
+    Empirical half-life: 56.7 days
+    Relative error: 99.7%
+    Discrepancy: 56.5 days
+
+ Overiding MRJD kappa with the empirical estimate instead
+
+ Corrected kappa: 3.915471 -> 0.012234
+ Corrected half-life: 0.2 days -> 56.7 days
+======================================================================
+
+ Step 2: Estimating jump distribution
+ Step 3: Joint MLE refinement
+Warning: Skipping joint MLE to preserve the validated kappa
+ (Joint MLE tends to overfit and revert to the incorrect parameters)
+MRJD Model Parameters:
+ κ (mean reversion speed): 0.0122
+ θ (long-run mean): 2.1177
+ σ (diffusive volatility): 3.687515
+  μ_J (jump mean): 0.0305
+  σ_J (jump volatility): 0.3853
+Detecting jumps using Bipower Variation
+Detected 55 jumps (5.25% of observations)
+
+ Evaluating period: Q8 OOS (2022-04-01 → 2022-06-30)
+  Half-life calibration:
+    Spread half-life: 56.7 days
+    Min hold period: 28 days
+    Target hold: 45 days
+    Max hold period: 85 days
+Generating trading signals (RELAXED filtering)...
+  LOW JUMP PAIR: 0.0% frequency -> Hawkes filtering relaxed
+  λ percentiles: p25=0.0062, p75=0.0071, p90=0.1140
+Generated 1 total signals:
+    - Long Entries: 1
+    - Short Entries: 0
+    - Closes: 0
+
+  Hawkes Filtering Impact:
+    Entries blocked by CRISIS regime: 0
+    Entries blocked by λ not decaying: 0
+    Exits triggered by regime escalation: 0
+  Backtest half-life: 56.7 days
+Running backtest
+  Hedge ratio (spread construction): 0.7486
+  Position sizing: Dollar-neutral
+  Max position: 25%
+  Hard stop: 3.0%
+  Trailing stop: 1.5% (activates at 1.0%)
+  Profit target: 6.0%
+Backtest Complete!
+    - Total Trades: 0
+    - Final Equity: $1,001,528.87
+    - Total Return: 0.15%
+Performance metrics calculated
+
+--- Quarter 9/23 ---
+  Train: ≤ 2022-06-30  (1049 obs)
+  Eval : 2022-07-01 → 2022-09-30  (64 obs)
+
+ Training slice: 1049 observations
+ [1/5] Pair Validation
+
+======================================================================
+PAIR VALIDATION
+======================================================================
+
+1. Stationarity Test (ADF):
+   ADF Statistic: -5.2220
+   P-value: 0.0000
+   Stationary:  YES
+
+2. Mean Reversion Half-Life:
+   Half-life: 55.1 days
+   Acceptable range: 5-60 days
+   Within range:  YES
+
+3. Mean Stability Check:
+   Long-term mean drift: 0.2102
+   Stable mean:  YES
+
+4. Spread Range Analysis:
+   Range: 9.5885
+   Range in std units: 6.8
+   Reasonable range (<10 std):  YES
+
+5. Recent vs Historical Mean:
+   Overall mean: 1.9839
+   Recent 1yr mean: 1.8758
+   Shift in std: 0.08
+   No recent regime change:  YES
+
+----------------------------------------------------------------------
+OVERALL ASSESSMENT:
+ PAIR IS SUITABLE FOR MEAN-REVERSION TRADING
+======================================================================
+ [2/5] Jump Detection
+Detecting jumps using Bipower Variation
+Detected 55 jumps (5.25% of observations)
+ [3/5] Hawkes Calibration
+Fitting Hawkes process using MLE
+ Hawkes parameters estimate: 
+ λ̄ (baseline intensity): 0.0068
+ α (jump impact): 0.1764
+ β_H (decay rate): 0.2168
+ Branching ratio (α/β_H): 0.8134
+ [4/5] Hawkes Suitability
+
+======================================================================
+HAWKES SUITABILITY ANALYSIS
+======================================================================
+
+1. Jump Frequency: 5.2%
+   LOW - Not enough jumps for Hawkes to add value
+
+2. Branching Ratio (α/β): 0.813
+   GOOD - Strong jump clustering, Hawkes very useful
+
+3. λ Coefficient of Variation: 2.83
+   HIGH - Strong regime variation, Hawkes valuable
+
+4. Time in Elevated State: 13.1%
+   GOOD - Meaningful time in elevated regimes
+
+----------------------------------------------------------------------
+OVERALL HAWKES SUITABILITY SCORE: 0.80/1.00
+RECOMMENDATION: GOOD - Hawkes useful for regime detection and filtering
+======================================================================
+ [5/5] MRJD estimation
+Fitting the MRJD model
+ Step 1: Estimating OU params from continous periods
+
+======================================================================
+Critical: MRJD Half Life Mismatch Detected
+======================================================================
+    MRJD estimated half-life: 0.2 days
+    Empirical half-life: 55.0 days
+    Relative error: 99.7%
+    Discrepancy: 54.9 days
+
+ Overiding MRJD kappa with the empirical estimate instead
+
+ Corrected kappa: 3.993879 -> 0.012593
+ Corrected half-life: 0.2 days -> 55.0 days
+======================================================================
+
+ Step 2: Estimating jump distribution
+ Step 3: Joint MLE refinement
+Warning: Skipping joint MLE to preserve the validated kappa
+ (Joint MLE tends to overfit and revert to the incorrect parameters)
+MRJD Model Parameters:
+ κ (mean reversion speed): 0.0126
+ θ (long-run mean): 2.0006
+ σ (diffusive volatility): 3.580887
+  μ_J (jump mean): 0.0320
+  σ_J (jump volatility): 0.4330
+Detecting jumps using Bipower Variation
+Detected 55 jumps (4.95% of observations)
+
+ Evaluating period: Q9 OOS (2022-07-01 → 2022-09-30)
+  Half-life calibration:
+    Spread half-life: 55.1 days
+    Min hold period: 27 days
+    Target hold: 44 days
+    Max hold period: 82 days
+Generating trading signals (RELAXED filtering)...
+  LOW JUMP PAIR: 0.0% frequency -> Hawkes filtering relaxed
+  λ percentiles: p25=0.0068, p75=0.0069, p90=0.0498
+Generated 2 total signals:
+    - Long Entries: 1
+    - Short Entries: 0
+    - Closes: 1
+
+  Hawkes Filtering Impact:
+    Entries blocked by CRISIS regime: 0
+    Entries blocked by λ not decaying: 0
+    Exits triggered by regime escalation: 0
+  Backtest half-life: 55.1 days
+Running backtest
+  Hedge ratio (spread construction): 1.0150
+  Position sizing: Dollar-neutral
+  Max position: 25%
+  Hard stop: 3.0%
+  Trailing stop: 1.5% (activates at 1.0%)
+  Profit target: 6.0%
+Backtest Complete!
+    - Total Trades: 1
+    - Final Equity: $998,530.57
+    - Total Return: -0.15%
+    - Exit reasons: {'signal': 1}
+Performance metrics calculated
+
+--- Quarter 10/23 ---
+  Train: ≤ 2022-09-30  (1113 obs)
+  Eval : 2022-10-03 → 2022-12-30  (63 obs)
+
+ Training slice: 1113 observations
+ [1/5] Pair Validation
+
+======================================================================
+PAIR VALIDATION
+======================================================================
+
+1. Stationarity Test (ADF):
+   ADF Statistic: -5.3119
+   P-value: 0.0000
+   Stationary:  YES
+
+2. Mean Reversion Half-Life:
+   Half-life: 59.0 days
+   Acceptable range: 5-60 days
+   Within range:  YES
+
+3. Mean Stability Check:
+   Long-term mean drift: 0.2091
+   Stable mean:  YES
+
+4. Spread Range Analysis:
+   Range: 9.5885
+   Range in std units: 6.9
+   Reasonable range (<10 std):  YES
+
+5. Recent vs Historical Mean:
+   Overall mean: 1.9433
+   Recent 1yr mean: 1.7241
+   Shift in std: 0.16
+   No recent regime change:  YES
+
+----------------------------------------------------------------------
+OVERALL ASSESSMENT:
+ PAIR IS SUITABLE FOR MEAN-REVERSION TRADING
+======================================================================
+ [2/5] Jump Detection
+Detecting jumps using Bipower Variation
+Detected 55 jumps (4.95% of observations)
+ [3/5] Hawkes Calibration
+Fitting Hawkes process using MLE
+ Hawkes parameters estimate: 
+ λ̄ (baseline intensity): 0.0063
+ α (jump impact): 0.1747
+ β_H (decay rate): 0.2141
+ Branching ratio (α/β_H): 0.8160
+ [4/5] Hawkes Suitability
+
+======================================================================
+HAWKES SUITABILITY ANALYSIS
+======================================================================
+
+1. Jump Frequency: 4.9%
+   LOW - Not enough jumps for Hawkes to add value
+
+2. Branching Ratio (α/β): 0.816
+   GOOD - Strong jump clustering, Hawkes very useful
+
+3. λ Coefficient of Variation: 2.92
+   HIGH - Strong regime variation, Hawkes valuable
+
+4. Time in Elevated State: 12.8%
+   GOOD - Meaningful time in elevated regimes
+
+----------------------------------------------------------------------
+OVERALL HAWKES SUITABILITY SCORE: 0.80/1.00
+RECOMMENDATION: GOOD - Hawkes useful for regime detection and filtering
+======================================================================
+ [5/5] MRJD estimation
+Fitting the MRJD model
+ Step 1: Estimating OU params from continous periods
+
+======================================================================
+Critical: MRJD Half Life Mismatch Detected
+======================================================================
+    MRJD estimated half-life: 0.2 days
+    Empirical half-life: 58.9 days
+    Relative error: 99.7%
+    Discrepancy: 58.7 days
+
+ Overiding MRJD kappa with the empirical estimate instead
+
+ Corrected kappa: 3.646613 -> 0.011768
+ Corrected half-life: 0.2 days -> 58.9 days
+======================================================================
+
+ Step 2: Estimating jump distribution
+ Step 3: Joint MLE refinement
+Warning: Skipping joint MLE to preserve the validated kappa
+ (Joint MLE tends to overfit and revert to the incorrect parameters)
+MRJD Model Parameters:
+ κ (mean reversion speed): 0.0118
+ θ (long-run mean): 1.8452
+ σ (diffusive volatility): 3.509672
+  μ_J (jump mean): 0.0320
+  σ_J (jump volatility): 0.4330
+Detecting jumps using Bipower Variation
+Detected 54 jumps (4.60% of observations)
+
+ Evaluating period: Q10 OOS (2022-10-03 → 2022-12-30)
+  Half-life calibration:
+    Spread half-life: 59.0 days
+    Min hold period: 29 days
+    Target hold: 47 days
+    Max hold period: 88 days
+Generating trading signals (RELAXED filtering)...
+  LOW JUMP PAIR: 0.0% frequency -> Hawkes filtering relaxed
+  λ percentiles: p25=0.0063, p75=0.0064, p90=0.0448
+Generated 2 total signals:
+    - Long Entries: 0
+    - Short Entries: 1
+    - Closes: 1
+
+  Hawkes Filtering Impact:
+    Entries blocked by CRISIS regime: 0
+    Entries blocked by λ not decaying: 0
+    Exits triggered by regime escalation: 0
+  Backtest half-life: 59.0 days
+Running backtest
+  Hedge ratio (spread construction): 1.1086
+  Position sizing: Dollar-neutral
+  Max position: 25%
+  Hard stop: 3.0%
+  Trailing stop: 1.5% (activates at 1.0%)
+  Profit target: 6.0%
+Backtest Complete!
+    - Total Trades: 1
+    - Final Equity: $992,383.28
+    - Total Return: -0.76%
+    - Exit reasons: {'stop_loss': 1}
+Performance metrics calculated
+
+--- Quarter 11/23 ---
+  Train: ≤ 2022-12-30  (1176 obs)
+  Eval : 2023-01-03 → 2023-03-31  (62 obs)
+
+ Training slice: 1176 observations
+ [1/5] Pair Validation
+
+======================================================================
+PAIR VALIDATION
+======================================================================
+
+1. Stationarity Test (ADF):
+   ADF Statistic: -5.0982
+   P-value: 0.0000
+   Stationary:  YES
+
+2. Mean Reversion Half-Life:
+   Half-life: 56.5 days
+   Acceptable range: 5-60 days
+   Within range:  YES
+
+3. Mean Stability Check:
+   Long-term mean drift: 0.2009
+   Stable mean:  YES
+
+4. Spread Range Analysis:
+   Range: 9.5885
+   Range in std units: 6.8
+   Reasonable range (<10 std):  YES
+
+5. Recent vs Historical Mean:
+   Overall mean: 1.8883
+   Recent 1yr mean: 1.7530
+   Shift in std: 0.10
+   No recent regime change:  YES
+
+----------------------------------------------------------------------
+OVERALL ASSESSMENT:
+ PAIR IS SUITABLE FOR MEAN-REVERSION TRADING
+======================================================================
+ [2/5] Jump Detection
+Detecting jumps using Bipower Variation
+Detected 54 jumps (4.60% of observations)
+ [3/5] Hawkes Calibration
+Fitting Hawkes process using MLE
+ Hawkes parameters estimate: 
+ λ̄ (baseline intensity): 0.0058
+ α (jump impact): 0.1632
+ β_H (decay rate): 0.1997
+ Branching ratio (α/β_H): 0.8174
+ [4/5] Hawkes Suitability
+
+======================================================================
+HAWKES SUITABILITY ANALYSIS
+======================================================================
+
+1. Jump Frequency: 4.6%
+   LOW - Not enough jumps for Hawkes to add value
+
+2. Branching Ratio (α/β): 0.817
+   GOOD - Strong jump clustering, Hawkes very useful
+
+3. λ Coefficient of Variation: 3.03
+   HIGH - Strong regime variation, Hawkes valuable
+
+4. Time in Elevated State: 12.8%
+   GOOD - Meaningful time in elevated regimes
+
+----------------------------------------------------------------------
+OVERALL HAWKES SUITABILITY SCORE: 0.80/1.00
+RECOMMENDATION: GOOD - Hawkes useful for regime detection and filtering
+======================================================================
+ [5/5] MRJD estimation
+Fitting the MRJD model
+ Step 1: Estimating OU params from continous periods
+
+======================================================================
+Critical: MRJD Half Life Mismatch Detected
+======================================================================
+    MRJD estimated half-life: 0.2 days
+    Empirical half-life: 56.4 days
+    Relative error: 99.7%
+    Discrepancy: 56.2 days
+
+ Overiding MRJD kappa with the empirical estimate instead
+
+ Corrected kappa: 3.721329 -> 0.012283
+ Corrected half-life: 0.2 days -> 56.4 days
+======================================================================
+
+ Step 2: Estimating jump distribution
+ Step 3: Joint MLE refinement
+Warning: Skipping joint MLE to preserve the validated kappa
+ (Joint MLE tends to overfit and revert to the incorrect parameters)
+MRJD Model Parameters:
+ κ (mean reversion speed): 0.0123
+ θ (long-run mean): 1.7746
+ σ (diffusive volatility): 3.656171
+  μ_J (jump mean): 0.0329
+  σ_J (jump volatility): 0.4370
+Detecting jumps using Bipower Variation
+Detected 60 jumps (4.85% of observations)
+
+ Evaluating period: Q11 OOS (2023-01-03 → 2023-03-31)
+  Half-life calibration:
+    Spread half-life: 56.5 days
+    Min hold period: 28 days
+    Target hold: 45 days
+    Max hold period: 84 days
+Generating trading signals (RELAXED filtering)...
+  λ percentiles: p25=0.0058, p75=0.0058, p90=0.0388
+Generated 2 total signals:
+    - Long Entries: 0
+    - Short Entries: 1
+    - Closes: 1
+
+  Hawkes Filtering Impact:
+    Entries blocked by CRISIS regime: 0
+    Entries blocked by λ not decaying: 0
+    Exits triggered by regime escalation: 0
+  Backtest half-life: 56.5 days
+Running backtest
+  Hedge ratio (spread construction): 0.8106
+  Position sizing: Dollar-neutral
+  Max position: 25%
+  Hard stop: 3.0%
+  Trailing stop: 1.5% (activates at 1.0%)
+  Profit target: 6.0%
+Backtest Complete!
+    - Total Trades: 1
+    - Final Equity: $1,001,681.77
+    - Total Return: 0.17%
+    - Exit reasons: {'trailing_stop': 1}
+Performance metrics calculated
+
+--- Quarter 12/23 ---
+  Train: ≤ 2023-03-31  (1238 obs)
+  Eval : 2023-04-03 → 2023-06-30  (62 obs)
+
+ Training slice: 1238 observations
+ [1/5] Pair Validation
+
+======================================================================
+PAIR VALIDATION
+======================================================================
+
+1. Stationarity Test (ADF):
+   ADF Statistic: -6.8038
+   P-value: 0.0000
+   Stationary:  YES
+
+2. Mean Reversion Half-Life:
+   Half-life: 45.7 days
+   Acceptable range: 5-60 days
+   Within range:  YES
+
+3. Mean Stability Check:
+   Long-term mean drift: 0.1878
+   Stable mean:  YES
+
+4. Spread Range Analysis:
+   Range: 9.7444
+   Range in std units: 6.7
+   Reasonable range (<10 std):  YES
+
+5. Recent vs Historical Mean:
+   Overall mean: 1.9036
+   Recent 1yr mean: 1.7099
+   Shift in std: 0.13
+   No recent regime change:  YES
+
+----------------------------------------------------------------------
+OVERALL ASSESSMENT:
+ PAIR IS SUITABLE FOR MEAN-REVERSION TRADING
+======================================================================
+ [2/5] Jump Detection
+Detecting jumps using Bipower Variation
+Detected 60 jumps (4.85% of observations)
+ [3/5] Hawkes Calibration
+Fitting Hawkes process using MLE
+ Hawkes parameters estimate: 
+ λ̄ (baseline intensity): 0.0071
+ α (jump impact): 0.1843
+ β_H (decay rate): 0.2336
+ Branching ratio (α/β_H): 0.7889
+ [4/5] Hawkes Suitability
+
+======================================================================
+HAWKES SUITABILITY ANALYSIS
+======================================================================
+
+1. Jump Frequency: 4.9%
+   LOW - Not enough jumps for Hawkes to add value
+
+2. Branching Ratio (α/β): 0.789
+   GOOD - Strong jump clustering, Hawkes very useful
+
+3. λ Coefficient of Variation: 2.83
+   HIGH - Strong regime variation, Hawkes valuable
+
+4. Time in Elevated State: 13.0%
+   GOOD - Meaningful time in elevated regimes
+
+----------------------------------------------------------------------
+OVERALL HAWKES SUITABILITY SCORE: 0.80/1.00
+RECOMMENDATION: GOOD - Hawkes useful for regime detection and filtering
+======================================================================
+ [5/5] MRJD estimation
+Fitting the MRJD model
+ Step 1: Estimating OU params from continous periods
+
+======================================================================
+Critical: MRJD Half Life Mismatch Detected
+======================================================================
+    MRJD estimated half-life: 0.1 days
+    Empirical half-life: 45.6 days
+    Relative error: 99.7%
+    Discrepancy: 45.5 days
+
+ Overiding MRJD kappa with the empirical estimate instead
+
+ Corrected kappa: 4.627439 -> 0.015186
+ Corrected half-life: 0.1 days -> 45.6 days
+======================================================================
+
+ Step 2: Estimating jump distribution
+ Step 3: Joint MLE refinement
+Warning: Skipping joint MLE to preserve the validated kappa
+ (Joint MLE tends to overfit and revert to the incorrect parameters)
+MRJD Model Parameters:
+ κ (mean reversion speed): 0.0152
+ θ (long-run mean): 1.8981
+ σ (diffusive volatility): 4.110298
+  μ_J (jump mean): 0.0255
+  σ_J (jump volatility): 0.4150
+Detecting jumps using Bipower Variation
+Detected 60 jumps (4.62% of observations)
+
+ Evaluating period: Q12 OOS (2023-04-03 → 2023-06-30)
+  Half-life calibration:
+    Spread half-life: 45.7 days
+    Min hold period: 22 days
+    Target hold: 36 days
+    Max hold period: 68 days
+Generating trading signals (RELAXED filtering)...
+  LOW JUMP PAIR: 3.2% frequency -> Hawkes filtering relaxed
+  λ percentiles: p25=0.0071, p75=0.0071, p90=0.0430
+Generated 0 total signals:
+    - Long Entries: 0
+    - Short Entries: 0
+    - Closes: 0
+
+  Hawkes Filtering Impact:
+    Entries blocked by CRISIS regime: 0
+    Entries blocked by λ not decaying: 0
+    Exits triggered by regime escalation: 0
+  Backtest half-life: 45.7 days
+Running backtest
+  Hedge ratio (spread construction): 0.7088
+  Position sizing: Dollar-neutral
+  Max position: 25%
+  Hard stop: 3.0%
+  Trailing stop: 1.5% (activates at 1.0%)
+  Profit target: 6.0%
+Backtest Complete!
+    - Total Trades: 0
+    - Final Equity: $1,000,000.00
+    - Total Return: 0.00%
+Performance metrics calculated
+
+--- Quarter 13/23 ---
+  Train: ≤ 2023-06-30  (1300 obs)
+  Eval : 2023-07-03 → 2023-09-29  (63 obs)
+
+ Training slice: 1300 observations
+ [1/5] Pair Validation
+
+======================================================================
+PAIR VALIDATION
+======================================================================
+
+1. Stationarity Test (ADF):
+   ADF Statistic: -6.9503
+   P-value: 0.0000
+   Stationary:  YES
+
+2. Mean Reversion Half-Life:
+   Half-life: 45.8 days
+   Acceptable range: 5-60 days
+   Within range:  YES
+
+3. Mean Stability Check:
+   Long-term mean drift: 0.1886
+   Stable mean:  YES
+
+4. Spread Range Analysis:
+   Range: 9.7444
+   Range in std units: 6.8
+   Reasonable range (<10 std):  YES
+
+5. Recent vs Historical Mean:
+   Overall mean: 1.9388
+   Recent 1yr mean: 1.7500
+   Shift in std: 0.13
+   No recent regime change:  YES
+
+----------------------------------------------------------------------
+OVERALL ASSESSMENT:
+ PAIR IS SUITABLE FOR MEAN-REVERSION TRADING
+======================================================================
+ [2/5] Jump Detection
+Detecting jumps using Bipower Variation
+Detected 60 jumps (4.62% of observations)
+ [3/5] Hawkes Calibration
+Fitting Hawkes process using MLE
+ Hawkes parameters estimate: 
+ λ̄ (baseline intensity): 0.0072
+ α (jump impact): 0.1763
+ β_H (decay rate): 0.2281
+ Branching ratio (α/β_H): 0.7728
+ [4/5] Hawkes Suitability
+
+======================================================================
+HAWKES SUITABILITY ANALYSIS
+======================================================================
+
+1. Jump Frequency: 4.6%
+   LOW - Not enough jumps for Hawkes to add value
+
+2. Branching Ratio (α/β): 0.773
+   GOOD - Strong jump clustering, Hawkes very useful
+
+3. λ Coefficient of Variation: 2.80
+   HIGH - Strong regime variation, Hawkes valuable
+
+4. Time in Elevated State: 13.2%
+   GOOD - Meaningful time in elevated regimes
+
+----------------------------------------------------------------------
+OVERALL HAWKES SUITABILITY SCORE: 0.80/1.00
+RECOMMENDATION: GOOD - Hawkes useful for regime detection and filtering
+======================================================================
+ [5/5] MRJD estimation
+Fitting the MRJD model
+ Step 1: Estimating OU params from continous periods
+
+======================================================================
+Critical: MRJD Half Life Mismatch Detected
+======================================================================
+    MRJD estimated half-life: 0.2 days
+    Empirical half-life: 45.7 days
+    Relative error: 99.7%
+    Discrepancy: 45.6 days
+
+ Overiding MRJD kappa with the empirical estimate instead
+
+ Corrected kappa: 4.582952 -> 0.015154
+ Corrected half-life: 0.2 days -> 45.7 days
+======================================================================
+
+ Step 2: Estimating jump distribution
+ Step 3: Joint MLE refinement
+Warning: Skipping joint MLE to preserve the validated kappa
+ (Joint MLE tends to overfit and revert to the incorrect parameters)
+MRJD Model Parameters:
+ κ (mean reversion speed): 0.0152
+ θ (long-run mean): 1.9976
+ σ (diffusive volatility): 4.025264
+  μ_J (jump mean): 0.0191
+  σ_J (jump volatility): 0.4007
+Detecting jumps using Bipower Variation
+Detected 92 jumps (6.75% of observations)
+
+ Evaluating period: Q13 OOS (2023-07-03 → 2023-09-29)
+  Half-life calibration:
+    Spread half-life: 45.8 days
+    Min hold period: 22 days
+    Target hold: 36 days
+    Max hold period: 68 days
+Generating trading signals (RELAXED filtering)...
+  λ percentiles: p25=0.0072, p75=0.0073, p90=0.0429
+Generated 3 total signals:
+    - Long Entries: 2
+    - Short Entries: 0
+    - Closes: 1
+
+  Hawkes Filtering Impact:
+    Entries blocked by CRISIS regime: 0
+    Entries blocked by λ not decaying: 0
+    Exits triggered by regime escalation: 0
+  Backtest half-life: 45.8 days
+Running backtest
+  Hedge ratio (spread construction): 0.9860
+  Position sizing: Dollar-neutral
+  Max position: 25%
+  Hard stop: 3.0%
+  Trailing stop: 1.5% (activates at 1.0%)
+  Profit target: 6.0%
+Backtest Complete!
+    - Total Trades: 1
+    - Final Equity: $1,003,265.87
+    - Total Return: 0.33%
+    - Exit reasons: {'trailing_stop': 1}
+Performance metrics calculated
+
+--- Quarter 14/23 ---
+  Train: ≤ 2023-09-29  (1363 obs)
+  Eval : 2023-10-02 → 2023-12-29  (63 obs)
+
+ Training slice: 1363 observations
+ [1/5] Pair Validation
+
+======================================================================
+PAIR VALIDATION
+======================================================================
+
+1. Stationarity Test (ADF):
+   ADF Statistic: -7.2167
+   P-value: 0.0000
+   Stationary:  YES
+
+2. Mean Reversion Half-Life:
+   Half-life: 44.2 days
+   Acceptable range: 5-60 days
+   Within range:  YES
+
+3. Mean Stability Check:
+   Long-term mean drift: 0.1869
+   Stable mean:  YES
+
+4. Spread Range Analysis:
+   Range: 9.7444
+   Range in std units: 6.9
+   Reasonable range (<10 std):  YES
+
+5. Recent vs Historical Mean:
+   Overall mean: 1.9143
+   Recent 1yr mean: 1.7712
+   Shift in std: 0.10
+   No recent regime change:  YES
+
+----------------------------------------------------------------------
+OVERALL ASSESSMENT:
+ PAIR IS SUITABLE FOR MEAN-REVERSION TRADING
+======================================================================
+ [2/5] Jump Detection
+Detecting jumps using Bipower Variation
+Detected 92 jumps (6.75% of observations)
+ [3/5] Hawkes Calibration
+Fitting Hawkes process using MLE
+ Hawkes parameters estimate: 
+ λ̄ (baseline intensity): 0.0077
+ α (jump impact): 0.1887
+ β_H (decay rate): 0.2229
+ Branching ratio (α/β_H): 0.8463
+ [4/5] Hawkes Suitability
+
+======================================================================
+HAWKES SUITABILITY ANALYSIS
+======================================================================
+
+1. Jump Frequency: 6.8%
+   LOW - Not enough jumps for Hawkes to add value
+
+2. Branching Ratio (α/β): 0.846
+   GOOD - Strong jump clustering, Hawkes very useful
+
+3. λ Coefficient of Variation: 2.65
+   HIGH - Strong regime variation, Hawkes valuable
+
+4. Time in Elevated State: 12.6%
+   GOOD - Meaningful time in elevated regimes
+
+----------------------------------------------------------------------
+OVERALL HAWKES SUITABILITY SCORE: 0.80/1.00
+RECOMMENDATION: GOOD - Hawkes useful for regime detection and filtering
+======================================================================
+ [5/5] MRJD estimation
+Fitting the MRJD model
+ Step 1: Estimating OU params from continous periods
+
+======================================================================
+Critical: MRJD Half Life Mismatch Detected
+======================================================================
+    MRJD estimated half-life: 0.2 days
+    Empirical half-life: 44.2 days
+    Relative error: 99.7%
+    Discrepancy: 44.0 days
+
+ Overiding MRJD kappa with the empirical estimate instead
+
+ Corrected kappa: 4.572824 -> 0.015693
+ Corrected half-life: 0.2 days -> 44.2 days
+======================================================================
+
+ Step 2: Estimating jump distribution
+ Step 3: Joint MLE refinement
+Warning: Skipping joint MLE to preserve the validated kappa
+ (Joint MLE tends to overfit and revert to the incorrect parameters)
+MRJD Model Parameters:
+ κ (mean reversion speed): 0.0157
+ θ (long-run mean): 1.8777
+ σ (diffusive volatility): 4.085283
+  μ_J (jump mean): 0.0502
+  σ_J (jump volatility): 0.3529
+Detecting jumps using Bipower Variation
+Detected 99 jumps (6.95% of observations)
+
+ Evaluating period: Q14 OOS (2023-10-02 → 2023-12-29)
+  Half-life calibration:
+    Spread half-life: 44.2 days
+    Min hold period: 22 days
+    Target hold: 35 days
+    Max hold period: 66 days
+Generating trading signals (RELAXED filtering)...
+  λ percentiles: p25=0.0077, p75=0.0080, p90=0.0942
+Generated 0 total signals:
+    - Long Entries: 0
+    - Short Entries: 0
+    - Closes: 0
+
+  Hawkes Filtering Impact:
+    Entries blocked by CRISIS regime: 0
+    Entries blocked by λ not decaying: 0
+    Exits triggered by regime escalation: 0
+  Backtest half-life: 44.2 days
+Running backtest
+  Hedge ratio (spread construction): 0.7728
+  Position sizing: Dollar-neutral
+  Max position: 25%
+  Hard stop: 3.0%
+  Trailing stop: 1.5% (activates at 1.0%)
+  Profit target: 6.0%
+Backtest Complete!
+    - Total Trades: 0
+    - Final Equity: $1,000,000.00
+    - Total Return: 0.00%
+Performance metrics calculated
+
+--- Quarter 15/23 ---
+  Train: ≤ 2023-12-29  (1426 obs)
+  Eval : 2024-01-02 → 2024-03-28  (61 obs)
+
+ Training slice: 1426 observations
+ [1/5] Pair Validation
+
+======================================================================
+PAIR VALIDATION
+======================================================================
+
+1. Stationarity Test (ADF):
+   ADF Statistic: -7.4619
+   P-value: 0.0000
+   Stationary:  YES
+
+2. Mean Reversion Half-Life:
+   Half-life: 44.5 days
+   Acceptable range: 5-60 days
+   Within range:  YES
+
+3. Mean Stability Check:
+   Long-term mean drift: 0.1855
+   Stable mean:  YES
+
+4. Spread Range Analysis:
+   Range: 9.7444
+   Range in std units: 6.9
+   Reasonable range (<10 std):  YES
+
+5. Recent vs Historical Mean:
+   Overall mean: 1.9366
+   Recent 1yr mean: 2.1440
+   Shift in std: 0.15
+   No recent regime change:  YES
+
+----------------------------------------------------------------------
+OVERALL ASSESSMENT:
+ PAIR IS SUITABLE FOR MEAN-REVERSION TRADING
+======================================================================
+ [2/5] Jump Detection
+Detecting jumps using Bipower Variation
+Detected 99 jumps (6.95% of observations)
+ [3/5] Hawkes Calibration
+Fitting Hawkes process using MLE
+ Hawkes parameters estimate: 
+ λ̄ (baseline intensity): 0.0074
+ α (jump impact): 0.2033
+ β_H (decay rate): 0.2403
+ Branching ratio (α/β_H): 0.8458
+ [4/5] Hawkes Suitability
+
+======================================================================
+HAWKES SUITABILITY ANALYSIS
+======================================================================
+
+1. Jump Frequency: 6.9%
+   LOW - Not enough jumps for Hawkes to add value
+
+2. Branching Ratio (α/β): 0.846
+   GOOD - Strong jump clustering, Hawkes very useful
+
+3. λ Coefficient of Variation: 2.65
+   HIGH - Strong regime variation, Hawkes valuable
+
+4. Time in Elevated State: 12.1%
+   GOOD - Meaningful time in elevated regimes
+
+----------------------------------------------------------------------
+OVERALL HAWKES SUITABILITY SCORE: 0.80/1.00
+RECOMMENDATION: GOOD - Hawkes useful for regime detection and filtering
+======================================================================
+ [5/5] MRJD estimation
+Fitting the MRJD model
+ Step 1: Estimating OU params from continous periods
+
+======================================================================
+Critical: MRJD Half Life Mismatch Detected
+======================================================================
+    MRJD estimated half-life: 0.1 days
+    Empirical half-life: 44.4 days
+    Relative error: 99.7%
+    Discrepancy: 44.3 days
+
+ Overiding MRJD kappa with the empirical estimate instead
+
+ Corrected kappa: 5.033148 -> 0.015597
+ Corrected half-life: 0.1 days -> 44.4 days
+======================================================================
+
+ Step 2: Estimating jump distribution
+ Step 3: Joint MLE refinement
+Warning: Skipping joint MLE to preserve the validated kappa
+ (Joint MLE tends to overfit and revert to the incorrect parameters)
+MRJD Model Parameters:
+ κ (mean reversion speed): 0.0156
+ θ (long-run mean): 2.0087
+ σ (diffusive volatility): 4.158237
+  μ_J (jump mean): 0.0475
+  σ_J (jump volatility): 0.3409
+Detecting jumps using Bipower Variation
+Detected 98 jumps (6.59% of observations)
+
+ Evaluating period: Q15 OOS (2024-01-02 → 2024-03-28)
+  Half-life calibration:
+    Spread half-life: 44.5 days
+    Min hold period: 22 days
+    Target hold: 35 days
+    Max hold period: 66 days
+Generating trading signals (RELAXED filtering)...
+  LOW JUMP PAIR: 0.0% frequency -> Hawkes filtering relaxed
+  λ percentiles: p25=0.0074, p75=0.0077, p90=0.1024
+Generated 2 total signals:
+    - Long Entries: 0
+    - Short Entries: 1
+    - Closes: 1
+
+  Hawkes Filtering Impact:
+    Entries blocked by CRISIS regime: 0
+    Entries blocked by λ not decaying: 0
+    Exits triggered by regime escalation: 0
+  Backtest half-life: 44.5 days
+Running backtest
+  Hedge ratio (spread construction): 0.3263
+  Position sizing: Dollar-neutral
+  Max position: 25%
+  Hard stop: 3.0%
+  Trailing stop: 1.5% (activates at 1.0%)
+  Profit target: 6.0%
+Backtest Complete!
+    - Total Trades: 1
+    - Final Equity: $992,752.77
+    - Total Return: -0.72%
+    - Exit reasons: {'stop_loss': 1}
+Performance metrics calculated
+
+--- Quarter 16/23 ---
+  Train: ≤ 2024-03-28  (1487 obs)
+  Eval : 2024-04-01 → 2024-06-28  (63 obs)
+
+ Training slice: 1487 observations
+ [1/5] Pair Validation
+
+======================================================================
+PAIR VALIDATION
+======================================================================
+
+1. Stationarity Test (ADF):
+   ADF Statistic: -7.1231
+   P-value: 0.0000
+   Stationary:  YES
+
+2. Mean Reversion Half-Life:
+   Half-life: 50.5 days
+   Acceptable range: 5-60 days
+   Within range:  YES
+
+3. Mean Stability Check:
+   Long-term mean drift: 0.1862
+   Stable mean:  YES
+
+4. Spread Range Analysis:
+   Range: 10.7304
+   Range in std units: 7.2
+   Reasonable range (<10 std):  YES
+
+5. Recent vs Historical Mean:
+   Overall mean: 2.0415
+   Recent 1yr mean: 2.7085
+   Shift in std: 0.45
+   No recent regime change:  YES
+
+----------------------------------------------------------------------
+OVERALL ASSESSMENT:
+ PAIR IS SUITABLE FOR MEAN-REVERSION TRADING
+======================================================================
+ [2/5] Jump Detection
+Detecting jumps using Bipower Variation
+Detected 98 jumps (6.59% of observations)
+ [3/5] Hawkes Calibration
+Fitting Hawkes process using MLE
+ Hawkes parameters estimate: 
+ λ̄ (baseline intensity): 0.0069
+ α (jump impact): 0.2103
+ β_H (decay rate): 0.2482
+ Branching ratio (α/β_H): 0.8474
+ [4/5] Hawkes Suitability
+
+======================================================================
+HAWKES SUITABILITY ANALYSIS
+======================================================================
+
+1. Jump Frequency: 6.6%
+   LOW - Not enough jumps for Hawkes to add value
+
+2. Branching Ratio (α/β): 0.847
+   GOOD - Strong jump clustering, Hawkes very useful
+
+3. λ Coefficient of Variation: 2.75
+   HIGH - Strong regime variation, Hawkes valuable
+
+4. Time in Elevated State: 12.0%
+   GOOD - Meaningful time in elevated regimes
+
+----------------------------------------------------------------------
+OVERALL HAWKES SUITABILITY SCORE: 0.80/1.00
+RECOMMENDATION: GOOD - Hawkes useful for regime detection and filtering
+======================================================================
+ [5/5] MRJD estimation
+Fitting the MRJD model
+ Step 1: Estimating OU params from continous periods
+
+======================================================================
+Critical: MRJD Half Life Mismatch Detected
+======================================================================
+    MRJD estimated half-life: 0.2 days
+    Empirical half-life: 50.4 days
+    Relative error: 99.7%
+    Discrepancy: 50.3 days
+
+ Overiding MRJD kappa with the empirical estimate instead
+
+ Corrected kappa: 4.336568 -> 0.013743
+ Corrected half-life: 0.2 days -> 50.4 days
+======================================================================
+
+ Step 2: Estimating jump distribution
+ Step 3: Joint MLE refinement
+Warning: Skipping joint MLE to preserve the validated kappa
+ (Joint MLE tends to overfit and revert to the incorrect parameters)
+MRJD Model Parameters:
+ κ (mean reversion speed): 0.0137
+ θ (long-run mean): 2.1355
+ σ (diffusive volatility): 4.138434
+  μ_J (jump mean): 0.0504
+  σ_J (jump volatility): 0.3414
+Detecting jumps using Bipower Variation
+Detected 97 jumps (6.26% of observations)
+
+ Evaluating period: Q16 OOS (2024-04-01 → 2024-06-28)
+  Half-life calibration:
+    Spread half-life: 50.5 days
+    Min hold period: 25 days
+    Target hold: 40 days
+    Max hold period: 75 days
+Generating trading signals (RELAXED filtering)...
+  LOW JUMP PAIR: 0.0% frequency -> Hawkes filtering relaxed
+  λ percentiles: p25=0.0069, p75=0.0070, p90=0.0839
+Generated 0 total signals:
+    - Long Entries: 0
+    - Short Entries: 0
+    - Closes: 0
+
+  Hawkes Filtering Impact:
+    Entries blocked by CRISIS regime: 0
+    Entries blocked by λ not decaying: 0
+    Exits triggered by regime escalation: 0
+  Backtest half-life: 50.5 days
+Running backtest
+  Hedge ratio (spread construction): 0.9070
+  Position sizing: Dollar-neutral
+  Max position: 25%
+  Hard stop: 3.0%
+  Trailing stop: 1.5% (activates at 1.0%)
+  Profit target: 6.0%
+Backtest Complete!
+    - Total Trades: 0
+    - Final Equity: $1,000,000.00
+    - Total Return: 0.00%
+Performance metrics calculated
+
+--- Quarter 17/23 ---
+  Train: ≤ 2024-06-28  (1550 obs)
+  Eval : 2024-07-01 → 2024-09-30  (64 obs)
+
+ Training slice: 1550 observations
+ [1/5] Pair Validation
+
+======================================================================
+PAIR VALIDATION
+======================================================================
+
+1. Stationarity Test (ADF):
+   ADF Statistic: -7.2898
+   P-value: 0.0000
+   Stationary:  YES
+
+2. Mean Reversion Half-Life:
+   Half-life: 49.9 days
+   Acceptable range: 5-60 days
+   Within range:  YES
+
+3. Mean Stability Check:
+   Long-term mean drift: 0.2155
+   Stable mean:  YES
+
+4. Spread Range Analysis:
+   Range: 10.7304
+   Range in std units: 7.3
+   Reasonable range (<10 std):  YES
+
+5. Recent vs Historical Mean:
+   Overall mean: 2.0377
+   Recent 1yr mean: 2.5526
+   Shift in std: 0.35
+   No recent regime change:  YES
+
+----------------------------------------------------------------------
+OVERALL ASSESSMENT:
+ PAIR IS SUITABLE FOR MEAN-REVERSION TRADING
+======================================================================
+ [2/5] Jump Detection
+Detecting jumps using Bipower Variation
+Detected 97 jumps (6.26% of observations)
+ [3/5] Hawkes Calibration
+Fitting Hawkes process using MLE
+ Hawkes parameters estimate: 
+ λ̄ (baseline intensity): 0.0066
+ α (jump impact): 0.2057
+ β_H (decay rate): 0.2426
+ Branching ratio (α/β_H): 0.8480
+ [4/5] Hawkes Suitability
+
+======================================================================
+HAWKES SUITABILITY ANALYSIS
+======================================================================
+
+1. Jump Frequency: 6.3%
+   LOW - Not enough jumps for Hawkes to add value
+
+2. Branching Ratio (α/β): 0.848
+   GOOD - Strong jump clustering, Hawkes very useful
+
+3. λ Coefficient of Variation: 2.84
+   HIGH - Strong regime variation, Hawkes valuable
+
+4. Time in Elevated State: 12.1%
+   GOOD - Meaningful time in elevated regimes
+
+----------------------------------------------------------------------
+OVERALL HAWKES SUITABILITY SCORE: 0.80/1.00
+RECOMMENDATION: GOOD - Hawkes useful for regime detection and filtering
+======================================================================
+ [5/5] MRJD estimation
+Fitting the MRJD model
+ Step 1: Estimating OU params from continous periods
+
+======================================================================
+Critical: MRJD Half Life Mismatch Detected
+======================================================================
+    MRJD estimated half-life: 0.2 days
+    Empirical half-life: 49.9 days
+    Relative error: 99.7%
+    Discrepancy: 49.7 days
+
+ Overiding MRJD kappa with the empirical estimate instead
+
+ Corrected kappa: 4.356374 -> 0.013889
+ Corrected half-life: 0.2 days -> 49.9 days
+======================================================================
+
+ Step 2: Estimating jump distribution
+ Step 3: Joint MLE refinement
+Warning: Skipping joint MLE to preserve the validated kappa
+ (Joint MLE tends to overfit and revert to the incorrect parameters)
+MRJD Model Parameters:
+ κ (mean reversion speed): 0.0139
+ θ (long-run mean): 2.1115
+ σ (diffusive volatility): 4.073609
+  μ_J (jump mean): 0.0485
+  σ_J (jump volatility): 0.3426
+Detecting jumps using Bipower Variation
+Detected 96 jumps (5.95% of observations)
+
+ Evaluating period: Q17 OOS (2024-07-01 → 2024-09-30)
+  Half-life calibration:
+    Spread half-life: 49.9 days
+    Min hold period: 24 days
+    Target hold: 39 days
+    Max hold period: 74 days
+Generating trading signals (RELAXED filtering)...
+  LOW JUMP PAIR: 0.0% frequency -> Hawkes filtering relaxed
+  λ percentiles: p25=0.0066, p75=0.0066, p90=0.0626
+Generated 2 total signals:
+    - Long Entries: 0
+    - Short Entries: 1
+    - Closes: 1
+
+  Hawkes Filtering Impact:
+    Entries blocked by CRISIS regime: 0
+    Entries blocked by λ not decaying: 0
+    Exits triggered by regime escalation: 0
+  Backtest half-life: 49.9 days
+Running backtest
+  Hedge ratio (spread construction): 0.7225
+  Position sizing: Dollar-neutral
+  Max position: 25%
+  Hard stop: 3.0%
+  Trailing stop: 1.5% (activates at 1.0%)
+  Profit target: 6.0%
+Backtest Complete!
+    - Total Trades: 1
+    - Final Equity: $1,007,744.88
+    - Total Return: 0.77%
+    - Exit reasons: {'signal': 1}
+Performance metrics calculated
+
+--- Quarter 18/23 ---
+  Train: ≤ 2024-09-30  (1614 obs)
+  Eval : 2024-10-01 → 2024-12-31  (64 obs)
+
+ Training slice: 1614 observations
+ [1/5] Pair Validation
+
+======================================================================
+PAIR VALIDATION
+======================================================================
+
+1. Stationarity Test (ADF):
+   ADF Statistic: -7.4351
+   P-value: 0.0000
+   Stationary:  YES
+
+2. Mean Reversion Half-Life:
+   Half-life: 49.7 days
+   Acceptable range: 5-60 days
+   Within range:  YES
+
+3. Mean Stability Check:
+   Long-term mean drift: 0.2384
+   Stable mean:  YES
+
+4. Spread Range Analysis:
+   Range: 10.7304
+   Range in std units: 7.3
+   Reasonable range (<10 std):  YES
+
+5. Recent vs Historical Mean:
+   Overall mean: 2.0702
+   Recent 1yr mean: 2.9137
+   Shift in std: 0.58
+   No recent regime change:  YES
+
+----------------------------------------------------------------------
+OVERALL ASSESSMENT:
+ PAIR IS SUITABLE FOR MEAN-REVERSION TRADING
+======================================================================
+ [2/5] Jump Detection
+Detecting jumps using Bipower Variation
+Detected 96 jumps (5.95% of observations)
+ [3/5] Hawkes Calibration
+Fitting Hawkes process using MLE
+ Hawkes parameters estimate: 
+ λ̄ (baseline intensity): 0.0062
+ α (jump impact): 0.2064
+ β_H (decay rate): 0.2435
+ Branching ratio (α/β_H): 0.8476
+ [4/5] Hawkes Suitability
+
+======================================================================
+HAWKES SUITABILITY ANALYSIS
+======================================================================
+
+1. Jump Frequency: 6.0%
+   LOW - Not enough jumps for Hawkes to add value
+
+2. Branching Ratio (α/β): 0.848
+   GOOD - Strong jump clustering, Hawkes very useful
+
+3. λ Coefficient of Variation: 2.92
+   HIGH - Strong regime variation, Hawkes valuable
+
+4. Time in Elevated State: 12.1%
+   GOOD - Meaningful time in elevated regimes
+
+----------------------------------------------------------------------
+OVERALL HAWKES SUITABILITY SCORE: 0.80/1.00
+RECOMMENDATION: GOOD - Hawkes useful for regime detection and filtering
+======================================================================
+ [5/5] MRJD estimation
+Fitting the MRJD model
+ Step 1: Estimating OU params from continous periods
+
+======================================================================
+Critical: MRJD Half Life Mismatch Detected
+======================================================================
+    MRJD estimated half-life: 0.2 days
+    Empirical half-life: 49.7 days
+    Relative error: 99.7%
+    Discrepancy: 49.5 days
+
+ Overiding MRJD kappa with the empirical estimate instead
+
+ Corrected kappa: 4.348335 -> 0.013951
+ Corrected half-life: 0.2 days -> 49.7 days
+======================================================================
+
+ Step 2: Estimating jump distribution
+ Step 3: Joint MLE refinement
+Warning: Skipping joint MLE to preserve the validated kappa
+ (Joint MLE tends to overfit and revert to the incorrect parameters)
+MRJD Model Parameters:
+ κ (mean reversion speed): 0.0140
+ θ (long-run mean): 2.1137
+ σ (diffusive volatility): 4.056033
+  μ_J (jump mean): 0.0495
+  σ_J (jump volatility): 0.3443
+Detecting jumps using Bipower Variation
+Detected 82 jumps (4.89% of observations)
+
+ Evaluating period: Q18 OOS (2024-10-01 → 2024-12-31)
+  Half-life calibration:
+    Spread half-life: 49.7 days
+    Min hold period: 24 days
+    Target hold: 39 days
+    Max hold period: 74 days
+Generating trading signals (RELAXED filtering)...
+  LOW JUMP PAIR: 0.0% frequency -> Hawkes filtering relaxed
+  λ percentiles: p25=0.0062, p75=0.0063, p90=0.0518
+Generated 1 total signals:
+    - Long Entries: 1
+    - Short Entries: 0
+    - Closes: 0
+
+  Hawkes Filtering Impact:
+    Entries blocked by CRISIS regime: 0
+    Entries blocked by λ not decaying: 0
+    Exits triggered by regime escalation: 0
+  Backtest half-life: 49.7 days
+Running backtest
+  Hedge ratio (spread construction): 0.7219
+  Position sizing: Dollar-neutral
+  Max position: 25%
+  Hard stop: 3.0%
+  Trailing stop: 1.5% (activates at 1.0%)
+  Profit target: 6.0%
+Backtest Complete!
+    - Total Trades: 0
+    - Final Equity: $998,233.34
+    - Total Return: -0.18%
+Performance metrics calculated
+
+--- Quarter 19/23 ---
+  Train: ≤ 2024-12-31  (1678 obs)
+  Eval : 2025-01-02 → 2025-03-31  (60 obs)
+
+ Training slice: 1678 observations
+ [1/5] Pair Validation
+
+======================================================================
+PAIR VALIDATION
+======================================================================
+
+1. Stationarity Test (ADF):
+   ADF Statistic: -7.6213
+   P-value: 0.0000
+   Stationary:  YES
+
+2. Mean Reversion Half-Life:
+   Half-life: 50.0 days
+   Acceptable range: 5-60 days
+   Within range:  YES
+
+3. Mean Stability Check:
+   Long-term mean drift: 0.2750
+   Stable mean:  YES
+
+4. Spread Range Analysis:
+   Range: 10.7304
+   Range in std units: 7.4
+   Reasonable range (<10 std):  YES
+
+5. Recent vs Historical Mean:
+   Overall mean: 2.0995
+   Recent 1yr mean: 3.0213
+   Shift in std: 0.63
+   No recent regime change:  YES
+
+----------------------------------------------------------------------
+OVERALL ASSESSMENT:
+ PAIR IS SUITABLE FOR MEAN-REVERSION TRADING
+======================================================================
+ [2/5] Jump Detection
+Detecting jumps using Bipower Variation
+Detected 82 jumps (4.89% of observations)
+ [3/5] Hawkes Calibration
+Fitting Hawkes process using MLE
+ Hawkes parameters estimate: 
+ λ̄ (baseline intensity): 0.0057
+ α (jump impact): 0.1961
+ β_H (decay rate): 0.2359
+ Branching ratio (α/β_H): 0.8310
+ [4/5] Hawkes Suitability
+
+======================================================================
+HAWKES SUITABILITY ANALYSIS
+======================================================================
+
+1. Jump Frequency: 4.9%
+   LOW - Not enough jumps for Hawkes to add value
+
+2. Branching Ratio (α/β): 0.831
+   GOOD - Strong jump clustering, Hawkes very useful
+
+3. λ Coefficient of Variation: 3.07
+   HIGH - Strong regime variation, Hawkes valuable
+
+4. Time in Elevated State: 12.4%
+   GOOD - Meaningful time in elevated regimes
+
+----------------------------------------------------------------------
+OVERALL HAWKES SUITABILITY SCORE: 0.80/1.00
+RECOMMENDATION: GOOD - Hawkes useful for regime detection and filtering
+======================================================================
+ [5/5] MRJD estimation
+Fitting the MRJD model
+ Step 1: Estimating OU params from continous periods
+
+======================================================================
+Critical: MRJD Half Life Mismatch Detected
+======================================================================
+    MRJD estimated half-life: 0.2 days
+    Empirical half-life: 49.9 days
+    Relative error: 99.7%
+    Discrepancy: 49.8 days
+
+ Overiding MRJD kappa with the empirical estimate instead
+
+ Corrected kappa: 4.137546 -> 0.013879
+ Corrected half-life: 0.2 days -> 49.9 days
+======================================================================
+
+ Step 2: Estimating jump distribution
+ Step 3: Joint MLE refinement
+Warning: Skipping joint MLE to preserve the validated kappa
+ (Joint MLE tends to overfit and revert to the incorrect parameters)
+MRJD Model Parameters:
+ κ (mean reversion speed): 0.0139
+ θ (long-run mean): 2.1823
+ σ (diffusive volatility): 3.955652
+  μ_J (jump mean): 0.0351
+  σ_J (jump volatility): 0.3680
+Detecting jumps using Bipower Variation
+Detected 82 jumps (4.72% of observations)
+
+ Evaluating period: Q19 OOS (2025-01-02 → 2025-03-31)
+  Half-life calibration:
+    Spread half-life: 50.0 days
+    Min hold period: 24 days
+    Target hold: 39 days
+    Max hold period: 74 days
+Generating trading signals (RELAXED filtering)...
+  LOW JUMP PAIR: 0.0% frequency -> Hawkes filtering relaxed
+  λ percentiles: p25=0.0057, p75=0.0057, p90=0.0354
+Generated 0 total signals:
+    - Long Entries: 0
+    - Short Entries: 0
+    - Closes: 0
+
+  Hawkes Filtering Impact:
+    Entries blocked by CRISIS regime: 0
+    Entries blocked by λ not decaying: 0
+    Exits triggered by regime escalation: 0
+  Backtest half-life: 50.0 days
+Running backtest
+  Hedge ratio (spread construction): 1.0110
+  Position sizing: Dollar-neutral
+  Max position: 25%
+  Hard stop: 3.0%
+  Trailing stop: 1.5% (activates at 1.0%)
+  Profit target: 6.0%
+Backtest Complete!
+    - Total Trades: 0
+    - Final Equity: $1,000,000.00
+    - Total Return: 0.00%
+Performance metrics calculated
+
+--- Quarter 20/23 ---
+  Train: ≤ 2025-03-31  (1738 obs)
+  Eval : 2025-04-01 → 2025-06-30  (62 obs)
+
+ Training slice: 1738 observations
+ [1/5] Pair Validation
+
+======================================================================
+PAIR VALIDATION
+======================================================================
+
+1. Stationarity Test (ADF):
+   ADF Statistic: -7.7615
+   P-value: 0.0000
+   Stationary:  YES
+
+2. Mean Reversion Half-Life:
+   Half-life: 49.3 days
+   Acceptable range: 5-60 days
+   Within range:  YES
+
+3. Mean Stability Check:
+   Long-term mean drift: 0.2897
+   Stable mean:  YES
+
+4. Spread Range Analysis:
+   Range: 10.7304
+   Range in std units: 7.4
+   Reasonable range (<10 std):  YES
+
+5. Recent vs Historical Mean:
+   Overall mean: 2.0782
+   Recent 1yr mean: 2.2988
+   Shift in std: 0.15
+   No recent regime change:  YES
+
+----------------------------------------------------------------------
+OVERALL ASSESSMENT:
+ PAIR IS SUITABLE FOR MEAN-REVERSION TRADING
+======================================================================
+ [2/5] Jump Detection
+Detecting jumps using Bipower Variation
+Detected 82 jumps (4.72% of observations)
+ [3/5] Hawkes Calibration
+Fitting Hawkes process using MLE
+ Hawkes parameters estimate: 
+ λ̄ (baseline intensity): 0.0054
+ α (jump impact): 0.1932
+ β_H (decay rate): 0.2319
+ Branching ratio (α/β_H): 0.8331
+ [4/5] Hawkes Suitability
+
+======================================================================
+HAWKES SUITABILITY ANALYSIS
+======================================================================
+
+1. Jump Frequency: 4.7%
+   LOW - Not enough jumps for Hawkes to add value
+
+2. Branching Ratio (α/β): 0.833
+   GOOD - Strong jump clustering, Hawkes very useful
+
+3. λ Coefficient of Variation: 3.13
+   HIGH - Strong regime variation, Hawkes valuable
+
+4. Time in Elevated State: 12.1%
+   GOOD - Meaningful time in elevated regimes
+
+----------------------------------------------------------------------
+OVERALL HAWKES SUITABILITY SCORE: 0.80/1.00
+RECOMMENDATION: GOOD - Hawkes useful for regime detection and filtering
+======================================================================
+ [5/5] MRJD estimation
+Fitting the MRJD model
+ Step 1: Estimating OU params from continous periods
+
+======================================================================
+Critical: MRJD Half Life Mismatch Detected
+======================================================================
+    MRJD estimated half-life: 0.2 days
+    Empirical half-life: 49.3 days
+    Relative error: 99.7%
+    Discrepancy: 49.2 days
+
+ Overiding MRJD kappa with the empirical estimate instead
+
+ Corrected kappa: 4.160928 -> 0.014052
+ Corrected half-life: 0.2 days -> 49.3 days
+======================================================================
+
+ Step 2: Estimating jump distribution
+ Step 3: Joint MLE refinement
+Warning: Skipping joint MLE to preserve the validated kappa
+ (Joint MLE tends to overfit and revert to the incorrect parameters)
+MRJD Model Parameters:
+ κ (mean reversion speed): 0.0141
+ θ (long-run mean): 2.0951
+ σ (diffusive volatility): 3.922214
+  μ_J (jump mean): 0.0351
+  σ_J (jump volatility): 0.3680
+Detecting jumps using Bipower Variation
+Detected 82 jumps (4.56% of observations)
+
+ Evaluating period: Q20 OOS (2025-04-01 → 2025-06-30)
+  Half-life calibration:
+    Spread half-life: 49.3 days
+    Min hold period: 24 days
+    Target hold: 39 days
+    Max hold period: 74 days
+Generating trading signals (RELAXED filtering)...
+  LOW JUMP PAIR: 0.0% frequency -> Hawkes filtering relaxed
+  λ percentiles: p25=0.0054, p75=0.0054, p90=0.0333
+Generated 1 total signals:
+    - Long Entries: 0
+    - Short Entries: 1
+    - Closes: 0
+
+  Hawkes Filtering Impact:
+    Entries blocked by CRISIS regime: 0
+    Entries blocked by λ not decaying: 0
+    Exits triggered by regime escalation: 0
+  Backtest half-life: 49.3 days
+Running backtest
+  Hedge ratio (spread construction): 1.0555
+  Position sizing: Dollar-neutral
+  Max position: 25%
+  Hard stop: 3.0%
+  Trailing stop: 1.5% (activates at 1.0%)
+  Profit target: 6.0%
+Backtest Complete!
+    - Total Trades: 1
+    - Final Equity: $993,117.06
+    - Total Return: -0.69%
+    - Exit reasons: {'stop_loss': 1}
+Performance metrics calculated
+
+--- Quarter 21/23 ---
+  Train: ≤ 2025-06-30  (1800 obs)
+  Eval : 2025-07-01 → 2025-09-30  (64 obs)
+
+ Training slice: 1800 observations
+ [1/5] Pair Validation
+
+======================================================================
+PAIR VALIDATION
+======================================================================
+
+1. Stationarity Test (ADF):
+   ADF Statistic: -7.7134
+   P-value: 0.0000
+   Stationary:  YES
+
+2. Mean Reversion Half-Life:
+   Half-life: 52.8 days
+   Acceptable range: 5-60 days
+   Within range:  YES
+
+3. Mean Stability Check:
+   Long-term mean drift: 0.2879
+   Stable mean:  YES
+
+4. Spread Range Analysis:
+   Range: 10.7304
+   Range in std units: 7.5
+   Reasonable range (<10 std):  YES
+
+5. Recent vs Historical Mean:
+   Overall mean: 2.0508
+   Recent 1yr mean: 2.1370
+   Shift in std: 0.06
+   No recent regime change:  YES
+
+----------------------------------------------------------------------
+OVERALL ASSESSMENT:
+ PAIR IS SUITABLE FOR MEAN-REVERSION TRADING
+======================================================================
+ [2/5] Jump Detection
+Detecting jumps using Bipower Variation
+Detected 82 jumps (4.56% of observations)
+ [3/5] Hawkes Calibration
+Fitting Hawkes process using MLE
+ Hawkes parameters estimate: 
+ λ̄ (baseline intensity): 0.0187
+ α (jump impact): 1.0740
+ β_H (decay rate): 1.2641
+ Branching ratio (α/β_H): 0.8496
+ [4/5] Hawkes Suitability
+
+======================================================================
+HAWKES SUITABILITY ANALYSIS
+======================================================================
+
+1. Jump Frequency: 4.6%
+   LOW - Not enough jumps for Hawkes to add value
+
+2. Branching Ratio (α/β): 0.850
+   GOOD - Strong jump clustering, Hawkes very useful
+
+3. λ Coefficient of Variation: 2.14
+   HIGH - Strong regime variation, Hawkes valuable
+
+4. Time in Elevated State: 100.0%
+   HIGH - Often volatile, Hawkes useful for filtering
+
+----------------------------------------------------------------------
+OVERALL HAWKES SUITABILITY SCORE: 0.75/1.00
+RECOMMENDATION: GOOD - Hawkes useful for regime detection and filtering
+======================================================================
+ [5/5] MRJD estimation
+Fitting the MRJD model
+ Step 1: Estimating OU params from continous periods
+
+======================================================================
+Critical: MRJD Half Life Mismatch Detected
+======================================================================
+    MRJD estimated half-life: 0.2 days
+    Empirical half-life: 52.8 days
+    Relative error: 99.7%
+    Discrepancy: 52.6 days
+
+ Overiding MRJD kappa with the empirical estimate instead
+
+ Corrected kappa: 3.853700 -> 0.013135
+ Corrected half-life: 0.2 days -> 52.8 days
+======================================================================
+
+ Step 2: Estimating jump distribution
+ Step 3: Joint MLE refinement
+Warning: Skipping joint MLE to preserve the validated kappa
+ (Joint MLE tends to overfit and revert to the incorrect parameters)
+MRJD Model Parameters:
+ κ (mean reversion speed): 0.0131
+ θ (long-run mean): 1.9867
+ σ (diffusive volatility): 3.867843
+  μ_J (jump mean): 0.0351
+  σ_J (jump volatility): 0.3680
+Detecting jumps using Bipower Variation
+Detected 85 jumps (4.56% of observations)
+
+ Evaluating period: Q21 OOS (2025-07-01 → 2025-09-30)
+  Half-life calibration:
+    Spread half-life: 52.8 days
+    Min hold period: 26 days
+    Target hold: 42 days
+    Max hold period: 79 days
+Generating trading signals (RELAXED filtering)...
+  λ percentiles: p25=0.0187, p75=0.0187, p90=0.0187
+Generated 2 total signals:
+    - Long Entries: 1
+    - Short Entries: 0
+    - Closes: 1
+
+  Hawkes Filtering Impact:
+    Entries blocked by CRISIS regime: 0
+    Entries blocked by λ not decaying: 0
+    Exits triggered by regime escalation: 0
+  Backtest half-life: 52.8 days
+Running backtest
+  Hedge ratio (spread construction): 1.1184
+  Position sizing: Dollar-neutral
+  Max position: 25%
+  Hard stop: 3.0%
+  Trailing stop: 1.5% (activates at 1.0%)
+  Profit target: 6.0%
+Backtest Complete!
+    - Total Trades: 1
+    - Final Equity: $1,000,322.13
+    - Total Return: 0.03%
+    - Exit reasons: {'signal': 1}
+Performance metrics calculated
+
+--- Quarter 22/23 ---
+  Train: ≤ 2025-09-30  (1864 obs)
+  Eval : 2025-10-01 → 2025-12-31  (64 obs)
+
+ Training slice: 1864 observations
+ [1/5] Pair Validation
+
+======================================================================
+PAIR VALIDATION
+======================================================================
+
+1. Stationarity Test (ADF):
+   ADF Statistic: -7.7829
+   P-value: 0.0000
+   Stationary:  YES
+
+2. Mean Reversion Half-Life:
+   Half-life: 49.6 days
+   Acceptable range: 5-60 days
+   Within range:  YES
+
+3. Mean Stability Check:
+   Long-term mean drift: 0.2788
+   Stable mean:  YES
+
+4. Spread Range Analysis:
+   Range: 10.7304
+   Range in std units: 7.4
+   Reasonable range (<10 std):  YES
+
+5. Recent vs Historical Mean:
+   Overall mean: 2.0158
+   Recent 1yr mean: 1.6652
+   Shift in std: 0.24
+   No recent regime change:  YES
+
+----------------------------------------------------------------------
+OVERALL ASSESSMENT:
+ PAIR IS SUITABLE FOR MEAN-REVERSION TRADING
+======================================================================
+ [2/5] Jump Detection
+Detecting jumps using Bipower Variation
+Detected 85 jumps (4.56% of observations)
+ [3/5] Hawkes Calibration
+Fitting Hawkes process using MLE
+ Hawkes parameters estimate: 
+ λ̄ (baseline intensity): 0.0058
+ α (jump impact): 0.1723
+ β_H (decay rate): 0.2110
+ Branching ratio (α/β_H): 0.8168
+ [4/5] Hawkes Suitability
+
+======================================================================
+HAWKES SUITABILITY ANALYSIS
+======================================================================
+
+1. Jump Frequency: 4.6%
+   LOW - Not enough jumps for Hawkes to add value
+
+2. Branching Ratio (α/β): 0.817
+   GOOD - Strong jump clustering, Hawkes very useful
+
+3. λ Coefficient of Variation: 3.04
+   HIGH - Strong regime variation, Hawkes valuable
+
+4. Time in Elevated State: 12.9%
+   GOOD - Meaningful time in elevated regimes
+
+----------------------------------------------------------------------
+OVERALL HAWKES SUITABILITY SCORE: 0.80/1.00
+RECOMMENDATION: GOOD - Hawkes useful for regime detection and filtering
+======================================================================
+ [5/5] MRJD estimation
+Fitting the MRJD model
+ Step 1: Estimating OU params from continous periods
+
+======================================================================
+Critical: MRJD Half Life Mismatch Detected
+======================================================================
+    MRJD estimated half-life: 0.2 days
+    Empirical half-life: 49.5 days
+    Relative error: 99.7%
+    Discrepancy: 49.4 days
+
+ Overiding MRJD kappa with the empirical estimate instead
+
+ Corrected kappa: 4.239148 -> 0.013993
+ Corrected half-life: 0.2 days -> 49.5 days
+======================================================================
+
+ Step 2: Estimating jump distribution
+ Step 3: Joint MLE refinement
+Warning: Skipping joint MLE to preserve the validated kappa
+ (Joint MLE tends to overfit and revert to the incorrect parameters)
+MRJD Model Parameters:
+ κ (mean reversion speed): 0.0140
+ θ (long-run mean): 2.0249
+ σ (diffusive volatility): 4.027163
+  μ_J (jump mean): 0.0536
+  σ_J (jump volatility): 0.3835
+Detecting jumps using Bipower Variation
+Detected 85 jumps (4.41% of observations)
+
+ Evaluating period: Q22 OOS (2025-10-01 → 2025-12-31)
+  Half-life calibration:
+    Spread half-life: 49.6 days
+    Min hold period: 24 days
+    Target hold: 39 days
+    Max hold period: 74 days
+Generating trading signals (RELAXED filtering)...
+  LOW JUMP PAIR: 1.6% frequency -> Hawkes filtering relaxed
+  λ percentiles: p25=0.0058, p75=0.0058, p90=0.0376
+Generated 2 total signals:
+    - Long Entries: 0
+    - Short Entries: 1
+    - Closes: 1
+
+  Hawkes Filtering Impact:
+    Entries blocked by CRISIS regime: 0
+    Entries blocked by λ not decaying: 0
+    Exits triggered by regime escalation: 0
+  Backtest half-life: 49.6 days
+Running backtest
+  Hedge ratio (spread construction): 0.8058
+  Position sizing: Dollar-neutral
+  Max position: 25%
+  Hard stop: 3.0%
+  Trailing stop: 1.5% (activates at 1.0%)
+  Profit target: 6.0%
+Backtest Complete!
+    - Total Trades: 1
+    - Final Equity: $999,036.88
+    - Total Return: -0.10%
+    - Exit reasons: {'signal': 1}
+Performance metrics calculated
+
+--- Quarter 23/23 ---
+  Train: ≤ 2025-12-31  (1928 obs)
+  Eval : 2026-01-02 → 2026-02-17  (31 obs)
+
+ Training slice: 1928 observations
+ [1/5] Pair Validation
+
+======================================================================
+PAIR VALIDATION
+======================================================================
+
+1. Stationarity Test (ADF):
+   ADF Statistic: -8.1288
+   P-value: 0.0000
+   Stationary:  YES
+
+2. Mean Reversion Half-Life:
+   Half-life: 49.9 days
+   Acceptable range: 5-60 days
+   Within range:  YES
+
+3. Mean Stability Check:
+   Long-term mean drift: 0.2730
+   Stable mean:  YES
+
+4. Spread Range Analysis:
+   Range: 10.7304
+   Range in std units: 7.2
+   Reasonable range (<10 std):  YES
+
+5. Recent vs Historical Mean:
+   Overall mean: 2.0343
+   Recent 1yr mean: 1.6091
+   Shift in std: 0.29
+   No recent regime change:  YES
+
+----------------------------------------------------------------------
+OVERALL ASSESSMENT:
+ PAIR IS SUITABLE FOR MEAN-REVERSION TRADING
+======================================================================
+ [2/5] Jump Detection
+Detecting jumps using Bipower Variation
+Detected 85 jumps (4.41% of observations)
+ [3/5] Hawkes Calibration
+Fitting Hawkes process using MLE
+ Hawkes parameters estimate: 
+ λ̄ (baseline intensity): 0.0058
+ α (jump impact): 0.1614
+ β_H (decay rate): 0.1998
+ Branching ratio (α/β_H): 0.8078
+ [4/5] Hawkes Suitability
+
+======================================================================
+HAWKES SUITABILITY ANALYSIS
+======================================================================
+
+1. Jump Frequency: 4.4%
+   LOW - Not enough jumps for Hawkes to add value
+
+2. Branching Ratio (α/β): 0.808
+   GOOD - Strong jump clustering, Hawkes very useful
+
+3. λ Coefficient of Variation: 3.04
+   HIGH - Strong regime variation, Hawkes valuable
+
+4. Time in Elevated State: 12.8%
+   GOOD - Meaningful time in elevated regimes
+
+----------------------------------------------------------------------
+OVERALL HAWKES SUITABILITY SCORE: 0.80/1.00
+RECOMMENDATION: GOOD - Hawkes useful for regime detection and filtering
+======================================================================
+ [5/5] MRJD estimation
+Fitting the MRJD model
+ Step 1: Estimating OU params from continous periods
+
+======================================================================
+Critical: MRJD Half Life Mismatch Detected
+======================================================================
+    MRJD estimated half-life: 0.2 days
+    Empirical half-life: 49.9 days
+    Relative error: 99.7%
+    Discrepancy: 49.7 days
+
+ Overiding MRJD kappa with the empirical estimate instead
+
+ Corrected kappa: 4.185213 -> 0.013889
+ Corrected half-life: 0.2 days -> 49.9 days
+======================================================================
+
+ Step 2: Estimating jump distribution
+ Step 3: Joint MLE refinement
+Warning: Skipping joint MLE to preserve the validated kappa
+ (Joint MLE tends to overfit and revert to the incorrect parameters)
+MRJD Model Parameters:
+ κ (mean reversion speed): 0.0139
+ θ (long-run mean): 2.0197
+ σ (diffusive volatility): 4.127794
+  μ_J (jump mean): 0.0682
+  σ_J (jump volatility): 0.3976
+Detecting jumps using Bipower Variation
+Detected 86 jumps (4.39% of observations)
+
+ Evaluating period: Q23 OOS (2026-01-02 → 2026-02-17)
+  Half-life calibration:
+    Spread half-life: 49.9 days
+    Min hold period: 24 days
+    Target hold: 39 days
+    Max hold period: 74 days
+Generating trading signals (RELAXED filtering)...
+  LOW JUMP PAIR: 3.2% frequency -> Hawkes filtering relaxed
+  λ percentiles: p25=0.0058, p75=0.0059, p90=0.0385
+Generated 1 total signals:
+    - Long Entries: 0
+    - Short Entries: 1
+    - Closes: 0
+
+  Hawkes Filtering Impact:
+    Entries blocked by CRISIS regime: 0
+    Entries blocked by λ not decaying: 0
+    Exits triggered by regime escalation: 0
+  Backtest half-life: 49.9 days
+Running backtest
+  Hedge ratio (spread construction): 1.2243
+  Position sizing: Dollar-neutral
+  Max position: 25%
+  Hard stop: 3.0%
+  Trailing stop: 1.5% (activates at 1.0%)
+  Profit target: 6.0%
+Backtest Complete!
+    - Total Trades: 0
+    - Final Equity: $999,056.59
+    - Total Return: -0.09%
+Performance metrics calculated
+Performance metrics calculated
+
+============================================================================
+WALK-FORWARD OOS PERFORMANCE SUMMARY
+  Quarters evaluated: 23
+  OOS span: 2020-07-01 → 2026-02-17
+============================================================================
+
+  Returns
+    Total Return:      0.43%
+    Annualized Return: 0.08%
+    Annualized Vol:    0.97%
+
+  Risk-Adjusted
+    Sharpe Ratio:      -1.979
+    Sortino Ratio:     -1.506
+    Max Drawdown:      -1.54%
+    Calmar Ratio:      0.050
+
+  Alpha vs SPY (HEADLINE)
+    Alpha (annualized): -1.9048%
+    Alpha T-Stat:       -4.651
+    Alpha P-Value:      0.0000
+    Beta:               -0.001
+    R²:                 0.0003
+    Information Ratio:  -1.966
+
+  Trading Activity
+    Total Trades: 14
+    Win Rate:     50.00%
+
+  Per-Quarter Performance:
+  Q    Train ≤      Eval window                    Ann.Ret%   Sharpe   Trades
+  ----------------------------------------------------------------------------
+  Q1   2020-06-30   2020-07-01 → 2020-09-30           -2.50   -3.596        0
+  Q2   2020-09-30   2020-10-01 → 2020-12-31            4.51    1.732        1
+  Q3   2020-12-31   2021-01-04 → 2021-03-31            0.01   -1.612        1
+  Q4   2021-03-31   2021-04-01 → 2021-06-30           -1.00   -2.130        1
+  Q5   2021-06-30   2021-07-01 → 2021-09-30           -0.46   -2.371        1
+  Q6   2021-09-30   2021-10-01 → 2021-12-31            0.00    0.000        0
+  Q7   2021-12-31   2022-01-03 → 2022-03-31            6.59    3.101        1
+  Q8   2022-03-31   2022-04-01 → 2022-06-30            0.62   -1.000        0
+  Q9   2022-06-30   2022-07-01 → 2022-09-30           -0.58   -2.646        1
+  Q10  2022-09-30   2022-10-03 → 2022-12-30           -3.01   -7.588        1
+  Q11  2022-12-30   2023-01-03 → 2023-03-31            0.69   -1.006        1
+  Q12  2023-03-31   2023-04-03 → 2023-06-30            0.00    0.000        0
+  Q13  2023-06-30   2023-07-03 → 2023-09-29            1.31   -0.409        1
+  Q14  2023-09-29   2023-10-02 → 2023-12-29            0.00    0.000        0
+  Q15  2023-12-29   2024-01-02 → 2024-03-28           -2.96   -6.966        1
+  Q16  2024-03-28   2024-04-01 → 2024-06-28            0.00    0.000        0
+  Q17  2024-06-28   2024-07-01 → 2024-09-30            3.08    1.033        1
+  Q18  2024-09-30   2024-10-01 → 2024-12-31           -0.69   -3.518        0
+  Q19  2024-12-31   2025-01-02 → 2025-03-31            0.00    0.000        0
+  Q20  2025-03-31   2025-04-01 → 2025-06-30           -2.77   -6.975        1
+  Q21  2025-06-30   2025-07-01 → 2025-09-30            0.13   -4.038        1
+  Q22  2025-09-30   2025-10-01 → 2025-12-31           -0.38   -6.598        1
+  Q23  2025-12-31   2026-01-02 → 2026-02-17           -0.76  -10.625        0
+============================================================================
+
+======================================================================
+WALK-FORWARD EXECUTION COMPLETE
+======================================================================

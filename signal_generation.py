@@ -1,12 +1,13 @@
 """
-Optimized Trading Signal Generation for Self-Exciting Pairs Trading
+Trading Signal Generation for Self-Exciting Pairs Trading
 
-Key Optimizations:
-1. Half-life aware holding periods (match exit timing to spread dynamics)
-2. Dynamic thresholds based on Hawkes λ (regime-adaptive entries)
-3. λ decay detection (only enter when jump cascade is subsiding)
-4. Fewer, higher-quality trades (stricter entry, more patient exits)
-5. Full Hawkes utilization for timing and sizing
+UPDATED VERSION with RELAXED FILTERING DEFAULTS:
+- Lambda decay requirement: DISABLED (was 15%)
+- Crisis regime blocking: DISABLED
+- Adaptive for low-jump pairs: ENABLED
+- Skip decay in calm regimes: ENABLED
+
+This produces MORE TRADES for better statistical power.
 """
 
 import numpy as np 
@@ -27,37 +28,44 @@ class SignalType(Enum):
 @dataclass
 class HawkesRegime:
     """Hawkes-based market regime classification"""
-    CALM = "calm"           # λ < 25th percentile - aggressive entries OK
-    NORMAL = "normal"       # 25th <= λ < 75th percentile - standard entries
-    ELEVATED = "elevated"   # 75th <= λ < 90th percentile - selective entries
-    CRISIS = "crisis"       # λ >= 90th percentile - no new entries
+    CALM = "calm"           # λ < 25th percentile
+    NORMAL = "normal"       # 25th <= λ < 75th percentile
+    ELEVATED = "elevated"   # 75th <= λ < 90th percentile
+    CRISIS = "crisis"       # λ >= 90th percentile
 
 
 class TradingSignals:
     """
-    Optimized trading signal generator with full Hawkes utilization
+    Trading signal generator with CONFIGURABLE Hawkes filtering
     
-    Key innovations:
-    1. Half-life aware exits: Hold positions proportional to spread half-life
-    2. λ-based regime detection: Adjust thresholds based on jump intensity
-    3. λ decay entry: Only enter when intensity is falling (post-cascade)
-    4. Dynamic position sizing: Inverse relationship with λ
-    5. Regime-triggered exits: Exit early if regime deteriorates
+    DEFAULT: Minimal filtering for maximum trade generation
+    
+    Key parameters for filtering intensity:
+    - min_lambda_decay_pct: 0.0 = disabled, 0.15 = aggressive filtering
+    - disable_crisis_block: True = allow crisis entries, False = block
+    - skip_decay_in_calm: True = bypass decay check when λ < p25
+    - adaptive_for_low_jumps: True = auto-relax for <5% jump frequency pairs
     """
 
     def __init__(self,
-                 # Entry thresholds (will be adjusted by regime)
-                 z_entry_threshold: float = 2.0,      # Increased from 1.5 for selectivity
-                 z_exit_threshold: float = 0.5,       # Increased from 0.3 for patience
+                 # Entry thresholds
+                 z_entry_threshold: float = 2.0,
+                 z_exit_threshold: float = 0.5,
                  
-                 # Hawkes parameters
-                 lambda_threshold: float = 0.5,       # Max λ for standard entry
-                 lambda_decay_lookback: int = 5,      # Days to check λ trend
-                 min_lambda_decay_pct: float = 0.15,  # λ must drop 15% from peak
+                 # Hawkes parameters - RELAXED DEFAULTS
+                 lambda_threshold: float = 0.5,
+                 lambda_decay_lookback: int = 5,
+                 min_lambda_decay_pct: float = 0.0,       # DISABLED (was 0.15)
+                 
+                 # Filtering relaxation options - ALL ENABLED BY DEFAULT
+                 skip_decay_in_calm: bool = True,         # Skip decay check if λ < p25
+                 adaptive_for_low_jumps: bool = True,     # Auto-relax for low-jump pairs
+                 min_jump_freq_for_hawkes: float = 0.05,  # 5% threshold
+                 disable_crisis_block: bool = True,       # ALLOW crisis entries (was False)
                  
                  # Position sizing
                  scaling_constant: float = 0.1,
-                 max_position_size: float = 0.25,     # Reduced from 1.0
+                 max_position_size: float = 0.25,
                  min_position_size: float = 0.10,
                  
                  # Holding period (will be overridden by half-life)
@@ -65,7 +73,7 @@ class TradingSignals:
                  
                  # Features
                  use_jump_entries: bool = True,
-                 use_hawkes_regimes: bool = True,
+                 use_hawkes_regimes: bool = True,         # Still use regimes for threshold adjustment
                  z_lookback: int = 60):
         
         # Entry/exit thresholds
@@ -77,6 +85,12 @@ class TradingSignals:
         self.lambda_decay_lookback = lambda_decay_lookback
         self.min_lambda_decay_pct = min_lambda_decay_pct
         
+        # Filtering relaxation options
+        self.skip_decay_in_calm = skip_decay_in_calm
+        self.adaptive_for_low_jumps = adaptive_for_low_jumps
+        self.min_jump_freq_for_hawkes = min_jump_freq_for_hawkes
+        self.disable_crisis_block = disable_crisis_block
+        
         # Position sizing
         self.c = scaling_constant
         self.max_position = max_position_size
@@ -84,7 +98,7 @@ class TradingSignals:
         
         # Holding period
         self.max_holding_period = max_holding_period
-        self.half_life = None  # Will be set externally
+        self.half_life = None
         
         # Features
         self.use_jump_entries = use_jump_entries
@@ -95,21 +109,22 @@ class TradingSignals:
         self.signals = None 
         self.positions = None
         self.lambda_percentiles = {}
+        self._percentiles_frozen = False
         
         # Diagnostics
         self.entries_blocked_by_regime = 0
         self.entries_blocked_by_decay = 0
+        self.entries_allowed_calm_skip = 0
+        self.entries_allowed_low_jump = 0
         self.regime_exits = 0
+        
+        # Pair characteristics
+        self.detected_jump_freq = None
+        self.is_low_jump_pair = False
+        self.hawkes_filtering_active = True
 
     def set_half_life(self, half_life: float):
-        """
-        Set half-life for holding period calibration
-        
-        This is CRITICAL for proper exit timing:
-        - Min hold: 50% of half-life (let mean reversion start)
-        - Target hold: 80% of half-life (capture most of reversion)
-        - Max hold: 150% of half-life (time stop)
-        """
+        """Set half-life for holding period calibration"""
         self.half_life = half_life
         self.min_hold = int(half_life * 0.5)
         self.target_hold = int(half_life * 0.8)
@@ -121,6 +136,11 @@ class TradingSignals:
         print(f"    Target hold: {self.target_hold} days")
         print(f"    Max hold period: {self.max_holding_period} days")
 
+    def set_lambda_percentiles(self, percentiles: dict):
+        """Freeze lambda percentiles from training data"""
+        self.lambda_percentiles = percentiles.copy()
+        self._percentiles_frozen = True
+
     def _calculate_lambda_percentiles(self, lambda_intensity: pd.Series):
         """Calculate λ percentiles for regime classification"""
         self.lambda_percentiles = {
@@ -130,6 +150,18 @@ class TradingSignals:
             'p90': lambda_intensity.quantile(0.90),
             'p95': lambda_intensity.quantile(0.95)
         }
+
+    def _detect_pair_characteristics(self, jump_indicator: Optional[pd.Series]):
+        """Detect if this is a low-jump pair"""
+        if jump_indicator is not None:
+            self.detected_jump_freq = jump_indicator.mean()
+            self.is_low_jump_pair = self.detected_jump_freq < self.min_jump_freq_for_hawkes
+            
+            if self.adaptive_for_low_jumps and self.is_low_jump_pair:
+                self.hawkes_filtering_active = False
+                print(f"  LOW JUMP PAIR: {self.detected_jump_freq:.1%} frequency -> Hawkes filtering relaxed")
+        else:
+            self.hawkes_filtering_active = True
 
     def _get_regime(self, lambda_t: float) -> str:
         """Determine current regime based on λ"""
@@ -146,63 +178,69 @@ class TradingSignals:
             return HawkesRegime.CRISIS
 
     def _get_regime_thresholds(self, regime: str) -> Tuple[float, float, int]:
-        """
-        Get entry threshold, exit threshold, and max hold based on regime
-        
-        CALM: More aggressive (tighter thresholds, longer hold)
-        CRISIS: More defensive (wider thresholds, shorter hold)
-        """
+        """Get entry threshold, exit threshold, and max hold based on regime"""
         if regime == HawkesRegime.CALM:
             z_entry = self.z_entry * 0.85    # 15% easier entry
-            z_exit = self.z_exit * 0.85      # Tighter exit (more patient)
-            max_hold = int(self.max_holding_period * 1.2)  # Hold longer
+            z_exit = self.z_exit * 0.85
+            max_hold = int(self.max_holding_period * 1.2)
         elif regime == HawkesRegime.NORMAL:
             z_entry = self.z_entry
             z_exit = self.z_exit
             max_hold = self.max_holding_period
         elif regime == HawkesRegime.ELEVATED:
             z_entry = self.z_entry * 1.25    # 25% stricter entry
-            z_exit = self.z_exit * 1.2       # Looser exit (exit earlier)
+            z_exit = self.z_exit * 1.2
             max_hold = int(self.max_holding_period * 0.75)
         else:  # CRISIS
-            z_entry = self.z_entry * 1.5     # 50% stricter (very selective)
-            z_exit = self.z_exit * 1.3       # Exit even earlier
+            z_entry = self.z_entry * 1.5     # 50% stricter
+            z_exit = self.z_exit * 1.3
             max_hold = int(self.max_holding_period * 0.5)
         
         return z_entry, z_exit, max_hold
 
-    def _is_lambda_decaying(self, lambda_series: pd.Series, current_idx: int) -> bool:
+    def _is_lambda_decaying(self, lambda_series: pd.Series, current_idx: int,
+                            current_regime: Optional[str] = None) -> Tuple[bool, str]:
         """
         Check if λ is in decay phase (safe to enter)
         
-        Don't enter during a jump cascade - wait for intensity to subside.
-        This is key for Hawkes utilization: predict the POST-jump period.
+        With relaxed defaults, this will almost always return True.
         """
-        if current_idx < self.lambda_decay_lookback:
-            return True
+        # Check 1: Decay check disabled (min_lambda_decay_pct <= 0)
+        if self.min_lambda_decay_pct <= 0:
+            return True, "decay_check_disabled"
         
+        # Check 2: Hawkes filtering disabled for low-jump pairs
+        if not self.hawkes_filtering_active:
+            self.entries_allowed_low_jump += 1
+            return True, "low_jump_pair_bypass"
+        
+        # Check 3: Skip decay check in CALM regime
+        if self.skip_decay_in_calm and current_regime == HawkesRegime.CALM:
+            self.entries_allowed_calm_skip += 1
+            return True, "calm_regime_bypass"
+        
+        # Check 4: Not enough history
+        if current_idx < self.lambda_decay_lookback:
+            return True, "insufficient_history"
+        
+        # Check 5: Actual decay calculation
         lookback_values = lambda_series.iloc[current_idx - self.lambda_decay_lookback:current_idx + 1]
         peak_lambda = lookback_values.max()
         current_lambda = lookback_values.iloc[-1]
         
         if peak_lambda > 0:
             decay_pct = (peak_lambda - current_lambda) / peak_lambda
-            return decay_pct >= self.min_lambda_decay_pct
-        return True
+            if decay_pct >= self.min_lambda_decay_pct:
+                return True, f"decay_sufficient ({decay_pct:.1%})"
+            else:
+                return False, f"decay_insufficient ({decay_pct:.1%} < {self.min_lambda_decay_pct:.1%})"
+        
+        return True, "zero_peak_lambda"
 
     def _calculate_position_size(self, z_score: float, lambda_t: float, regime: str) -> float:
-        """
-        Dynamic position sizing based on signal strength and regime
-        
-        Larger position when:
-        - |Z| is larger (stronger signal)
-        - λ is lower (calmer market)
-        - Regime is calm
-        """
-        # Z-score factor: stronger signal = larger position
+        """Dynamic position sizing based on signal strength and regime"""
         z_factor = min(abs(z_score) / 3.0, 1.5)
         
-        # Lambda factor: lower λ = larger position (inverse relationship)
         lambda_90 = self.lambda_percentiles.get('p90', 0.20)
         if lambda_90 > 0:
             lambda_ratio = lambda_t / lambda_90
@@ -210,7 +248,6 @@ class TradingSignals:
         else:
             lambda_factor = 1.0
         
-        # Regime factor
         regime_factors = {
             HawkesRegime.CALM: 1.2,
             HawkesRegime.NORMAL: 1.0,
@@ -219,7 +256,6 @@ class TradingSignals:
         }
         regime_factor = regime_factors.get(regime, 1.0)
         
-        # Combined
         position = self.max_position * z_factor * lambda_factor * regime_factor
         return max(self.min_position, min(position, self.max_position))
 
@@ -240,24 +276,16 @@ class TradingSignals:
                          z_score: Optional[pd.Series] = None,
                          half_life: Optional[float] = None) -> pd.DataFrame:
         """
-        Generate optimized trading signals with full Hawkes utilization
+        Generate trading signals with RELAXED Hawkes filtering
         
-        Entry Conditions:
-        1. |Z| > regime-adjusted threshold
-        2. λ is in decay phase (not during cascade)
-        3. Regime is not CRISIS
-        4. (Optional) Jump-assisted entry with lower threshold
-        
-        Exit Conditions:
-        1. |Z| < regime-adjusted exit threshold (mean reversion)
-        2. Holding period > max (regime-adjusted)
-        3. Profit target reached (Z crossed favorable)
-        4. Regime escalated to CRISIS
-        5. Minimum hold not yet reached (prevents early exit)
+        Default behavior (minimal filtering):
+        - No λ decay requirement
+        - Crisis entries allowed
+        - Regime still adjusts thresholds (but doesn't block)
         """
-        print("Generating optimized Hawkes-aware trading signals...")
+        print("Generating trading signals (RELAXED filtering)...")
         
-        # Set half-life if provided
+        # Set half-life
         if half_life is not None:
             self.set_half_life(half_life)
         elif self.half_life is None:
@@ -270,7 +298,12 @@ class TradingSignals:
         # Reset diagnostics
         self.entries_blocked_by_regime = 0
         self.entries_blocked_by_decay = 0
+        self.entries_allowed_calm_skip = 0
+        self.entries_allowed_low_jump = 0
         self.regime_exits = 0
+
+        # Detect pair characteristics
+        self._detect_pair_characteristics(jump_indicator)
 
         # Align data
         common_index = spread.index.intersection(lambda_intensity.index)
@@ -289,8 +322,9 @@ class TradingSignals:
         else:
             z_score = z_score.loc[common_index]
 
-        # Calculate λ percentiles for regime classification
-        self._calculate_lambda_percentiles(lambda_intensity)
+        # Calculate λ percentiles (if not frozen from training)
+        if not self._percentiles_frozen:
+            self._calculate_lambda_percentiles(lambda_intensity)
         
         print(f"  λ percentiles: p25={self.lambda_percentiles['p25']:.4f}, "
               f"p75={self.lambda_percentiles['p75']:.4f}, "
@@ -330,20 +364,19 @@ class TradingSignals:
 
             # ENTRY LOGIC
             if current_position == 0:
-                # Check basic z-score condition
                 long_signal = z_t < -z_entry_adj
                 short_signal = z_t > z_entry_adj
                 
                 if long_signal or short_signal:
-                    # Block entry in CRISIS regime
-                    if regime == HawkesRegime.CRISIS:
+                    # Check crisis block (can be disabled)
+                    if regime == HawkesRegime.CRISIS and not self.disable_crisis_block:
                         self.entries_blocked_by_regime += 1
                         continue
                     
-                    # Check λ decay (only enter when cascade is subsiding)
-                    if self.use_hawkes_regimes:
-                        lambda_decaying = self._is_lambda_decaying(lambda_intensity, i)
-                        if not lambda_decaying:
+                    # Check λ decay (with relaxation options)
+                    if self.use_hawkes_regimes and self.min_lambda_decay_pct > 0:
+                        is_decaying, _ = self._is_lambda_decaying(lambda_intensity, i, regime)
+                        if not is_decaying:
                             self.entries_blocked_by_decay += 1
                             continue
                     
@@ -381,19 +414,17 @@ class TradingSignals:
             # EXIT LOGIC
             elif current_position != 0:
                 holding_days = i - entry_idx
-                
-                # Get current regime thresholds
                 _, z_exit_current, max_hold_current = self._get_regime_thresholds(regime)
                 
                 exit_signal = False
                 exit_reason = None
                 
-                # 1. Mean reversion complete (but respect min hold)
+                # 1. Mean reversion complete (respect min hold)
                 if abs(z_t) < z_exit_current and holding_days >= self.min_hold:
                     exit_signal = True
                     exit_reason = 'mean_reversion'
                 
-                # 2. Profit target: Z crossed favorable threshold (past zero)
+                # 2. Profit target: Z crossed favorable threshold
                 elif holding_days >= self.min_hold:
                     if current_position == 1 and z_t > 0.5:
                         exit_signal = True
@@ -407,14 +438,14 @@ class TradingSignals:
                     exit_signal = True
                     exit_reason = 'max_hold'
                 
-                # 4. Regime escalated to CRISIS (exit early to protect)
+                # 4. Regime escalation (if not disabled)
                 elif regime == HawkesRegime.CRISIS and entry_regime != HawkesRegime.CRISIS:
-                    if holding_days >= self.min_hold // 2:  # Allow some min hold even in crisis
+                    if not self.disable_crisis_block and holding_days >= self.min_hold // 2:
                         exit_signal = True
                         exit_reason = 'regime_crisis'
                         self.regime_exits += 1
                 
-                # 5. Emergency stop: Z moved significantly against position
+                # 5. Emergency stop
                 elif current_position == 1 and z_t < entry_z - 2.5:
                     exit_signal = True
                     exit_reason = 'emergency_stop'
@@ -443,7 +474,6 @@ class TradingSignals:
         if jump_indicator is not None:
             signals_df['jump'] = jump_indicator
         
-        # Add regime (pad for alignment)
         regimes = [HawkesRegime.NORMAL] + regimes
         signals_df['regime'] = regimes[:len(signals_df)]
 
@@ -457,11 +487,14 @@ class TradingSignals:
         print(f"    - Short Entries: {n_short}")
         print(f"    - Closes: {n_close}")
         
-        if self.use_hawkes_regimes:
-            print(f"\n  Hawkes Filtering Impact:")
-            print(f"    Entries blocked by CRISIS regime: {self.entries_blocked_by_regime}")
-            print(f"    Entries blocked by λ not decaying: {self.entries_blocked_by_decay}")
-            print(f"    Exits triggered by regime escalation: {self.regime_exits}")
+        print(f"\n  Hawkes Filtering Impact:")
+        print(f"    Entries blocked by CRISIS regime: {self.entries_blocked_by_regime}")
+        print(f"    Entries blocked by λ not decaying: {self.entries_blocked_by_decay}")
+        if self.entries_allowed_calm_skip > 0:
+            print(f"    Entries allowed via calm bypass: {self.entries_allowed_calm_skip}")
+        if self.entries_allowed_low_jump > 0:
+            print(f"    Entries allowed via low-jump bypass: {self.entries_allowed_low_jump}")
+        print(f"    Exits triggered by regime escalation: {self.regime_exits}")
 
         self.signals = signals_df
         return signals_df
@@ -472,21 +505,14 @@ class TradingSignals:
         entries = signals_df[signals_df['signal'].isin([1, -1])]
         
         if len(entries) == 0:
-            return {
-                'n_entries': 0,
-                'time_in_market': 0,
-                'entry_discipline': 0
-            }
+            return {'n_entries': 0, 'time_in_market': 0, 'entry_discipline': 0}
         
-        # Basic metrics
         total_obs = len(signals_df)
         time_in_market = (signals_df['position'] != 0).mean()
         
-        # Entry quality: did we enter at extreme z-scores?
         avg_entry_z = entries['z_score'].abs().mean()
         entries_above_2std = (entries['z_score'].abs() > 2.0).mean()
         
-        # Lambda discipline: did we avoid high-intensity entries?
         avg_entry_lambda = entries['lambda'].mean()
         lambda_90 = self.lambda_percentiles.get('p90', 0.20)
         low_lambda_entries = (entries['lambda'] < lambda_90).mean()
@@ -506,16 +532,66 @@ class TradingSignals:
         return metrics
 
 
-# Legacy class name for backward compatibility
-class AdaptiveSignalGenerator(TradingSignals):
-    """Alias for backward compatibility"""
-    pass
+# ============================================================================
+# PRESET CONFIGURATIONS
+# ============================================================================
+
+def get_minimal_filtering():
+    """
+    MINIMAL FILTERING - Maximum trade generation
+    Use this for statistical power and baseline comparison
+    """
+    return TradingSignals(
+        z_entry_threshold=2.0,
+        z_exit_threshold=0.5,
+        min_lambda_decay_pct=0.0,          # DISABLED
+        skip_decay_in_calm=True,
+        adaptive_for_low_jumps=True,
+        disable_crisis_block=True,          # Allow ALL entries
+        use_hawkes_regimes=True             # Still adjust thresholds by regime
+    )
+
+
+def get_moderate_filtering():
+    """
+    MODERATE FILTERING - Some Hawkes influence
+    Balanced between trade count and selectivity
+    """
+    return TradingSignals(
+        z_entry_threshold=2.0,
+        z_exit_threshold=0.5,
+        min_lambda_decay_pct=0.05,          # Reduced from 0.15
+        skip_decay_in_calm=True,
+        adaptive_for_low_jumps=True,
+        disable_crisis_block=False,         # Block CRISIS entries
+        use_hawkes_regimes=True
+    )
+
+
+def get_aggressive_filtering():
+    """
+    AGGRESSIVE FILTERING - Original settings
+    Use for comparison with previous results
+    """
+    return TradingSignals(
+        z_entry_threshold=2.0,
+        z_exit_threshold=0.5,
+        min_lambda_decay_pct=0.15,          # Original
+        skip_decay_in_calm=False,
+        adaptive_for_low_jumps=False,
+        disable_crisis_block=False,
+        use_hawkes_regimes=True
+    )
+
+
+# Legacy alias for backward compatibility
+AdaptiveSignalGenerator = TradingSignals
 
 
 if __name__ == "__main__":
-    print("="*70)
-    print("OPTIMIZED SIGNAL GENERATION TEST")
-    print("="*70)
+    print("=" * 70)
+    print("SIGNAL GENERATION - FILTERING COMPARISON TEST")
+    print("=" * 70)
     
     np.random.seed(42)
     n = 500
@@ -542,26 +618,27 @@ if __name__ == "__main__":
     
     print(f"\nTest data: {n} observations, {int(jumps.sum())} jumps")
     
-    # Test with half-life awareness
-    signal_gen = TradingSignals(
-        z_entry_threshold=2.0,
-        z_exit_threshold=0.5,
-        use_hawkes_regimes=True
-    )
+    # Test each configuration
+    for name, config_fn in [
+        ("MINIMAL", get_minimal_filtering),
+        ("MODERATE", get_moderate_filtering),
+        ("AGGRESSIVE", get_aggressive_filtering)
+    ]:
+        print(f"\n{'='*70}")
+        print(f"Testing {name} filtering:")
+        print("=" * 70)
+        
+        signal_gen = config_fn()
+        signals_df = signal_gen.generate_signals(
+            spread, 
+            lambda_intensity,
+            jump_indicator=jump_indicator,
+            half_life=25.0
+        )
+        
+        n_entries = (signals_df['signal'].isin([1, -1])).sum()
+        print(f"\n  -> {name}: {n_entries} entries generated")
     
-    signals_df = signal_gen.generate_signals(
-        spread, 
-        lambda_intensity,
-        jump_indicator=jump_indicator,
-        half_life=25.0  # Provide half-life
-    )
-    
-    quality = signal_gen.calculate_signal_quality(signals_df)
-    print(f"\nSignal Quality:")
-    for k, v in quality.items():
-        if isinstance(v, float):
-            print(f"  {k}: {v:.4f}")
-        else:
-            print(f"  {k}: {v}")
-    
-    print("\n Test complete!")
+    print("\n" + "=" * 70)
+    print("TEST COMPLETE")
+    print("=" * 70)

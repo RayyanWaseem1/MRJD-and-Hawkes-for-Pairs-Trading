@@ -1,0 +1,2 @@
+half_life,use_hawkes_regimes,hawkes_lambda_bar,hawkes_alpha,hawkes_beta,hawkes_beta_H,mrjd_kappa,mrjd_theta,mrjd_sigma,mrjd_jump_mean,mrjd_jump_std,lambda_p25,lambda_p50,lambda_p75,lambda_p90,lambda_p95
+44.40974803944023,False,0.01,0.1,1.0,1.0,0.015673990090040803,3.8350756475454535,1.4604452016674692,0.010289601459582057,0.052032394731480726,0.01,0.01,0.01,0.01,0.01

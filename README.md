@@ -172,7 +172,7 @@ The empirical analysis deployed daily closing prices for five equity pairs repre
 
 - The third pair, GS/MS, consists of two major investment banks with similar business lines and regulatory environments. The cointegration relationship is driven by common exposure to capital markets activity and interest rate dynamics.
 
-- The fourth pair, GDX/GLD, represents gold mining equities (GDX) versus physical gold (GLD). The mines provide operational leverage to gold prices, creating a theoretically cointegrated but more volatile spread
+- The fourth pair, AMD/NVDA, represents two semiconductor companies with shared exposure to GPU, CPU, data-center, and broader chip-cycle dynamics. The relationship is economically related but more volatile because NVIDIA's AI-related growth has created structural shifts in the spread.
 
 - The fifth pair, NVDA/AMD, represents two semiconductor companies competing in similar markets. While statistically cointegrated over portions of the sample, this pair exhibits sstructural breaks due to NVIDIA's dominant position in AI related chips. 
 
@@ -220,7 +220,7 @@ Table 1 presents a summary statistics for each pair's spread dynamics and jump c
 Table 1: Sprad and Jump Summary Statistics 
 ![alt text](<Screenshot 2026-02-20 at 8.04.08 PM.png>)
 
-Substantial heterogeneity exists in jump frequencies and branching ratios. The SPY/IVV and XOM/CVX exhibited the highest jump frequencies at approximately 20%, while GDX/GLD shows only 1.4% jump frequency, rendering Hawkes modeling largely inapplicable for this pair
+Substantial heterogeneity exists in jump frequencies and branching ratios. The SPY/IVV and XOM/CVX exhibited the highest jump frequencies at approximately 20%, while AMD/NVDA shows only 1.4% jump frequency, rendering Hawkes modeling largely inapplicable for this pair
 
 ## Hawkes Parameter Estimates
 Table 2 reports the maximum likelihood estimates of the Hawkes process parameters. 
@@ -228,7 +228,7 @@ Table 2 reports the maximum likelihood estimates of the Hawkes process parameter
 Table 2: Hawkes Process Parameter Estimates
 ![alt text](<Screenshot 2026-02-20 at 8.17.55 PM.png>)
 
-The branching ratios cluster around the 0.7 - 0.85 range, consistent with the subcritical self-excitation documented in past literature. However, it can be observed that pairs with low jump frequency (GS/MS and GDX/GLD) exhibit degenerate intensity distrubtions where the 90th percentile is close to or even sometimes below the mean. This indicates minimal variation in the intensity process. This severly limits the applicability of regime-based filtering for these pairs. 
+The branching ratios cluster around the 0.7 - 0.85 range, consistent with the subcritical self-excitation documented in past literature. However, it can be observed that pairs with low jump frequency (GS/MS and AMD/NVDA) exhibit degenerate intensity distrubtions where the 90th percentile is close to or even sometimes below the mean. This indicates minimal variation in the intensity process. This severly limits the applicability of regime-based filtering for these pairs. 
 
 ## Trading Performance
 Table 3 summarizes the backtest results across all pairs
@@ -244,7 +244,7 @@ Table 4 examines the impact of Hawkes-based filtering on signal generation
 Table 4: Hawkes Filtering Impact
 ![alt text](<Screenshot 2026-02-20 at 8.25.48 PM.png>)
 
-The $\lambda$ decay filter proved to be the most restrictive, blocking about 80-207 potential entries per pair. While this aggressive filtering was intended to avoid entry during volatility cascaces, it ultimately resulted in the elimination of nearly all trading opportunities for low-jump frequency pairs. The GDX/GLD pair is completely blocked from trading, while GS/MS retains only 5 trades over an 8-year period. 
+The $\lambda$ decay filter proved to be the most restrictive, blocking about 80-207 potential entries per pair. While this aggressive filtering was intended to avoid entry during volatility cascaces, it ultimately resulted in the elimination of nearly all trading opportunities for low-jump frequency pairs. The AMD/NVDA pair is completely blocked from trading, while GS/MS retains only 5 trades over an 8-year period. 
 
 # Analysis and Discussion
 ## Fundamental Disconnect: Statistical Predictability vs Economic Profitability
@@ -259,7 +259,7 @@ This observation suggests that the Hawkes framewor, while valuable for risk mana
 ## The Over-Filtering Problem
 My implementation of regime-based filtering demonstrates a classic trade-off in systematic trading: filters that successfully avoid bad trades often also eliminate good trades. The $\lambda$ decay requirement, that intensity must have fallen from 15% from its recent peak before entry, was motivated by the intuition that we should avoid entering positions during active volatility cascacdes. In practice, this filter blocked the majority of trading opportunities, with blocking rates exceeding 80% for most pairs. 
 
-The problem is particularly apparent for low-jump frequency pairs. When jumps are rare, the intensity process spends most of its time at or near the baseline level with minimal variation. In this regime, the $\lambda$ decay condition became almost impossible to satisfy, as there was no meaningful "peak" from which to decay. The GDX/GLD case is illustrative: with only 27 jumps over 1,961 trading days (1.4% frequency), the intensity distribution is essentially degenerate, and the Hawkes model provides no useful information beyond what a simple Poission assumption would have yielded. 
+The problem is particularly apparent for low-jump frequency pairs. When jumps are rare, the intensity process spends most of its time at or near the baseline level with minimal variation. In this regime, the $\lambda$ decay condition became almost impossible to satisfy, as there was no meaningful "peak" from which to decay. The AMD/NVDA case is illustrative: with only 27 jumps over 1,961 trading days (1.4% frequency), the intensity distribution is essentially degenerate, and the Hawkes model provides no useful information beyond what a simple Poission assumption would have yielded. 
 
 This finding led me to implement adaptive filtering, wherein Hawkes-based constraints are relaxed for pairs with jump frequencies below 5% or degenerate intensity distributions. While this adjustment allowed trades to be generated, it effectively concedes that the Hawkes framework was inapplicable for these pairs, reducing the strategy to a simple z-score mean reversion approach. 
 

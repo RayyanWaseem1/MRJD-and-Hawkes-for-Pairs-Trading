@@ -474,7 +474,7 @@ class HawkesProcess:
     
 if __name__ == "__main__":
     """
-    Test Hawkes process calibration on GDX/GLD equity pairs
+    Test Hawkes process calibration on CVX/XOM equity pairs
     """
     import sys
     import os
@@ -489,18 +489,18 @@ if __name__ == "__main__":
     from jump_detector import JumpDetector
     
     print("="*70)
-    print("HAWKES PROCESS CALIBRATION TEST - GDX/GLD EQUITY PAIRS")
+    print("HAWKES PROCESS CALIBRATION TEST - CVX/XOM EQUITY PAIRS")
     print("="*70)
     
     # Initialize data pipeline
-    print("\n[1] Loading GDX/GLD data from CSV files...")
+    print("\n[1] Loading CVX/XOM data from CSV files...")
     pipeline = EquityPairsDataPipeline()
     
     # Try to load CSV files from multiple possible locations
     csv_paths = [
-        (os.path.join(current_dir, 'OHLCV_GDX.csv'),
-         os.path.join(current_dir, 'OHLCV_GLD.csv')),  # Script directory
-        ('OHLCV_GDX.csv', 'OHLCV_GLD.csv'),  # Current directory
+        (os.path.join(current_dir, 'OHLCV_CVX.csv'),
+         os.path.join(current_dir, 'OHLCV_XOM.csv')),  # Script directory
+        ('OHLCV_CVX.csv', 'OHLCV_XOM.csv'),  # Current directory
     ]
     
     data_loaded = False
@@ -588,7 +588,7 @@ if __name__ == "__main__":
     if n_jumps < 2:
         print("\nWarning: Too few jumps for reliable Hawkes calibration")
         print(f"  Minimum 2 jumps required, found only {n_jumps}")
-        print("  This is actually good - shows stable GDX/GLD relationship!")
+        print("  This is actually good - shows stable CVX/XOM relationship!")
         
         # Still fit with dummy parameters for demonstration
         hawkes = HawkesProcess()
@@ -656,7 +656,7 @@ if __name__ == "__main__":
                    color='red', s=100, marker='x', zorder=5, 
                    label=f'Detected Jumps (n={n_jumps})')
     axes[0].set_ylabel('Spread')
-    axes[0].set_title('GDX/GLD Spread with Detected Jumps', fontsize=14, fontweight='bold')
+    axes[0].set_title('CVX/XOM Spread with Detected Jumps', fontsize=14, fontweight='bold')
     axes[0].legend(loc='upper right')
     axes[0].grid(True, alpha=0.3)
     
@@ -709,7 +709,7 @@ if __name__ == "__main__":
     print("\n" + "="*70)
     print("SUMMARY")
     print("="*70)
-    print(f"\nData: GDX/GLD spread ({len(spread_df)} days)")
+    print(f"\nData: CVX/XOM spread ({len(spread_df)} days)")
     print(f"Date range: {spread_df.index[0].date()} to {spread_df.index[-1].date()}")
     print(f"\nJump Detection:")
     print(f"  Total jumps: {n_jumps}")

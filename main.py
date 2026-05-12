@@ -11,13 +11,18 @@ Key Optimizations:
 
 import sys
 import os
-from typing import Optional, Dict
+from contextlib import redirect_stderr, redirect_stdout
+from pathlib import Path
+import traceback
+from typing import Callable, Dict, IO, Optional, TypeVar
 import numpy as np 
 import pandas as pd
 import warnings
+from dataclasses import dataclass
 warnings.filterwarnings('ignore')
 
 project_root = os.path.dirname(os.path.abspath(__file__))
+os.environ.setdefault("MPLCONFIGDIR", os.path.join(project_root, ".matplotlib_cache"))
 sys.path.insert(0, project_root)
 
 # Import modules
@@ -27,7 +32,60 @@ from hawkes_calibration import HawkesProcess
 from mrjd_estimation import MRJDModel
 from config import ConfigV2, diagnose_signal_generation, print_diagnostics
 from signal_generation import TradingSignals
-from backtest_engine import BacktestEngineV2
+from backtest_engine import BacktestEngineV2, compute_alpha_tstat
+
+T = TypeVar("T")
+
+@dataclass
+class ModelBundle:
+    """
+    Frozen model parameters fitted exclusively on training data.
+
+    Passed to evaluation phases so no in-sample information leaks
+    into out-of-sample backtest periods.
+    """
+    hawkes_params: Dict #lambda_bar, alpha, beta
+    mrjd_params: Dict #kappa, theta, sigma, jump_mean, jump_std
+    half_life: float #empirical half-life from training spread 
+    lambda_percentiles: Dict #p25/50/75/90/95 of training Hawkes intensity
+    hawkes_suitability: Dict #Hawkes scoring dict (including use_hawkes_regimes)
+    pair_validation: Dict #ADF/half-life/mean-stability results
+    use_hawkes_regimes: bool #whether Hawkes regime logic is active
+
+
+class TeeOutput:
+    """Write script output to the terminal and a log file."""
+
+    def __init__(self, *streams: IO[str]) -> None:
+        self.streams = streams
+
+    def write(self, data: str) -> int:
+        for stream in self.streams:
+            stream.write(data)
+            stream.flush()
+        return len(data)
+
+    def flush(self) -> None:
+        for stream in self.streams:
+            stream.flush()
+
+
+def run_with_output_capture(output_filename: str, func: Callable[[], T]) -> T:
+    output_path = Path(__file__).with_name(output_filename)
+
+    with output_path.open("w", encoding="utf-8") as output_file:
+        console_stdout: IO[str] = sys.__stdout__ if sys.__stdout__ is not None else sys.stdout
+        console_stderr: IO[str] = sys.__stderr__ if sys.__stderr__ is not None else sys.stderr
+        stdout_tee = TeeOutput(console_stdout, output_file)
+        stderr_tee = TeeOutput(console_stderr, output_file)
+
+        with redirect_stdout(stdout_tee), redirect_stderr(stderr_tee):
+            print(f"Saving terminal output to: {output_path}")
+            try:
+                return func()
+            except Exception:
+                traceback.print_exc()
+                raise
 
 
 def validate_pair(spread: pd.Series, min_half_life: int = 5, max_half_life: int = 60) -> dict:
@@ -290,7 +348,8 @@ class SelfExcitingPairsTradingV4:
 
         print("\n" + "=" * 70)
         print("Self-Exciting Pairs Trading System")
-        print("GDX/GLD Equity Pairs Strategy (Dollar-Neutral)")
+        print(f"{self.config.data.asset_a_symbol}/{self.config.data.asset_b_symbol} "
+              "Equity Pairs Strategy (Dollar-Neutral)")
         print("=" * 70)
 
         # Step 1: Data
@@ -361,7 +420,9 @@ class SelfExcitingPairsTradingV4:
 
         self.data_pipeline = EquityPairsDataPipeline(
             asset_a_path=cfg.asset_a_csv,
-            asset_b_path=cfg.asset_b_csv
+            asset_b_path=cfg.asset_b_csv,
+            asset_a_symbol=cfg.asset_a_symbol,
+            asset_b_symbol=cfg.asset_b_symbol
         )
 
         self.data_pipeline.load_from_csv(
@@ -378,8 +439,7 @@ class SelfExcitingPairsTradingV4:
 
         stats = self.data_pipeline.calculate_spread_statistics(self.spread_df['spread'])
         
-        print(f"\n Spread Statistics ({cfg.asset_a_csv.split('/')[-1].replace('.csv','').replace('OHLCV_','')}"
-              f"/{cfg.asset_b_csv.split('/')[-1].replace('.csv','').replace('OHLCV_','')})")
+        print(f"\n Spread Statistics ({cfg.asset_a_symbol}/{cfg.asset_b_symbol})")
         print(f"    Mean: {stats['mean']:.4f}")
         print(f"    Std: {stats['std']:.4f}")
         print(f"    Half-life: {stats['half_life']:.2f} days")
@@ -684,10 +744,356 @@ class SelfExcitingPairsTradingV4:
             risk_free_rate=cfg.risk_free_rate
         )
 
+        #Alpha t-stat vs SPY benchmark
+        alpha_stats = compute_alpha_tstat(
+            self.equity_curve,
+            cfg.benchmark_csv,
+            cfg.risk_free_rate
+        )
+
         regime_perf = self.backtest_engine.analyze_regime_performance(regime_threshold=0.1)
 
         self.results['performance'] = self.performance_metrics 
         self.results['regime_performance'] = regime_perf
+
+    # Train / Validation Pipeline Helpers
+
+    def _fit_models(self, train_spread_df: pd.DataFrame, train_cleaned_data: Dict) -> ModelBundle:
+        """
+        Fit all models on a training data slice and return frozen parameters
+        """
+        cfg_jd = self.config.jump_detection
+        cfg_mrjd = self.config.mrjd 
+
+        print(f"\n Training slice: {len(train_spread_df)} observations")
+
+        print(" [1/5] Pair Validation")
+        pair_val = validate_pair(train_spread_df['spread'])
+        half_life = pair_val['half_life']
+        if not np.isfinite(half_life) or half_life <= 0:
+            half_life = 30.0
+
+        print(" [2/5] Jump Detection")
+        jd = JumpDetector(significance_level = cfg_jd.significance_level)
+        train_returns = train_spread_df['spread'].pct_change().dropna()
+        train_jump_df = jd.detect_jumps_bipower_variation(
+            train_returns, window = cfg_jd.window_size
+        )
+        jump_times_numeric = jd.extract_jump_times(train_jump_df)
+
+        print(" [3/5] Hawkes Calibration")
+        hawkes = HawkesProcess()
+        if isinstance(train_jump_df.index, pd.DatetimeIndex):
+            T = (train_jump_df.index[-1] - train_jump_df.index[0]).total_seconds() / (24 * 3600)
+        else:
+            T = float(len(train_jump_df) - 1)
+        T = max(T, 1.0)
+
+        if len(jump_times_numeric) >= 5:
+            hawkes_params = hawkes.fit(jump_times_numeric, T)
+            train_intensity = hawkes.compute_intensity_at_dates(
+                jump_times_numeric, pd.DatetimeIndex(train_spread_df.index), T
+            )
+        else:
+            hawkes_params = {'lambda_bar': 0.01, 'alpha': 0.1, 'beta': 1.0, 'beta_H': 1.0}
+            hawkes.params = hawkes_params.copy()
+            train_intensity = pd.Series(hawkes_params['lambda_bar'], index = train_spread_df.index)
+
+        print(" [4/5] Hawkes Suitability")
+        hawkes_suit = analyze_hawkes_suitability(train_jump_df, hawkes_params, train_intensity)
+        lambda_pcts = {
+            'p25': float(train_intensity.quantile(0.25)),
+            'p50': float(train_intensity.quantile(0.50)),
+            'p75': float(train_intensity.quantile(0.75)),
+            'p90': float(train_intensity.quantile(0.90)),
+            'p95': float(train_intensity.quantile(0.95)),
+        }
+
+        print(" [5/5] MRJD estimation")
+        mrjd = MRJDModel()
+        common_idx = train_spread_df.index.intersection(train_jump_df.index)
+        train_spread_s = train_spread_df.loc[common_idx, 'spread']
+        jump_ind_train = pd.Series(0, index = train_spread_df.index)
+        jt_dates = train_jump_df[train_jump_df['jump_indicator'] == 1].index
+        jump_ind_train.loc[train_spread_df.index.intersection(jt_dates)] = 1
+
+
+        mrjd_params = mrjd.fit(
+            train_spread_s,
+            jump_ind_train.loc[common_idx],
+            dt = cfg_mrjd.dt,
+            method = cfg_mrjd.estimation_method
+        )
+
+        #half-life correction (mirror of main pipeline)
+        mrjd_hl = np.log(2) / mrjd_params['kappa'] if mrjd_params['kappa'] > 0 else np.inf
+        if np.isfinite(mrjd_hl) and np.isfinite(half_life) and half_life > 0:
+            if abs(mrjd_hl - half_life) > half_life * 0.5:
+                mrjd_params['kappa'] = np.log(2) / half_life 
+
+        return ModelBundle(
+            hawkes_params = hawkes_params,
+            mrjd_params = mrjd_params,
+            half_life = half_life,
+            lambda_percentiles = lambda_pcts,
+            hawkes_suitability = hawkes_suit,
+            pair_validation = pair_val,
+            use_hawkes_regimes = hawkes_suit.get('use_hawkes_regimes', False),
+        )
+    
+    def _compute_full_sample_artifacts(self, full_spread_df: pd.DataFrame, bundle: ModelBundle) -> Dict:
+        """
+        Compute jump_df, Hawkes intensity, and z-score on the FULL sample using
+        FROZEN parameters from a training bundle
+        """
+        cfg_jd = self.config.jump_detection
+        cfg_t = self.config.trading 
+
+        jd = JumpDetector(significance_level = cfg_jd.significance_level)
+        full_returns = full_spread_df['spread'].pct_change().dropna() 
+        full_jump_df = jd.detect_jumps_bipower_variation(
+            full_returns, window = cfg_jd.window_size
+        )
+        jump_times_numeric = jd.extract_jump_times(full_jump_df)
+        hawkes = HawkesProcess()
+        hawkes.params = bundle.hawkes_params.copy() 
+
+        if len(jump_times_numeric) >= 1:
+            full_intensity = hawkes.compute_intensity_at_dates(
+                jump_times_numeric,
+                pd.DatetimeIndex(full_spread_df.index),
+                float(len(full_spread_df))
+            )
+        else:
+            full_intensity = pd.Series(
+                bundle.hawkes_params.get('lambda_bar', 0.01),
+                index = full_spread_df.index
+            )
+
+        lookback = cfg_t.z_score_lookback
+        rm = full_spread_df['spread'].rolling(window = lookback, min_periods = 20).mean() 
+        rs = full_spread_df['spread'].rolling(window = lookback, min_periods = 20).std()
+        full_z = ((full_spread_df['spread'] - rm) / rs).fillna(0)
+
+        return {
+            'jump_df': full_jump_df,
+            'hawkes_intensity': full_intensity,
+            'z_score': full_z,
+        }
+    
+    def _evaluate_period(self,
+                         full_spread_df: pd.DataFrame,
+                         full_cleaned_data: Dict,
+                         artifacts: Dict,
+                         bundle: ModelBundle,
+                         start: str, 
+                         end: str,
+                         label: str) -> Dict:
+        """
+        Generate signals and run a backtest on [start,end] using frozen parameters from 'bundle'
+        """
+        cfg_t = self.config.trading
+        cfg_bt = self.config.backtest 
+
+        print(f"\n Evaluating period: {label}")
+
+        period_spread = full_spread_df.loc[start:end]
+        period_cleaned = {
+            'asset_a': full_cleaned_data['asset_a'].loc[start:end],
+            'asset_b': full_cleaned_data['asset_b'].loc[start:end],
+        }
+
+        if len(period_spread) == 0:
+            print(f" Warning: No data in window {start} to {end}")
+            return {}
+        
+        jdf = artifacts['jump_df']
+        period_jump_df = jdf.loc[start:end] if not jdf.empty else jdf
+        period_intensity = artifacts['hawkes_intensity'].loc[start:end]
+        period_z = artifacts['z_score'].loc[start:end]
+
+        jump_indicator = pd.Series(0, index = period_spread.index)
+        if not period_jump_df.empty:
+            jt_dates = period_jump_df[period_jump_df['jump_indicator'] == 1].index
+            common_jt = jump_indicator.index.intersection(jt_dates)
+            jump_indicator.loc[common_jt] = 1
+
+        sig_gen = TradingSignals(
+            z_entry_threshold = cfg_t.z_entry_threshold,
+            z_exit_threshold = cfg_t.z_exit_threshold,
+            lambda_threshold = cfg_t.lambda_threshold,
+            scaling_constant = cfg_t.scaling_constant,
+            max_position_size = 0.25,
+            use_jump_entries = cfg_t.use_jump_entries,
+            use_hawkes_regimes = bundle.use_hawkes_regimes,
+            z_lookback = cfg_t.z_score_lookback,
+            max_holding_period = cfg_t.max_holding_period,
+        )
+
+        sig_gen.set_lambda_percentiles(bundle.lambda_percentiles)
+        sig_gen.set_half_life(bundle.half_life)
+
+        signals_df = sig_gen.generate_signals(
+            spread = period_spread['spread'],
+            lambda_intensity = period_intensity,
+            jump_indicator = jump_indicator,
+            z_score = period_z,
+        )
+
+        engine = BacktestEngineV2(
+            initial_capital = cfg_bt.initial_capital,
+            commission_rate = cfg_bt.commission_rate,
+            slippage_bps= cfg_bt.slippage_bps,
+            max_position_pct = 0.25,
+            stop_loss_pct = 0.03,
+            trailing_stop_pct = 0.015,
+            trailing_activation_pct = 0.01,
+            profit_target_pct = 0.06,
+        )
+        engine.set_half_life(bundle.half_life)
+
+        hedge_ratio = (
+            period_spread['hedge_ratio'].mean() 
+            if 'hedge_ratio' in period_spread.columns else 1.0
+        )
+        equity_curve = engine.run_backtest(
+            signals_df, period_spread,
+            period_cleaned['asset_a']['Close'],
+            period_cleaned['asset_b']['Close'],
+            hedge_ratio = hedge_ratio,
+        )
+
+        metrics = engine.calculate_performance_metrics(risk_free_rate = cfg_bt.risk_free_rate)
+
+        alpha_stats = compute_alpha_tstat(equity_curve, cfg_bt.benchmark_csv, cfg_bt.risk_free_rate)
+        metrics.update(alpha_stats)
+
+        return {
+            'label': label,
+            'equity_curve': equity_curve,
+            'metrics': metrics,
+            'engine': engine,
+            'signals_df': signals_df,
+        }
+    
+    def _print_train_val_comparison(self, train_res: Dict, val_res: Dict):
+        """ Print side-by-side in-sample vs out-of-sample performance"""
+        tv = self.config.train_val 
+        tm = train_res.get('metrics', {})
+        vm = val_res.get('metrics', {})
+
+        h_train = f"{tv.train_start[:10]} to {tv.train_end[:10]}"
+        h_val = f"{tv.val_start[:10]} to {tv.val_end[:10]}"
+
+        print("\n" + "="*80)
+        print("TRAIN vs VALIDATION PERFORMANCE COMPARISON")
+        print("=" * 80)
+        print(f"\n{'Metric':<30} {'In-Sample':>22} {'Out-of-Sample':>22}")
+        print(f"{'Period':<30} {h_train:>22} {h_val:>22}")
+        print("-" * 80)
+
+        def _fmt(val, spec):
+            if val is None or (isinstance(val, float) and not np.isfinite(val)):
+                return f"{'N/A':>22}"
+            try:
+                return f"{val:{spec}}"
+            except (TypeError, ValueError):
+                return f"{'N/A':>22}"
+        
+        rows = [
+            ("Total Return (%)", "total_return_pct", ">22.2f"),
+            ("Annualized Return (%)", "annualized_return_pct", ">22.2f"),
+            ("Annualized Vol (%)", "annualized_volatility_pct", ">22.2f"),
+            ("Sharpe Ratio", "sharpe_ratio", ">22.3f"),
+            ("Sortino Ratio", "sortino_ratio", ">22.3f"),
+            ("Max Drawdown (%)", "max_drawdown_pct", ">22.2f"),
+            ("Calmar Ratio", "calmar_ratio", ">22.3f"),
+            ("Alpha Annualized (%)", "alpha_annualized", ">22.4"),
+            ("Alpha T-stat", "alpha_tstat", ">22.3f"),
+            ("Alpha P-value", "alpha_pvalue", ">22.4f"),
+            ("Beta vs SPY", "beta", ">22.3f"),
+            ("R-Squared", "r_squared", ">22.4f"),
+            ("Info Ratio", "information_ratio", ">22.3f"),
+            ("Total Trades", "total_trades", ">22"),
+            ("Win Rate (%)", "win_rate_pct", ">22.2f"),
+            ("Profit Factor", "profit_factor", ">22.3f"),
+        ]
+
+        for label, key, spec in rows:
+            tv_ = tm.get(key)
+            vv_ = vm.get(key)
+            if key == 'alpha_annualized':
+                tv_ = tv_ * 100 if tv_ is not None else None 
+                vv_ = vv_ * 100 if vv_ is not None else None 
+            print(f" {label:<28} {_fmt(tv_, spec)} {_fmt(vv_, spec)}")
+
+        print("=" * 76)
+
+        t_sharpe = tm.get('sharpe_ratio', 0.0) or 0.0
+        v_sharpe = vm.get('sharpe_ratio', 0.0) or 0.0
+        if t_sharpe != 0:
+            deg = (t_sharpe - v_sharpe) / abs(t_sharpe)
+            tag = "WARNING: large Sharpe degradation" if deg > 0.5 else "Sharpe degradation"
+            print(f"\n {tag} (train -> val): {deg:+.1%}")
+        print("=" * 80)
+
+    def run_train_val_pipeline(self) -> Dict:
+        """ Full pipeline with proper in-sample / out-of-sample split"""
+        tv = self.config.train_val 
+
+        print("\n" + "="*80)
+        print("TRAIN / VALIDATION PIPELINE")
+        print(f" Train: {tv.train_start} -> {tv.train_end}")
+        print(f" Val: {tv.val_start} -> {tv.val_end}")
+        print("=" * 80)
+
+        print("\n [Step 1] Data Acquisition (Full Sample)")
+        self._acquire_data()
+        if self.spread_df is None or self.cleaned_data is None:
+            raise ValueError("Train/validation pipeline requires acquired spread and cleaned data")
+        full_spread = self.spread_df
+        full_cleaned = self.cleaned_data 
+
+        train_spread = full_spread.loc[tv.train_start:tv.train_end]
+        train_cleaned = {
+            'asset_a': full_cleaned['asset_a'].loc[tv.train_start:tv.train_end],
+            'asset_b': full_cleaned['asset_b'].loc[tv.train_start:tv.train_end],
+        }
+        n_val = len(full_spread.loc[tv.val_start:tv.val_end])
+        print(f"\n Training obs: {len(train_spread)}")
+        print(f" Validation obs: {n_val}")
+
+        print("\n [Steps 2-6] Fitting Models on Training Data Only")
+        bundle = self._fit_models(train_spread, train_cleaned)
+
+        self.half_life = bundle.half_life 
+        self.pair_validation = bundle.pair_validation
+        self.hawkes_suitability = bundle.hawkes_suitability
+
+        print("\n [Step 7] Full Sample Causal Artifacts (Frozen Params)")
+        artifacts = self._compute_full_sample_artifacts(full_spread, bundle)
+
+        print("\n [Step 8a] IN-SAMPLE Evaluation")
+        print("-" * 70)
+        train_res = self._evaluate_period(
+            full_spread, full_cleaned, artifacts, bundle,
+            tv.train_start, tv.train_end, "In-Sample (Train)"
+        )
+
+        print("\n [Step 8b] OUT-OF-SAMPLE Evaluation")
+        print("-" * 70)
+        val_res = self._evaluate_period(
+            full_spread, full_cleaned, artifacts, bundle,
+            tv.val_start, tv.val_end, "Out-of-Sample (Val)"
+        )
+
+        self._print_train_val_comparison(train_res, val_res)
+
+        self.results['train_results'] = train_res.get('metrics', {})
+        self.results['val_results'] = val_res.get('metrics', {})
+        self.results['bundle'] = bundle
+
+        return {'bundle': bundle, 'artifacts': artifacts, 'train': train_res, 'val': val_res}
 
     def _print_summary(self):
         """Print comprehensive summary"""
@@ -711,6 +1117,14 @@ class SelfExcitingPairsTradingV4:
         print(f"    Sharpe Ratio: {perf['sharpe_ratio']:.3f}")
         print(f"    Sortino Ratio: {perf['sortino_ratio']:.3f}")
         print(f"    Max Drawdown: {perf['max_drawdown_pct']:.2f}%")
+
+        print(f"\n Alpha vs Benchmark (SPY):")
+        print(f" Alpha (annaulized): {perf.get('alpha_annualized', 0) * 100:.3f}%")
+        print(f" Alpha T-Stat: {perf.get('alpha_tstat', 0):.3f}")
+        print(f" Alpha P-Value: {perf.get('alpha_pvalue', 1):.4f}")
+        print(f" Beta: {perf.get('beta', 0):.3f}")
+        print(f" R-squared: {perf.get('r_squared', 0):.4f}")
+        print(f" Information Ratio: {perf.get('information_ratio', 0):.3f}")
         
         print(f"\n Trading Activity:")
         print(f"    Total Trades: {perf['total_trades']}")
@@ -848,6 +1262,221 @@ class SelfExcitingPairsTradingV4:
         fig.savefig(output_path, dpi=dpi, bbox_inches='tight')
         plt.close(fig)
         print(f"Saved Hawkes visualization: {output_path}")
+
+    def _default_output_dir(self, analysis_name: str) -> str:
+        cfg = self.config.data
+        pair_slug = f"{cfg.asset_a_symbol}_{cfg.asset_b_symbol}".replace("/", "_")
+        return os.path.join(project_root, "outputs", pair_slug, analysis_name)
+
+    def _save_train_val_artifact_visualizations(self, artifacts: Dict, output_dir: str) -> None:
+        """Save full-sample jump and Hawkes plots for the train/validation run."""
+        if self.spread_df is None or not artifacts:
+            return
+
+        import matplotlib.pyplot as plt
+
+        vis_cfg = self.config.visualization
+        plot_format = vis_cfg.plot_format
+        dpi = vis_cfg.dpi
+        figsize = (vis_cfg.figure_size[0], vis_cfg.figure_size[1] + 2)
+
+        jump_df = artifacts.get('jump_df')
+        intensity = artifacts.get('hawkes_intensity')
+        z_score = artifacts.get('z_score')
+
+        if isinstance(jump_df, pd.DataFrame) and not jump_df.empty:
+            fig, axes = plt.subplots(2, 1, figsize=figsize, sharex=True)
+            axes[0].plot(self.spread_df.index, self.spread_df['spread'], color='blue', linewidth=0.9)
+            jump_times = jump_df.index[jump_df['jump_indicator'] == 1]
+            jump_times = self.spread_df.index.intersection(jump_times)
+            if len(jump_times) > 0:
+                axes[0].scatter(
+                    jump_times,
+                    self.spread_df.loc[jump_times, 'spread'],
+                    color='red',
+                    s=28,
+                    marker='x',
+                    label=f'Jumps (n={len(jump_times)})',
+                    zorder=5,
+                )
+                axes[0].legend(loc='upper right')
+            axes[0].set_ylabel('Spread')
+            axes[0].set_title('Spread with Detected Jumps')
+            axes[0].grid(True, alpha=0.3)
+
+            if 'z_statistic' in jump_df.columns:
+                axes[1].plot(jump_df.index, jump_df['z_statistic'], color='green', linewidth=0.9)
+                critical_value = float(jump_df['z_statistic'].quantile(
+                    1 - self.config.jump_detection.significance_level
+                ))
+                axes[1].axhline(y=critical_value, color='red', linestyle='--', linewidth=1.0)
+                axes[1].set_ylabel('Z-stat')
+                axes[1].set_title('Jump Test Statistic')
+            else:
+                axes[1].plot(jump_df.index, jump_df['jump_indicator'].cumsum(), color='purple', linewidth=1.2)
+                axes[1].set_ylabel('Cumulative Jumps')
+                axes[1].set_title('Cumulative Jump Count')
+            axes[1].set_xlabel('Date')
+            axes[1].grid(True, alpha=0.3)
+
+            fig.tight_layout()
+            output_path = os.path.join(output_dir, f'jump_detection.{plot_format}')
+            fig.savefig(output_path, dpi=dpi, bbox_inches='tight')
+            plt.close(fig)
+            print(f"Saved jump visualization: {output_path}")
+
+        if isinstance(intensity, pd.Series):
+            fig, axes = plt.subplots(2, 1, figsize=figsize, sharex=True)
+            axes[0].plot(self.spread_df.index, self.spread_df['spread'], color='blue', linewidth=0.9)
+            axes[0].set_ylabel('Spread')
+            axes[0].set_title('Spread')
+            axes[0].grid(True, alpha=0.3)
+
+            axes[1].plot(intensity.index, intensity.values, color='orange', linewidth=1.1)
+            axes[1].axhline(
+                y=self.config.trading.lambda_threshold,
+                color='red',
+                linestyle='--',
+                linewidth=1.0,
+                label=f"lambda_threshold={self.config.trading.lambda_threshold:.3f}",
+            )
+            axes[1].set_ylabel('Intensity lambda(t)')
+            axes[1].set_xlabel('Date')
+            axes[1].set_title('Hawkes Intensity Path')
+            axes[1].legend(loc='upper right')
+            axes[1].grid(True, alpha=0.3)
+
+            fig.tight_layout()
+            output_path = os.path.join(output_dir, f'hawkes_intensity.{plot_format}')
+            fig.savefig(output_path, dpi=dpi, bbox_inches='tight')
+            plt.close(fig)
+            print(f"Saved Hawkes visualization: {output_path}")
+
+        if isinstance(z_score, pd.Series):
+            fig, ax = plt.subplots(figsize=vis_cfg.figure_size)
+            ax.plot(z_score.index, z_score.values, color='purple', linewidth=0.9)
+            ax.axhline(self.config.trading.z_entry_threshold, color='red', linestyle='--', linewidth=1.0)
+            ax.axhline(-self.config.trading.z_entry_threshold, color='red', linestyle='--', linewidth=1.0)
+            ax.axhline(0, color='black', linewidth=0.8)
+            ax.set_title('Full-Sample Z-Score')
+            ax.set_ylabel('Z-score')
+            ax.set_xlabel('Date')
+            ax.grid(True, alpha=0.3)
+            fig.tight_layout()
+            output_path = os.path.join(output_dir, f'z_score.{plot_format}')
+            fig.savefig(output_path, dpi=dpi, bbox_inches='tight')
+            plt.close(fig)
+            print(f"Saved z-score visualization: {output_path}")
+
+    def _save_train_val_equity_visualization(self, results: Dict, output_dir: str) -> None:
+        """Save train/validation equity curve comparison."""
+        import matplotlib.pyplot as plt
+
+        train_res = results.get('train', {})
+        val_res = results.get('val', {})
+        train_curve = train_res.get('equity_curve')
+        val_curve = val_res.get('equity_curve')
+        if not isinstance(train_curve, pd.DataFrame) and not isinstance(val_curve, pd.DataFrame):
+            return
+
+        vis_cfg = self.config.visualization
+        fig, axes = plt.subplots(2, 1, figsize=(vis_cfg.figure_size[0], vis_cfg.figure_size[1] + 2), sharex=False)
+
+        for label, curve in [('Train', train_curve), ('Validation', val_curve)]:
+            if isinstance(curve, pd.DataFrame) and not curve.empty:
+                axes[0].plot(curve.index, curve['equity'], linewidth=1.2, label=label)
+                running_max = curve['equity'].cummax()
+                drawdown = (curve['equity'] / running_max - 1.0) * 100
+                axes[1].plot(drawdown.index, drawdown, linewidth=1.0, label=label)
+
+        axes[0].set_title('Train/Validation Equity Curves')
+        axes[0].set_ylabel('Equity')
+        axes[0].legend(loc='best')
+        axes[0].grid(True, alpha=0.3)
+        axes[1].set_title('Drawdown')
+        axes[1].set_ylabel('Drawdown (%)')
+        axes[1].set_xlabel('Date')
+        axes[1].legend(loc='best')
+        axes[1].grid(True, alpha=0.3)
+
+        fig.tight_layout()
+        output_path = os.path.join(output_dir, f'train_val_equity.{vis_cfg.plot_format}')
+        fig.savefig(output_path, dpi=vis_cfg.dpi, bbox_inches='tight')
+        plt.close(fig)
+        print(f"Saved train/validation equity visualization: {output_path}")
+
+    def save_train_val_results(self, train_val_results: Dict, output_dir: Optional[str] = None) -> None:
+        """Save CSV and PNG artifacts from run_train_val_pipeline without recomputing results."""
+        if output_dir is None:
+            output_dir = self._default_output_dir("train_val")
+
+        print(f"\nSaving train/validation results to {output_dir}...")
+        os.makedirs(output_dir, exist_ok=True)
+
+        train_res = train_val_results.get('train', {})
+        val_res = train_val_results.get('val', {})
+        artifacts = train_val_results.get('artifacts', {})
+        bundle = train_val_results.get('bundle')
+
+        metric_rows = []
+        for sample, result in [('train', train_res), ('validation', val_res)]:
+            metrics = result.get('metrics', {})
+            if metrics:
+                metric_rows.append({'sample': sample, **metrics})
+        if metric_rows:
+            pd.DataFrame(metric_rows).to_csv(os.path.join(output_dir, 'performance_metrics.csv'), index=False)
+
+        if self.pair_validation:
+            pd.DataFrame([self.pair_validation]).to_csv(os.path.join(output_dir, 'pair_validation.csv'), index=False)
+        if self.hawkes_suitability:
+            pd.DataFrame([self.hawkes_suitability]).to_csv(os.path.join(output_dir, 'hawkes_suitability.csv'), index=False)
+
+        if isinstance(bundle, ModelBundle):
+            bundle_row = {
+                'half_life': bundle.half_life,
+                'use_hawkes_regimes': bundle.use_hawkes_regimes,
+            }
+            bundle_row.update({f"hawkes_{k}": v for k, v in bundle.hawkes_params.items()})
+            bundle_row.update({f"mrjd_{k}": v for k, v in bundle.mrjd_params.items()})
+            bundle_row.update({f"lambda_{k}": v for k, v in bundle.lambda_percentiles.items()})
+            pd.DataFrame([bundle_row]).to_csv(os.path.join(output_dir, 'model_bundle.csv'), index=False)
+
+        if self.spread_df is not None:
+            self.spread_df.to_csv(os.path.join(output_dir, 'spread.csv'), index_label='date')
+
+        if artifacts and self.spread_df is not None:
+            artifact_df = pd.DataFrame(index=self.spread_df.index)
+            artifact_df['spread'] = self.spread_df['spread']
+            if 'hedge_ratio' in self.spread_df.columns:
+                artifact_df['hedge_ratio'] = self.spread_df['hedge_ratio']
+            intensity = artifacts.get('hawkes_intensity')
+            z_score = artifacts.get('z_score')
+            jump_df = artifacts.get('jump_df')
+            if isinstance(intensity, pd.Series):
+                artifact_df['hawkes_intensity'] = intensity.reindex(artifact_df.index)
+            if isinstance(z_score, pd.Series):
+                artifact_df['z_score'] = z_score.reindex(artifact_df.index)
+            if isinstance(jump_df, pd.DataFrame) and 'jump_indicator' in jump_df.columns:
+                artifact_df['jump_indicator'] = jump_df['jump_indicator'].reindex(artifact_df.index).fillna(0)
+            artifact_df.to_csv(os.path.join(output_dir, 'causal_artifacts.csv'), index_label='date')
+
+        for sample, result in [('train', train_res), ('validation', val_res)]:
+            equity_curve = result.get('equity_curve')
+            signals_df = result.get('signals_df')
+            engine = result.get('engine')
+            if isinstance(equity_curve, pd.DataFrame) and not equity_curve.empty:
+                equity_curve.to_csv(os.path.join(output_dir, f'{sample}_equity_curve.csv'), index_label='date')
+            if isinstance(signals_df, pd.DataFrame) and not signals_df.empty:
+                signals_df.to_csv(os.path.join(output_dir, f'{sample}_trading_signals.csv'), index_label='date')
+            if engine is not None:
+                trade_summary = engine.get_trade_summary()
+                if not trade_summary.empty:
+                    trade_summary.to_csv(os.path.join(output_dir, f'{sample}_trade_summary.csv'), index=False)
+
+        self._save_train_val_artifact_visualizations(artifacts, output_dir)
+        self._save_train_val_equity_visualization(train_val_results, output_dir)
+
+        print("Train/validation results saved successfully")
         
     def save_results(self, output_dir: Optional[str] = None):
         """Save results"""
@@ -891,15 +1520,15 @@ def main():
     
     config = ConfigV2()
     
-    # Optimized thresholds for fewer, higher-quality trades
+    # Trading thresholds (tuned on training data; frozen for val/walk-forward)
     config.trading.z_entry_threshold = 2.0    # Increased from 1.5
     config.trading.z_exit_threshold = 0.5     # Increased from 0.3
     config.trading.lambda_threshold = 0.15    # Use 85th percentile
     
     system = SelfExcitingPairsTradingV4(config)
-    results = system.run_complete_pipeline(skip_validation=False)
-    system.save_results()
-    
+    results = system.run_train_val_pipeline()
+    system.save_train_val_results(results)
+
     print("\n" + "="*70)
     print("PIPELINE EXECUTION COMPLETE")
     print("="*70)
@@ -908,4 +1537,7 @@ def main():
 
 
 if __name__ == "__main__":
-    system, results = main()
+    try:
+        system, results = run_with_output_capture("main_output.txt", main)
+    except Exception:
+        sys.exit(1)

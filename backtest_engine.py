@@ -16,6 +16,107 @@ from dataclasses import dataclass
 import warnings
 warnings.filterwarnings('ignore')
 
+def compute_alpha_tstat(
+        equity_curve: pd.DataFrame,
+        benchmark_csv: str,
+        risk_free_rate: float = 0.02) -> Dict:
+    """
+    Regress strategy excess returns on benchmark excess returns (CAPM).
+
+    Uses Newey-West HAC standard errors (maxlags = 5) to account for autocorrelation in daily returns.
+
+    Returns alpha (daily and annualized), t-stat, p-value, beta, R-squared, and information ratio
+    """
+
+    import statsmodels.api as sm 
+
+    #Loading benchmark prices
+    bench_raw = pd.read_csv(benchmark_csv)
+
+    date_col = None
+    for col in bench_raw.columns:
+        if col.lower() in ['ts_event', 'date', 'datetime']:
+            date_col = col
+            break 
+    if date_col:
+        bench_raw[date_col] = pd.to_datetime(bench_raw[date_col], errors = 'coerce')
+        bench_raw = bench_raw.set_index(date_col)
+    bench_raw.columns = [c.capitalize() for c in bench_raw.columns]
+    bench_prices = bench_raw['Close'].dropna()
+    bench_returns = bench_prices.pct_change().dropna() 
+
+    #Strategy daily returns 
+    strat_returns = equity_curve['returns'].copy()
+
+    #Strip timezone so index types are compatible for intersection
+    def _strip_tz(s: pd.Series) -> pd.Series:
+        index = s.index
+        if isinstance(index, pd.DatetimeIndex) and index.tz is not None:
+            s = s.copy()
+            s.index = index.tz_convert(None)
+        return s 
+    
+    strat_returns = _strip_tz(strat_returns)
+    bench_returns = _strip_tz(bench_returns)
+
+    if isinstance(strat_returns.index, pd.DatetimeIndex):
+        strat_returns.index = strat_returns.index.normalize()
+    if isinstance(bench_returns.index, pd.DatetimeIndex):
+        bench_returns.index = bench_returns.index.normalize() 
+
+    common_idx = strat_returns.index.intersection(bench_returns.index)
+    if len(common_idx) < 30:
+        print(f" Warning: only {len(common_idx)} common dates for alpha t-stat -- returning zeros")
+        return {
+            'alpha_daily': 0.0, 'alpha_annualized': 0.0,
+            'alpha_tstat': 0.0, 'alpha_pvalue': 1.0,
+            'beta': 0.0, 'beta_tstat': 0.0,
+            'r_squared': 0.0, 'information_ratio': 0.0,
+            'n_observations': len(common_idx),
+        }
+    
+    strat_r = strat_returns.loc[common_idx].to_numpy(dtype=float)
+    bench_r = bench_returns.loc[common_idx].to_numpy(dtype=float)
+
+    #Degenerate case: strategy is fully flat (no trades). Avoid divide by zero 
+    if float(np.std(strat_r)) < 1e-12:
+        return {
+            'alpha_daily': 0.0, 'alpha_annualized': 0.0,
+            'alpha_tstat': 0.0, 'alpha_pvalue': 1.0,
+            'beta': 0.0, 'beta_tstat': 0.0,
+            'r_squared': 0.0, 'information_ratio': 0.0,
+            'n_observations': len(common_idx),
+        }
+    
+    daily_rf = risk_free_rate / 252
+    strat_excess = strat_r - daily_rf 
+    bench_excess = bench_r - daily_rf 
+
+    X = sm.add_constant(bench_excess)
+    model = sm.OLS(strat_excess, X).fit(cov_type = 'HAC', cov_kwds = {'maxlags': 5})
+
+    alpha_daily = float(model.params[0])
+    alpha_annual = alpha_daily * 252 
+    alpha_tstat = float(model.tvalues[0])
+    alpha_pval = float(model.pvalues[0])
+    beta = float(model.params[1])
+    beta_tstat = float(model.tvalues[1])
+    r_squared = float(model.rsquared)
+
+    tracking_error = float(np.std(np.asarray(model.resid, dtype=float)) * np.sqrt(252))
+    info_ratio = alpha_annual / tracking_error if tracking_error > 0 else 0.0
+
+    return {
+        'alpha_daily': alpha_daily,
+        'alpha_annualized': alpha_annual,
+        'alpha_tstat': alpha_tstat,
+        'alpha_pvalue': alpha_pval,
+        'beta': beta,
+        'beta_tstat': beta_tstat,
+        'r_squared': r_squared,
+        'information_ratio': info_ratio,
+        'n_observations': len(common_idx),
+    }
 
 @dataclass
 class Trade:

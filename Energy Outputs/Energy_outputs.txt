@@ -1,0 +1,238 @@
+Saving terminal output to: /Users/rayyanwaseem/Desktop/Projects/MRJD-and-Hawkes-for-Pairs-Trading/main_output.txt
+
+================================================================================
+TRAIN / VALIDATION PIPELINE
+ Train: 2018-05-01 -> 2022-12-31
+ Val: 2023-01-01 -> 2024-12-31
+================================================================================
+
+ [Step 1] Data Acquisition (Full Sample)
+Loading equity pairs data from the CSV files...
+ Asset A (CVX): /Users/rayyanwaseem/Desktop/Projects/MRJD-and-Hawkes-for-Pairs-Trading/OHLCV_CVX.csv
+ Asset B (XOM): /Users/rayyanwaseem/Desktop/Projects/MRJD-and-Hawkes-for-Pairs-Trading/OHLCV_XOM.csv
+Successfully loaded data
+ Asset A (CVX): 1958 observations
+ Asset B (XOM): 1958 observations
+ Date range: 2018-05-01 00:00:00+00:00 to 2026-02-12 00:00:00+00:00
+Cleaning data...
+ Cleaned data: 1957 observations remaining
+Constructing spread using cointegration method
+Spread constructed with the mean hedge ratio: 0.7427
+Spread range: [-4.7784, 6.5533]
+Spread mean: 1.6080
+Spread std: 1.5968
+
+ Spread Statistics (CVX/XOM)
+    Mean: 1.6080
+    Std: 1.5968
+    Half-life: 47.19 days
+    Stationary: True
+
+ Training obs: 1176
+ Validation obs: 502
+
+ [Steps 2-6] Fitting Models on Training Data Only
+
+ Training slice: 1176 observations
+ [1/5] Pair Validation
+
+======================================================================
+PAIR VALIDATION
+======================================================================
+
+1. Stationarity Test (ADF):
+   ADF Statistic: -7.3108
+   P-value: 0.0000
+   Stationary:  YES
+
+2. Mean Reversion Half-Life:
+   Half-life: 50.7 days
+   Acceptable range: 5-60 days
+   Within range:  YES
+
+3. Mean Stability Check:
+   Long-term mean drift: 0.1954
+   Stable mean:  YES
+
+4. Spread Range Analysis:
+   Range: 9.6436
+   Range in std units: 7.1
+   Reasonable range (<10 std):  YES
+
+5. Recent vs Historical Mean:
+   Overall mean: 1.5683
+   Recent 1yr mean: 0.9922
+   Shift in std: 0.43
+   No recent regime change:  YES
+
+----------------------------------------------------------------------
+OVERALL ASSESSMENT:
+ PAIR IS SUITABLE FOR MEAN-REVERSION TRADING
+======================================================================
+ [2/5] Jump Detection
+Detecting jumps using Bipower Variation
+Detected 44 jumps (3.74% of observations)
+ [3/5] Hawkes Calibration
+Fitting Hawkes process using MLE
+ Hawkes parameters estimate: 
+ λ̄ (baseline intensity): 0.0082
+ α (jump impact): 0.1837
+ β_H (decay rate): 0.2689
+ Branching ratio (α/β_H): 0.6832
+ [4/5] Hawkes Suitability
+
+======================================================================
+HAWKES SUITABILITY ANALYSIS
+======================================================================
+
+1. Jump Frequency: 3.7%
+   LOW - Not enough jumps for Hawkes to add value
+
+2. Branching Ratio (α/β): 0.683
+   GOOD - Strong jump clustering, Hawkes very useful
+
+3. λ Coefficient of Variation: 2.76
+   HIGH - Strong regime variation, Hawkes valuable
+
+4. Time in Elevated State: 13.9%
+   GOOD - Meaningful time in elevated regimes
+
+----------------------------------------------------------------------
+OVERALL HAWKES SUITABILITY SCORE: 0.80/1.00
+RECOMMENDATION: GOOD - Hawkes useful for regime detection and filtering
+======================================================================
+ [5/5] MRJD estimation
+Fitting the MRJD model
+ Step 1: Estimating OU params from continous periods
+
+======================================================================
+Critical: MRJD Half Life Mismatch Detected
+======================================================================
+    MRJD estimated half-life: 0.2 days
+    Empirical half-life: 50.6 days
+    Relative error: 99.7%
+    Discrepancy: 50.4 days
+
+ Overiding MRJD kappa with the empirical estimate instead
+
+ Corrected kappa: 4.252531 -> 0.013703
+ Corrected half-life: 0.2 days -> 50.6 days
+======================================================================
+
+ Step 2: Estimating jump distribution
+ Step 3: Joint MLE refinement
+Warning: Skipping joint MLE to preserve the validated kappa
+ (Joint MLE tends to overfit and revert to the incorrect parameters)
+MRJD Model Parameters:
+ κ (mean reversion speed): 0.0137
+ θ (long-run mean): 1.4324
+ σ (diffusive volatility): 3.872943
+  μ_J (jump mean): 0.1086
+  σ_J (jump volatility): 0.2598
+
+ [Step 7] Full Sample Causal Artifacts (Frozen Params)
+Detecting jumps using Bipower Variation
+Detected 140 jumps (7.16% of observations)
+
+ [Step 8a] IN-SAMPLE Evaluation
+----------------------------------------------------------------------
+
+ Evaluating period: In-Sample (Train)
+  Half-life calibration:
+    Spread half-life: 50.7 days
+    Min hold period: 25 days
+    Target hold: 40 days
+    Max hold period: 76 days
+Generating trading signals (RELAXED filtering)...
+  LOW JUMP PAIR: 3.2% frequency -> Hawkes filtering relaxed
+  λ percentiles: p25=0.0082, p75=0.0082, p90=0.0245
+Generated 36 total signals:
+    - Long Entries: 12
+    - Short Entries: 6
+    - Closes: 18
+
+  Hawkes Filtering Impact:
+    Entries blocked by CRISIS regime: 0
+    Entries blocked by λ not decaying: 0
+    Exits triggered by regime escalation: 0
+  Backtest half-life: 50.7 days
+Running backtest
+  Hedge ratio (spread construction): 0.7596
+  Position sizing: Dollar-neutral
+  Max position: 25%
+  Hard stop: 3.0%
+  Trailing stop: 1.5% (activates at 1.0%)
+  Profit target: 6.0%
+Backtest Complete!
+    - Total Trades: 18
+    - Final Equity: $1,020,634.90
+    - Total Return: 2.06%
+    - Exit reasons: {'trailing_stop': 7, 'signal': 11}
+Performance metrics calculated
+
+ [Step 8b] OUT-OF-SAMPLE Evaluation
+----------------------------------------------------------------------
+
+ Evaluating period: Out-of-Sample (Val)
+  Half-life calibration:
+    Spread half-life: 50.7 days
+    Min hold period: 25 days
+    Target hold: 40 days
+    Max hold period: 76 days
+Generating trading signals (RELAXED filtering)...
+  λ percentiles: p25=0.0082, p75=0.0082, p90=0.0245
+Generated 10 total signals:
+    - Long Entries: 2
+    - Short Entries: 3
+    - Closes: 5
+
+  Hawkes Filtering Impact:
+    Entries blocked by CRISIS regime: 0
+    Entries blocked by λ not decaying: 0
+    Exits triggered by regime escalation: 0
+  Backtest half-life: 50.7 days
+Running backtest
+  Hedge ratio (spread construction): 0.6561
+  Position sizing: Dollar-neutral
+  Max position: 25%
+  Hard stop: 3.0%
+  Trailing stop: 1.5% (activates at 1.0%)
+  Profit target: 6.0%
+Backtest Complete!
+    - Total Trades: 5
+    - Final Equity: $1,022,005.25
+    - Total Return: 2.20%
+    - Exit reasons: {'signal': 4, 'trailing_stop': 1}
+Performance metrics calculated
+
+================================================================================
+TRAIN vs VALIDATION PERFORMANCE COMPARISON
+================================================================================
+
+Metric                                      In-Sample          Out-of-Sample
+Period                         2018-05-01 to 2022-12-31 2023-01-01 to 2024-12-31
+--------------------------------------------------------------------------------
+ Total Return (%)                               2.06                   2.20
+ Annualized Return (%)                          0.44                   1.10
+ Annualized Vol (%)                             0.90                   0.95
+ Sharpe Ratio                                 -1.727                 -0.951
+ Sortino Ratio                                -1.477                 -0.796
+ Max Drawdown (%)                              -1.16                  -0.87
+ Calmar Ratio                                  0.379                  1.258
+ Alpha Annualized (%)                         -1.567                -0.8434
+ Alpha T-stat                                 -3.993                 -1.341
+ Alpha P-value                                0.0001                 0.1799
+ Beta vs SPY                                   0.001                 -0.003
+ R-Squared                                    0.0007                 0.0015
+ Info Ratio                                   -1.739                 -0.892
+ Total Trades                                     18                      5
+ Win Rate (%)                                  50.00                  60.00
+ Profit Factor                                 2.572                  7.293
+============================================================================
+
+ Sharpe degradation (train -> val): -44.9%
+================================================================================
+
+======================================================================
+PIPELINE EXECUTION COMPLETE
+======================================================================

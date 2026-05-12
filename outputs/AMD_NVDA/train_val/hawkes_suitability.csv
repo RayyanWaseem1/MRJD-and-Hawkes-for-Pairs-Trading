@@ -1,0 +1,2 @@
+overall_score,jump_frequency,branching_ratio,lambda_cv,time_elevated,recommendation,use_hawkes_regimes
+0.95,0.2010221465076661,0.8486762610168073,1.5123576963662575,0.1974468085106383,EXCELLENT - Hawkes should significantly improve timing,True

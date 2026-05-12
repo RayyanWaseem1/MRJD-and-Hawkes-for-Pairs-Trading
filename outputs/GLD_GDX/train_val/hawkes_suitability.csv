@@ -1,0 +1,2 @@
+overall_score,jump_frequency,branching_ratio,lambda_cv,time_elevated,recommendation,use_hawkes_regimes
+0.45,0.002553191489361702,0.1,1.7528161141783967e-14,1.0,MARGINAL - Hawkes provides limited value,False

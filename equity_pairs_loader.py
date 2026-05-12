@@ -1,5 +1,5 @@
 """
-Data pipeline for loading equity pairs (GDX and GLD)
+Data pipeline for loading equity pairs.
 """
 
 import numpy as np
@@ -12,11 +12,15 @@ warnings.filterwarnings('ignore')
 
 class EquityPairsDataPipeline:
     """
-    Data preprocessing for equity pairs (GDX and GLD)
+    Data preprocessing for equity pairs.
 
     """
 
-    def __init__(self, asset_a_path: Optional[str] = None, asset_b_path: Optional[str] = None):
+    def __init__(self,
+                 asset_a_path: Optional[str] = None,
+                 asset_b_path: Optional[str] = None,
+                 asset_a_symbol: str = "Asset A",
+                 asset_b_symbol: str = "Asset B"):
         """
         Initialize data pipeline
 
@@ -29,6 +33,8 @@ class EquityPairsDataPipeline:
         """
         self.asset_a_path = asset_a_path
         self.asset_b_path = asset_b_path
+        self.asset_a_symbol = asset_a_symbol
+        self.asset_b_symbol = asset_b_symbol
         self.data = {}
 
     def load_from_csv(self,
@@ -58,11 +64,11 @@ class EquityPairsDataPipeline:
             raise ValueError("Both asset_a_path and asset_b_path must be provided")
 
         print(f"Loading equity pairs data from the CSV files...")
-        print(f" Asset A (GDX): {asset_a_path}")
-        print(f" Asset B (GLD): {asset_b_path}")
+        print(f" Asset A ({self.asset_a_symbol}): {asset_a_path}")
+        print(f" Asset B ({self.asset_b_symbol}): {asset_b_path}")
 
         try:
-            #loading Asset A (GDX)
+            #loading Asset A
             asset_a = pd.read_csv(asset_a_path)
 
             #handling date column
@@ -85,7 +91,7 @@ class EquityPairsDataPipeline:
             #ensure proper column names (case-insensitive)
             asset_a.columns = [col.capitalize() for col in asset_a.columns]
 
-            #loading Asset B (GLD)
+            #loading Asset B
             asset_b = pd.read_csv(asset_b_path)
 
             #handling date column
@@ -121,8 +127,8 @@ class EquityPairsDataPipeline:
             }
 
             print("Successfully loaded data")
-            print(f" Asset A (GDX): {len(asset_a)} observations")
-            print(f" Asset B (GLD): {len(asset_b)} observations")
+            print(f" Asset A ({self.asset_a_symbol}): {len(asset_a)} observations")
+            print(f" Asset B ({self.asset_b_symbol}): {len(asset_b)} observations")
             print(f" Date range: {asset_a.index[0]} to {asset_a.index[-1]}")
 
             return self.data
@@ -253,9 +259,9 @@ class EquityPairsDataPipeline:
 
         Params:
         -asset_a: pd.Series
-            -Asset A prices (GDX)
+            -Asset A prices
         -asset_b: pd.Series
-            -Asset B prices (GLD)
+            -Asset B prices
         -lookback: int
             -rolling window size (in days)
 
@@ -289,9 +295,9 @@ class EquityPairsDataPipeline:
 
         Params:
         - asset_a: pd.Series
-            -Asset A prices (GDX)
+            -Asset A prices
         - asset_b: pd.Series
-            - Asset B prices (GLD)
+            - Asset B prices
         - lookback: int
             - rolling window size
 
@@ -369,7 +375,7 @@ class EquityPairsDataPipeline:
 if __name__ == "__main__":
     #testing the equity pairs pipeline 
     print("=" * 70)
-    print("Equity Pairs Data Pipeline Test (GDX/GLD)")
+    print("Equity Pairs Data Pipeline Test (CVX/XOM)")
     print("="*70)
 
     #initialize pipelife
@@ -380,8 +386,8 @@ if __name__ == "__main__":
     try:
         #load data
         data = pipeline.load_from_csv(
-            asset_a_path = str(current_dir / 'OHLCV_GDX.csv'),
-            asset_b_path = str(current_dir / 'OHLCV_GLD.csv')
+            asset_a_path = str(current_dir / 'OHLCV_CVX.csv'),
+            asset_b_path = str(current_dir / 'OHLCV_XOM.csv')
         )
 
         #Clean data
@@ -394,7 +400,7 @@ if __name__ == "__main__":
         stats = pipeline.calculate_spread_statistics(spread_df['spread'])
 
         print("\n" + "=" * 70)
-        print("Spread Statistics (GDX/GLD)")
+        print("Spread Statistics (CVX/XOM)")
         print("=" * 70)
 
         for key, value in stats.items():
@@ -408,7 +414,7 @@ if __name__ == "__main__":
 
     except FileNotFoundError:
         print("\n CSV not found")
-        print("Please ensure OHLCV_GDX.csv and OHLCV_GLD.csv are in correct path")
+        print("Please ensure OHLCV_CVX.csv and OHLCV_XOM.csv are in correct path")
     except Exception as e:
         print(f"\n Error: {str(e)}")
 

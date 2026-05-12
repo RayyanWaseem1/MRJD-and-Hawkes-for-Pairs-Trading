@@ -23,12 +23,12 @@ project_root = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, project_root)
 
 #import project modules
-from config import Config
+from config_old import Config
 from equity_pairs_loader import EquityPairsDataPipeline
 from jump_detector import JumpDetector
 from hawkes_calibration import HawkesProcess
 from mrjd_estimation import MRJDModel
-from signal_generation import TradingSignals
+from signal_generation_old import TradingSignals
 from backtest_engine import BacktestEngine
 
 class SelfExcitingPairsTrading:
@@ -67,7 +67,7 @@ class SelfExcitingPairsTrading:
 
         print("\n" + "=" * 70)
         print("Self Exciting Pairs Trading System")
-        print("GDX/GLD Equity Pairs Strategy")
+        print(f"{self.config.data.asset_a_symbol}/{self.config.data.asset_b_symbol} Equity Pairs Strategy")
         print("=" * 70)
 
         #Step 1: Data Acquisition
@@ -114,7 +114,9 @@ class SelfExcitingPairsTrading:
 
         self.data_pipeline = EquityPairsDataPipeline(
             asset_a_path = cfg.asset_a_csv,
-            asset_b_path = cfg.asset_b_csv
+            asset_b_path = cfg.asset_b_csv,
+            asset_a_symbol = cfg.asset_a_symbol,
+            asset_b_symbol = cfg.asset_b_symbol
         )
 
         #Loading data from CSV files
@@ -138,7 +140,7 @@ class SelfExcitingPairsTrading:
             self.spread_df['spread']
         )
 
-        print(f"\n Spread Statistics (GDX/GLD)")
+        print(f"\n Spread Statistics ({cfg.asset_a_symbol}/{cfg.asset_b_symbol})")
         print(f"    Mean: {stats['mean']:.4f}")
         print(f"    Std: {stats['std']:.4f}")
         print(f"    Half-life: {stats['half_life']:.2f} days")
@@ -417,8 +419,8 @@ class SelfExcitingPairsTrading:
         self.equity_curve = self.backtest_engine.run_backtest(
             signals_df,
             spread_df,
-            asset_a_prices,  # GDX prices
-            asset_b_prices,  # GLD prices
+            asset_a_prices,
+            asset_b_prices,
             hedge_ratio=hedge_ratio
         )
 
