@@ -16,11 +16,10 @@ import warnings
 warnings.filterwarnings('ignore')
 
 project_root = os.path.dirname(os.path.abspath(__file__))
-os.environ.setdefault("MPLCONFIGDIR", os.path.join(project_root, ".matplotlib_cache"))
 if project_root not in sys.path:
     sys.path.insert(0, project_root)
 
-from config import ConfigV2
+from config_old import ConfigV2
 from main import SelfExcitingPairsTradingV4, ModelBundle, run_with_output_capture
 from backtest_engine import BacktestEngineV2, compute_alpha_tstat
 
@@ -161,8 +160,6 @@ class WalkForwardEngine:
                 'bundle':     bundle,
                 'metrics':    result['metrics'],
                 'equity_curve': result['equity_curve'],
-                'signals_df': result.get('signals_df'),
-                'engine': result.get('engine'),
             })
             all_equity_curves.append(result['equity_curve'])
 
@@ -284,167 +281,6 @@ class WalkForwardEngine:
                   f"{ev:<28} {ann:>10.2f} {shrp:>8.3f} {trd:>8}")
         print("=" * 76)
 
-    def _default_output_dir(self) -> str:
-        cfg = self.config.data
-        pair_slug = f"{cfg.asset_a_symbol}_{cfg.asset_b_symbol}".replace("/", "_")
-        return os.path.join(project_root, "outputs", pair_slug, "walk_forward")
-
-    def _save_visualizations(self, output_dir: str) -> None:
-        """Save walk-forward equity and quarterly summary plots."""
-        if self.oos_equity_curve is None or self.oos_equity_curve.empty:
-            return
-
-        import matplotlib.pyplot as plt
-
-        vis_cfg = self.config.visualization
-        fig, axes = plt.subplots(2, 1, figsize=(vis_cfg.figure_size[0], vis_cfg.figure_size[1] + 2), sharex=True)
-
-        equity = self.oos_equity_curve['equity']
-        axes[0].plot(equity.index, equity.values, color='blue', linewidth=1.2)
-        axes[0].set_title('Walk-Forward OOS Equity Curve')
-        axes[0].set_ylabel('Equity')
-        axes[0].grid(True, alpha=0.3)
-
-        drawdown = (equity / equity.cummax() - 1.0) * 100
-        axes[1].plot(drawdown.index, drawdown.values, color='red', linewidth=1.0)
-        axes[1].set_title('Walk-Forward OOS Drawdown')
-        axes[1].set_ylabel('Drawdown (%)')
-        axes[1].set_xlabel('Date')
-        axes[1].grid(True, alpha=0.3)
-
-        fig.tight_layout()
-        output_path = os.path.join(output_dir, f'walk_forward_equity.{vis_cfg.plot_format}')
-        fig.savefig(output_path, dpi=vis_cfg.dpi, bbox_inches='tight')
-        plt.close(fig)
-        print(f"Saved walk-forward equity visualization: {output_path}")
-
-        if self.quarterly_results:
-            quarters = [f"Q{qr['quarter']}" for qr in self.quarterly_results]
-            returns = [qr['metrics'].get('annualized_return_pct', 0.0) for qr in self.quarterly_results]
-            sharpes = [qr['metrics'].get('sharpe_ratio', 0.0) for qr in self.quarterly_results]
-
-            fig, axes = plt.subplots(2, 1, figsize=(vis_cfg.figure_size[0], vis_cfg.figure_size[1] + 2))
-            axes[0].bar(quarters, returns, color='steelblue')
-            axes[0].axhline(0, color='black', linewidth=0.8)
-            axes[0].set_title('Quarterly Annualized Return')
-            axes[0].set_ylabel('Return (%)')
-            axes[0].tick_params(axis='x', rotation=90)
-            axes[0].grid(True, axis='y', alpha=0.3)
-
-            axes[1].bar(quarters, sharpes, color='darkorange')
-            axes[1].axhline(0, color='black', linewidth=0.8)
-            axes[1].set_title('Quarterly Sharpe Ratio')
-            axes[1].set_ylabel('Sharpe')
-            axes[1].tick_params(axis='x', rotation=90)
-            axes[1].grid(True, axis='y', alpha=0.3)
-
-            fig.tight_layout()
-            output_path = os.path.join(output_dir, f'quarterly_performance.{vis_cfg.plot_format}')
-            fig.savefig(output_path, dpi=vis_cfg.dpi, bbox_inches='tight')
-            plt.close(fig)
-            print(f"Saved quarterly performance visualization: {output_path}")
-
-    def save_results(self, output_dir: Optional[str] = None) -> None:
-        """Save CSV and PNG artifacts from the completed walk-forward run."""
-        if output_dir is None:
-            output_dir = self._default_output_dir()
-
-        print(f"\nSaving walk-forward results to {output_dir}...")
-        os.makedirs(output_dir, exist_ok=True)
-
-        if self.oos_metrics:
-            pd.DataFrame([self.oos_metrics]).to_csv(
-                os.path.join(output_dir, 'walk_forward_metrics.csv'),
-                index=False,
-            )
-
-        quarterly_rows = []
-        for qr in self.quarterly_results:
-            row = {
-                'quarter': qr['quarter'],
-                'train_end': qr['train_end'],
-                'eval_start': qr['eval_start'],
-                'eval_end': qr['eval_end'],
-            }
-            row.update(qr.get('metrics', {}))
-            quarterly_rows.append(row)
-        if quarterly_rows:
-            pd.DataFrame(quarterly_rows).to_csv(
-                os.path.join(output_dir, 'quarterly_metrics.csv'),
-                index=False,
-            )
-
-        if self.oos_equity_curve is not None and not self.oos_equity_curve.empty:
-            self.oos_equity_curve.to_csv(
-                os.path.join(output_dir, 'walk_forward_equity_curve.csv'),
-                index_label='date',
-            )
-
-        quarterly_equity = []
-        quarterly_signals = []
-        quarterly_trades = []
-        bundle_rows = []
-        for qr in self.quarterly_results:
-            quarter = qr['quarter']
-            equity_curve = qr.get('equity_curve')
-            signals_df = qr.get('signals_df')
-            engine = qr.get('engine')
-            bundle = qr.get('bundle')
-
-            if isinstance(equity_curve, pd.DataFrame) and not equity_curve.empty:
-                ec = equity_curve.copy()
-                ec.insert(0, 'quarter', quarter)
-                quarterly_equity.append(ec)
-
-            if isinstance(signals_df, pd.DataFrame) and not signals_df.empty:
-                sig = signals_df.copy()
-                sig.insert(0, 'quarter', quarter)
-                quarterly_signals.append(sig)
-
-            if engine is not None:
-                trades = engine.get_trade_summary()
-                if not trades.empty:
-                    trades.insert(0, 'quarter', quarter)
-                    quarterly_trades.append(trades)
-
-            if isinstance(bundle, ModelBundle):
-                bundle_row = {
-                    'quarter': quarter,
-                    'train_end': qr['train_end'],
-                    'eval_start': qr['eval_start'],
-                    'eval_end': qr['eval_end'],
-                    'half_life': bundle.half_life,
-                    'use_hawkes_regimes': bundle.use_hawkes_regimes,
-                }
-                bundle_row.update({f"hawkes_{k}": v for k, v in bundle.hawkes_params.items()})
-                bundle_row.update({f"mrjd_{k}": v for k, v in bundle.mrjd_params.items()})
-                bundle_row.update({f"lambda_{k}": v for k, v in bundle.lambda_percentiles.items()})
-                bundle_rows.append(bundle_row)
-
-        if quarterly_equity:
-            pd.concat(quarterly_equity).to_csv(
-                os.path.join(output_dir, 'quarterly_equity_curves.csv'),
-                index_label='date',
-            )
-        if quarterly_signals:
-            pd.concat(quarterly_signals).to_csv(
-                os.path.join(output_dir, 'quarterly_trading_signals.csv'),
-                index_label='date',
-            )
-        if quarterly_trades:
-            pd.concat(quarterly_trades, ignore_index=True).to_csv(
-                os.path.join(output_dir, 'quarterly_trade_summary.csv'),
-                index=False,
-            )
-        if bundle_rows:
-            pd.DataFrame(bundle_rows).to_csv(
-                os.path.join(output_dir, 'quarterly_model_bundles.csv'),
-                index=False,
-            )
-
-        self._save_visualizations(output_dir)
-        print("Walk-forward results saved successfully")
-
 
 def main():
     """Run a walk-forward backtest with the default configured pair."""
@@ -456,7 +292,6 @@ def main():
 
     engine  = WalkForwardEngine(config, min_train_days=504)
     results = engine.run()
-    engine.save_results()
 
     print("\n" + "=" * 70)
     print("WALK-FORWARD EXECUTION COMPLETE")

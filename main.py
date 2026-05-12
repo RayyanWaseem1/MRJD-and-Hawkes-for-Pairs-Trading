@@ -22,7 +22,6 @@ from dataclasses import dataclass
 warnings.filterwarnings('ignore')
 
 project_root = os.path.dirname(os.path.abspath(__file__))
-os.environ.setdefault("MPLCONFIGDIR", os.path.join(project_root, ".matplotlib_cache"))
 sys.path.insert(0, project_root)
 
 # Import modules
@@ -30,8 +29,8 @@ from equity_pairs_loader import EquityPairsDataPipeline
 from jump_detector import JumpDetector
 from hawkes_calibration import HawkesProcess
 from mrjd_estimation import MRJDModel
-from config import ConfigV2, diagnose_signal_generation, print_diagnostics
-from signal_generation import TradingSignals
+from config_old import ConfigV2, diagnose_signal_generation, print_diagnostics
+from signal_generation_old import TradingSignals
 from backtest_engine import BacktestEngineV2, compute_alpha_tstat
 
 T = TypeVar("T")
@@ -74,10 +73,8 @@ def run_with_output_capture(output_filename: str, func: Callable[[], T]) -> T:
     output_path = Path(__file__).with_name(output_filename)
 
     with output_path.open("w", encoding="utf-8") as output_file:
-        console_stdout: IO[str] = sys.__stdout__ if sys.__stdout__ is not None else sys.stdout
-        console_stderr: IO[str] = sys.__stderr__ if sys.__stderr__ is not None else sys.stderr
-        stdout_tee = TeeOutput(console_stdout, output_file)
-        stderr_tee = TeeOutput(console_stderr, output_file)
+        stdout_tee = TeeOutput(sys.__stdout__, output_file)
+        stderr_tee = TeeOutput(sys.__stderr__, output_file)
 
         with redirect_stdout(stdout_tee), redirect_stderr(stderr_tee):
             print(f"Saving terminal output to: {output_path}")
@@ -1093,7 +1090,7 @@ class SelfExcitingPairsTradingV4:
         self.results['val_results'] = val_res.get('metrics', {})
         self.results['bundle'] = bundle
 
-        return {'bundle': bundle, 'artifacts': artifacts, 'train': train_res, 'val': val_res}
+        return {'bundle': bundle, 'train': train_res, 'val': val_res}
 
     def _print_summary(self):
         """Print comprehensive summary"""
@@ -1262,221 +1259,6 @@ class SelfExcitingPairsTradingV4:
         fig.savefig(output_path, dpi=dpi, bbox_inches='tight')
         plt.close(fig)
         print(f"Saved Hawkes visualization: {output_path}")
-
-    def _default_output_dir(self, analysis_name: str) -> str:
-        cfg = self.config.data
-        pair_slug = f"{cfg.asset_a_symbol}_{cfg.asset_b_symbol}".replace("/", "_")
-        return os.path.join(project_root, "outputs", pair_slug, analysis_name)
-
-    def _save_train_val_artifact_visualizations(self, artifacts: Dict, output_dir: str) -> None:
-        """Save full-sample jump and Hawkes plots for the train/validation run."""
-        if self.spread_df is None or not artifacts:
-            return
-
-        import matplotlib.pyplot as plt
-
-        vis_cfg = self.config.visualization
-        plot_format = vis_cfg.plot_format
-        dpi = vis_cfg.dpi
-        figsize = (vis_cfg.figure_size[0], vis_cfg.figure_size[1] + 2)
-
-        jump_df = artifacts.get('jump_df')
-        intensity = artifacts.get('hawkes_intensity')
-        z_score = artifacts.get('z_score')
-
-        if isinstance(jump_df, pd.DataFrame) and not jump_df.empty:
-            fig, axes = plt.subplots(2, 1, figsize=figsize, sharex=True)
-            axes[0].plot(self.spread_df.index, self.spread_df['spread'], color='blue', linewidth=0.9)
-            jump_times = jump_df.index[jump_df['jump_indicator'] == 1]
-            jump_times = self.spread_df.index.intersection(jump_times)
-            if len(jump_times) > 0:
-                axes[0].scatter(
-                    jump_times,
-                    self.spread_df.loc[jump_times, 'spread'],
-                    color='red',
-                    s=28,
-                    marker='x',
-                    label=f'Jumps (n={len(jump_times)})',
-                    zorder=5,
-                )
-                axes[0].legend(loc='upper right')
-            axes[0].set_ylabel('Spread')
-            axes[0].set_title('Spread with Detected Jumps')
-            axes[0].grid(True, alpha=0.3)
-
-            if 'z_statistic' in jump_df.columns:
-                axes[1].plot(jump_df.index, jump_df['z_statistic'], color='green', linewidth=0.9)
-                critical_value = float(jump_df['z_statistic'].quantile(
-                    1 - self.config.jump_detection.significance_level
-                ))
-                axes[1].axhline(y=critical_value, color='red', linestyle='--', linewidth=1.0)
-                axes[1].set_ylabel('Z-stat')
-                axes[1].set_title('Jump Test Statistic')
-            else:
-                axes[1].plot(jump_df.index, jump_df['jump_indicator'].cumsum(), color='purple', linewidth=1.2)
-                axes[1].set_ylabel('Cumulative Jumps')
-                axes[1].set_title('Cumulative Jump Count')
-            axes[1].set_xlabel('Date')
-            axes[1].grid(True, alpha=0.3)
-
-            fig.tight_layout()
-            output_path = os.path.join(output_dir, f'jump_detection.{plot_format}')
-            fig.savefig(output_path, dpi=dpi, bbox_inches='tight')
-            plt.close(fig)
-            print(f"Saved jump visualization: {output_path}")
-
-        if isinstance(intensity, pd.Series):
-            fig, axes = plt.subplots(2, 1, figsize=figsize, sharex=True)
-            axes[0].plot(self.spread_df.index, self.spread_df['spread'], color='blue', linewidth=0.9)
-            axes[0].set_ylabel('Spread')
-            axes[0].set_title('Spread')
-            axes[0].grid(True, alpha=0.3)
-
-            axes[1].plot(intensity.index, intensity.values, color='orange', linewidth=1.1)
-            axes[1].axhline(
-                y=self.config.trading.lambda_threshold,
-                color='red',
-                linestyle='--',
-                linewidth=1.0,
-                label=f"lambda_threshold={self.config.trading.lambda_threshold:.3f}",
-            )
-            axes[1].set_ylabel('Intensity lambda(t)')
-            axes[1].set_xlabel('Date')
-            axes[1].set_title('Hawkes Intensity Path')
-            axes[1].legend(loc='upper right')
-            axes[1].grid(True, alpha=0.3)
-
-            fig.tight_layout()
-            output_path = os.path.join(output_dir, f'hawkes_intensity.{plot_format}')
-            fig.savefig(output_path, dpi=dpi, bbox_inches='tight')
-            plt.close(fig)
-            print(f"Saved Hawkes visualization: {output_path}")
-
-        if isinstance(z_score, pd.Series):
-            fig, ax = plt.subplots(figsize=vis_cfg.figure_size)
-            ax.plot(z_score.index, z_score.values, color='purple', linewidth=0.9)
-            ax.axhline(self.config.trading.z_entry_threshold, color='red', linestyle='--', linewidth=1.0)
-            ax.axhline(-self.config.trading.z_entry_threshold, color='red', linestyle='--', linewidth=1.0)
-            ax.axhline(0, color='black', linewidth=0.8)
-            ax.set_title('Full-Sample Z-Score')
-            ax.set_ylabel('Z-score')
-            ax.set_xlabel('Date')
-            ax.grid(True, alpha=0.3)
-            fig.tight_layout()
-            output_path = os.path.join(output_dir, f'z_score.{plot_format}')
-            fig.savefig(output_path, dpi=dpi, bbox_inches='tight')
-            plt.close(fig)
-            print(f"Saved z-score visualization: {output_path}")
-
-    def _save_train_val_equity_visualization(self, results: Dict, output_dir: str) -> None:
-        """Save train/validation equity curve comparison."""
-        import matplotlib.pyplot as plt
-
-        train_res = results.get('train', {})
-        val_res = results.get('val', {})
-        train_curve = train_res.get('equity_curve')
-        val_curve = val_res.get('equity_curve')
-        if not isinstance(train_curve, pd.DataFrame) and not isinstance(val_curve, pd.DataFrame):
-            return
-
-        vis_cfg = self.config.visualization
-        fig, axes = plt.subplots(2, 1, figsize=(vis_cfg.figure_size[0], vis_cfg.figure_size[1] + 2), sharex=False)
-
-        for label, curve in [('Train', train_curve), ('Validation', val_curve)]:
-            if isinstance(curve, pd.DataFrame) and not curve.empty:
-                axes[0].plot(curve.index, curve['equity'], linewidth=1.2, label=label)
-                running_max = curve['equity'].cummax()
-                drawdown = (curve['equity'] / running_max - 1.0) * 100
-                axes[1].plot(drawdown.index, drawdown, linewidth=1.0, label=label)
-
-        axes[0].set_title('Train/Validation Equity Curves')
-        axes[0].set_ylabel('Equity')
-        axes[0].legend(loc='best')
-        axes[0].grid(True, alpha=0.3)
-        axes[1].set_title('Drawdown')
-        axes[1].set_ylabel('Drawdown (%)')
-        axes[1].set_xlabel('Date')
-        axes[1].legend(loc='best')
-        axes[1].grid(True, alpha=0.3)
-
-        fig.tight_layout()
-        output_path = os.path.join(output_dir, f'train_val_equity.{vis_cfg.plot_format}')
-        fig.savefig(output_path, dpi=vis_cfg.dpi, bbox_inches='tight')
-        plt.close(fig)
-        print(f"Saved train/validation equity visualization: {output_path}")
-
-    def save_train_val_results(self, train_val_results: Dict, output_dir: Optional[str] = None) -> None:
-        """Save CSV and PNG artifacts from run_train_val_pipeline without recomputing results."""
-        if output_dir is None:
-            output_dir = self._default_output_dir("train_val")
-
-        print(f"\nSaving train/validation results to {output_dir}...")
-        os.makedirs(output_dir, exist_ok=True)
-
-        train_res = train_val_results.get('train', {})
-        val_res = train_val_results.get('val', {})
-        artifacts = train_val_results.get('artifacts', {})
-        bundle = train_val_results.get('bundle')
-
-        metric_rows = []
-        for sample, result in [('train', train_res), ('validation', val_res)]:
-            metrics = result.get('metrics', {})
-            if metrics:
-                metric_rows.append({'sample': sample, **metrics})
-        if metric_rows:
-            pd.DataFrame(metric_rows).to_csv(os.path.join(output_dir, 'performance_metrics.csv'), index=False)
-
-        if self.pair_validation:
-            pd.DataFrame([self.pair_validation]).to_csv(os.path.join(output_dir, 'pair_validation.csv'), index=False)
-        if self.hawkes_suitability:
-            pd.DataFrame([self.hawkes_suitability]).to_csv(os.path.join(output_dir, 'hawkes_suitability.csv'), index=False)
-
-        if isinstance(bundle, ModelBundle):
-            bundle_row = {
-                'half_life': bundle.half_life,
-                'use_hawkes_regimes': bundle.use_hawkes_regimes,
-            }
-            bundle_row.update({f"hawkes_{k}": v for k, v in bundle.hawkes_params.items()})
-            bundle_row.update({f"mrjd_{k}": v for k, v in bundle.mrjd_params.items()})
-            bundle_row.update({f"lambda_{k}": v for k, v in bundle.lambda_percentiles.items()})
-            pd.DataFrame([bundle_row]).to_csv(os.path.join(output_dir, 'model_bundle.csv'), index=False)
-
-        if self.spread_df is not None:
-            self.spread_df.to_csv(os.path.join(output_dir, 'spread.csv'), index_label='date')
-
-        if artifacts and self.spread_df is not None:
-            artifact_df = pd.DataFrame(index=self.spread_df.index)
-            artifact_df['spread'] = self.spread_df['spread']
-            if 'hedge_ratio' in self.spread_df.columns:
-                artifact_df['hedge_ratio'] = self.spread_df['hedge_ratio']
-            intensity = artifacts.get('hawkes_intensity')
-            z_score = artifacts.get('z_score')
-            jump_df = artifacts.get('jump_df')
-            if isinstance(intensity, pd.Series):
-                artifact_df['hawkes_intensity'] = intensity.reindex(artifact_df.index)
-            if isinstance(z_score, pd.Series):
-                artifact_df['z_score'] = z_score.reindex(artifact_df.index)
-            if isinstance(jump_df, pd.DataFrame) and 'jump_indicator' in jump_df.columns:
-                artifact_df['jump_indicator'] = jump_df['jump_indicator'].reindex(artifact_df.index).fillna(0)
-            artifact_df.to_csv(os.path.join(output_dir, 'causal_artifacts.csv'), index_label='date')
-
-        for sample, result in [('train', train_res), ('validation', val_res)]:
-            equity_curve = result.get('equity_curve')
-            signals_df = result.get('signals_df')
-            engine = result.get('engine')
-            if isinstance(equity_curve, pd.DataFrame) and not equity_curve.empty:
-                equity_curve.to_csv(os.path.join(output_dir, f'{sample}_equity_curve.csv'), index_label='date')
-            if isinstance(signals_df, pd.DataFrame) and not signals_df.empty:
-                signals_df.to_csv(os.path.join(output_dir, f'{sample}_trading_signals.csv'), index_label='date')
-            if engine is not None:
-                trade_summary = engine.get_trade_summary()
-                if not trade_summary.empty:
-                    trade_summary.to_csv(os.path.join(output_dir, f'{sample}_trade_summary.csv'), index=False)
-
-        self._save_train_val_artifact_visualizations(artifacts, output_dir)
-        self._save_train_val_equity_visualization(train_val_results, output_dir)
-
-        print("Train/validation results saved successfully")
         
     def save_results(self, output_dir: Optional[str] = None):
         """Save results"""
@@ -1527,7 +1309,7 @@ def main():
     
     system = SelfExcitingPairsTradingV4(config)
     results = system.run_train_val_pipeline()
-    system.save_train_val_results(results)
+
 
     print("\n" + "="*70)
     print("PIPELINE EXECUTION COMPLETE")
