@@ -1,307 +1,427 @@
 """
-Walk-Forward Backtesting Engine for Self-Exciting Pairs Trading.
+Quarterly walk-forward, run as ONE CONTINUOUS BACKTEST.
 
-At each quarter-end, refits all models on training data up to that date,
-then trades the next quarter with frozen params. Concatenates quarterly
-equity curves into one continuous OOS curve.
+Changes from the audited version
+--------------------------------
+1. CONTINUOUS, NOT 23 RESTARTS. The old engine restarted the backtest at every
+   quarter with a fresh $1,000,000 and a flat book. Meanwhile the signal
+   generator set min_hold = 0.5 x half-life and max_hold = 1.5 x half-life --
+   for CVX/XOM that is 25 and 76 trading days against a ~63-day quarter. A
+   trade entered mid-quarter often could not reach its minimum hold before the
+   quarter ended, at which point it was silently liquidated and never recorded.
+   That is not a test of the strategy; it is a test of a strategy that gets
+   stopped out on an arbitrary calendar boundary.
+
+   Parameters are now SWAPPED IN at each boundary while the book, the cash
+   balance and any open position carry straight through.
+
+2. NO STITCHING. `_stitch_equity_curves` rescaled each quarter so its first
+   equity equalled the previous quarter's last. Because each quarter's
+   `equity[0]` was the untouched initial capital, the boundary day contributed
+   a hardcoded 0% return and the quarter's first genuine return was discarded
+   -- 23 days zeroed out of the OOS series that then fed the Sharpe and the
+   alpha t-stat. With one continuous curve there is nothing to stitch.
+
+3. METRICS COME FROM REAL TRADES. The old code built a `temp_engine`, assigned
+   it the stitched curve, and called `calculate_performance_metrics()` on it.
+   `temp_engine.trades` was empty, so profit factor, average win, average loss,
+   expected value, duration, MAE and MFE were all written to
+   `walk_forward_metrics.csv` as zeros that looked like measurements.
+
+4. FAILURES ARE REPORTED. Three `except Exception: print(...); continue` blocks
+   dropped failed quarters and stitched the remainder as if continuous --
+   survivorship bias that preferentially drops the volatile quarters a jump
+   model most needs to be tested on. Failures are now counted, logged, and
+   written to `quarter_failures.csv`.
+
+5. THRESHOLDS ARE TUNED INSIDE THE LOOP, on each quarter's training window
+   only, and the number of configurations tried is recorded so the deflated
+   Sharpe can account for the search.
+
+6. THE HEDGE RATIO IS RE-ESTIMATED at each boundary and held fixed within the
+   quarter.
 """
 
-import os
-import sys
+from __future__ import annotations
+
 from typing import Dict, List, Optional
 
 import numpy as np
 import pandas as pd
-import warnings
-warnings.filterwarnings('ignore')
 
-project_root = os.path.dirname(os.path.abspath(__file__))
-if project_root not in sys.path:
-    sys.path.insert(0, project_root)
+from config import Config
+from backtest_engine import BacktestEngine, compute_alpha_tstat
+from pipeline import ModelBundle, PairPipeline
+from signal_generation import TradingSignals
+from statistics_tools import deflated_sharpe_ratio, power_statement
 
-from config_old import ConfigV2
-from main import SelfExcitingPairsTradingV4, ModelBundle, run_with_output_capture
-from backtest_engine import BacktestEngineV2, compute_alpha_tstat
+__all__ = ["WalkForwardEngine"]
 
 
 class WalkForwardEngine:
-    """Quarterly walk-forward backtest."""
+    """Quarterly refit, one continuous book."""
 
-    def __init__(self, config: ConfigV2, min_train_days: int = 504):
-        self.config         = config
-        self.min_train_days = min_train_days
+    def __init__(self, config: Config, verbose: bool = True):
+        self.config = config
+        self.verbose = verbose
+
         self.quarterly_results: List[Dict] = []
-        self.oos_equity_curve: Optional[pd.DataFrame] = None
-        self.oos_metrics: Dict = {}
+        self.failures: List[Dict] = []
+        self.equity_curve: Optional[pd.DataFrame] = None
+        self.signals: Optional[pd.DataFrame] = None
+        self.metrics: Dict = {}
+        self.total_configurations_tried = 0
 
-    def _get_quarter_end_dates(self, index: pd.DatetimeIndex) -> List[pd.Timestamp]:
-        if len(index) <= self.min_train_days:
+    def _log(self, *args) -> None:
+        if self.verbose:
+            print(*args)
+
+    # ------------------------------------------------------------------ #
+
+    def _quarter_ends(self, index: pd.DatetimeIndex) -> List[pd.Timestamp]:
+        min_train = self.config.walk_forward.min_train_days
+        if len(index) <= min_train:
             return []
 
-        if hasattr(index, 'tz') and index.tz is not None:
-            naive_index = index.tz_convert(None)
-        else:
-            naive_index = index
+        naive = index.tz_convert(None) if index.tz is not None else index
+        first, last = naive[min_train], naive[-1]
 
-        first_eligible = naive_index[self.min_train_days]
-        last           = naive_index[-1]
-
-        # 'QE' for pandas >= 2.2, fall back to 'Q' for older versions
         try:
-            cal_q_ends = pd.date_range(start=first_eligible, end=last, freq='QE')
+            calendar = pd.date_range(start=first, end=last, freq="QE")
         except ValueError:
-            cal_q_ends = pd.date_range(start=first_eligible, end=last, freq='Q')
+            calendar = pd.date_range(start=first, end=last, freq="Q")
 
-        result = []
-        for q in cal_q_ends:
-            mask = naive_index <= q
+        ends: List[pd.Timestamp] = []
+        for q in calendar:
+            mask = naive <= q
             if not mask.any():
                 continue
             actual = index[mask][-1]
-            if not result or actual != result[-1]:
-                result.append(actual)
+            if not ends or actual != ends[-1]:
+                ends.append(actual)
+        return ends
 
-        return result
+    # ------------------------------------------------------------------ #
 
     def run(self) -> Dict:
         cfg = self.config
+        wf = cfg.walk_forward
 
-        print("\n" + "=" * 70)
-        print("WALK-FORWARD BACKTESTING ENGINE")
-        print(f"  Min training: {self.min_train_days} days "
-              f"(~{self.min_train_days // 252} years)")
-        print(f"  Rebalance frequency: quarterly")
-        print("=" * 70)
+        self._log("\n" + "=" * 72)
+        self._log("WALK-FORWARD (continuous book, quarterly parameter swap)")
+        self._log(f"  min training: {wf.min_train_days} days")
+        self._log("=" * 72)
 
-        system = SelfExcitingPairsTradingV4(cfg)
-        system._acquire_data()
-        full_spread  = system.spread_df
-        full_cleaned = system.cleaned_data
+        pipeline = PairPipeline(cfg, verbose=False)
+        pipeline.acquire_data()
 
-        if full_spread is None or full_cleaned is None:
-            raise RuntimeError("Failed to load full dataset")
-        if not isinstance(full_spread.index, pd.DatetimeIndex):
-            raise TypeError("Walk-forward backtesting requires full_spread to use a DatetimeIndex")
-        full_index = full_spread.index
+        full_spread = pipeline.spread_df
+        full_cleaned = pipeline.cleaned_data
+        loader = pipeline.loader
+        if full_spread is None or full_cleaned is None or loader is None:
+            raise RuntimeError("Data acquisition did not produce a complete pipeline state")
+        index = full_spread.index
+        if not isinstance(index, pd.DatetimeIndex):
+            raise RuntimeError("Walk-forward evaluation requires a DatetimeIndex")
 
-        print(f"\nFull dataset: {full_index[0].date()} → "
-              f"{full_index[-1].date()}  ({len(full_spread)} obs)")
-
-        quarter_ends = self._get_quarter_end_dates(full_index)
+        quarter_ends = self._quarter_ends(index)
         if not quarter_ends:
             raise RuntimeError("Not enough data for the requested min_train_days")
 
-        print(f"\nRebalancing dates: {len(quarter_ends)} quarters")
-        print(f"  First rebalance: {quarter_ends[0].date()}")
-        print(f"  Last  rebalance: {quarter_ends[-1].date()}")
+        self._log(
+            f"\nFull sample {index[0].date()} -> {index[-1].date()} "
+            f"({len(index)} obs), {len(quarter_ends)} quarters"
+        )
 
-        all_equity_curves = []
+        # -------- build one signal series, swapping parameters per quarter --------
+        signal_frames: List[pd.DataFrame] = []
+        hedge_by_period: List[tuple] = []
+
         for i, q_end in enumerate(quarter_ends):
-            after_q = full_index[full_index > q_end]
-            if len(after_q) == 0:
+            after = index[index > q_end]
+            if len(after) == 0:
                 continue
-            eval_start = after_q[0]
-            eval_end   = quarter_ends[i + 1] if i + 1 < len(quarter_ends) else full_index[-1]
-
+            eval_start = after[0]
+            eval_end = quarter_ends[i + 1] if i + 1 < len(quarter_ends) else index[-1]
             if eval_start >= eval_end:
                 continue
 
-            n_train = (full_index <= q_end).sum()
-            n_eval  = ((full_index >= eval_start) &
-                       (full_index <= eval_end)).sum()
-
-            print(f"\n--- Quarter {i + 1}/{len(quarter_ends)} ---")
-            print(f"  Train: ≤ {q_end.date()}  ({n_train} obs)")
-            print(f"  Eval : {eval_start.date()} → {eval_end.date()}  ({n_eval} obs)")
-
-            train_spread  = full_spread.loc[:q_end]
-            train_cleaned = {
-                'asset_a': full_cleaned['asset_a'].loc[:q_end],
-                'asset_b': full_cleaned['asset_b'].loc[:q_end],
-            }
+            label = f"Q{i + 1} {eval_start.date()}->{eval_end.date()}"
+            train_spread = full_spread.loc[:q_end]
 
             try:
-                bundle = system._fit_models(train_spread, train_cleaned)
-            except Exception as e:
-                print(f"  Skipping quarter — model fitting failed: {e}")
-                continue
+                # Re-estimate the hedge ratio on this quarter's training window.
+                if wf.reestimate_hedge_each_quarter:
+                    h, _ = loader.estimate_hedge_ratio_static(
+                        full_cleaned["asset_a"]["Close"].loc[:q_end],
+                        full_cleaned["asset_b"]["Close"].loc[:q_end],
+                        method=cfg.data.hedge_ratio_method,
+                    )
+                    quarter_spread = full_spread.copy()
+                    quarter_spread["spread"] = (
+                        quarter_spread["log_a"] - h * quarter_spread["log_b"]
+                    )
+                    quarter_spread["hedge_ratio"] = h
+                    train_spread = quarter_spread.loc[:q_end]
+                else:
+                    quarter_spread = full_spread
+                    h = float(full_spread["hedge_ratio"].iloc[-1])
 
-            span_spread = full_spread.loc[:eval_end]
-            span_cleaned = {
-                'asset_a': full_cleaned['asset_a'].loc[:eval_end],
-                'asset_b': full_cleaned['asset_b'].loc[:eval_end],
-            }
-
-            try:
-                artifacts = system._compute_full_sample_artifacts(span_spread, bundle)
-            except Exception as e:
-                print(f"  Skipping quarter — artifact computation failed: {e}")
-                continue
-
-            try:
-                result = system._evaluate_period(
-                    span_spread, span_cleaned, artifacts, bundle,
-                    eval_start.strftime('%Y-%m-%d'),
-                    eval_end.strftime('%Y-%m-%d'),
-                    label=f"Q{i + 1} OOS ({eval_start.date()} → {eval_end.date()})",
+                bundle = pipeline.fit_models(
+                    train_spread,
+                    train_start=str(index[0].date()),
+                    train_end=str(q_end.date()),
                 )
-            except Exception as e:
-                print(f"  Skipping quarter — evaluation failed: {e}")
+                artifacts = pipeline.compute_artifacts(quarter_spread, bundle)
+
+                if wf.tune_thresholds:
+                    z_entry, z_exit, n_trials, _ = pipeline.tune_thresholds(
+                        quarter_spread, full_cleaned, artifacts, bundle,
+                        str(index[0].date()), str(q_end.date()),
+                    )
+                    self.total_configurations_tried += n_trials
+                else:
+                    z_entry, z_exit = bundle.z_entry_threshold, bundle.z_exit_threshold
+
+                # Signals for THIS quarter only, from frozen parameters.
+                period = quarter_spread.loc[eval_start:eval_end]
+                indicator = (
+                    artifacts["jump_df"]["jump_indicator"]
+                    .reindex(period.index).fillna(0).astype(int)
+                )
+                intensity = artifacts["hawkes_intensity"].reindex(period.index).ffill()
+                z_score = artifacts["z_score"].reindex(period.index).fillna(0.0)
+
+                generator = TradingSignals(
+                    z_entry_threshold=z_entry,
+                    z_exit_threshold=z_exit,
+                    lambda_decay_lookback=cfg.trading.lambda_decay_lookback,
+                    min_lambda_decay_pct=cfg.trading.min_lambda_decay_pct,
+                    max_position_size=cfg.trading.max_position_size,
+                    min_position_size=cfg.trading.min_position_size,
+                    use_jump_entries=cfg.trading.use_jump_entries,
+                    use_hawkes_regimes=bundle.use_hawkes_regimes,
+                    z_lookback=cfg.trading.z_score_lookback,
+                    emergency_z_move=cfg.trading.emergency_z_move,
+                    regime_excess_calm=cfg.trading.regime_excess_calm,
+                    regime_excess_elevated=cfg.trading.regime_excess_elevated,
+                    regime_excess_crisis=cfg.trading.regime_excess_crisis,
+                    verbose=False,
+                )
+                generator.set_lambda_baseline(bundle.hawkes_params.get("lambda_bar", 0.01))
+                generator.set_half_life(bundle.half_life)
+
+                quarter_signals = generator.generate_signals(
+                    spread=period["spread"],
+                    lambda_intensity=intensity,
+                    jump_indicator=indicator,
+                    z_score=z_score,
+                )
+                signal_frames.append(quarter_signals)
+                hedge_by_period.append((eval_start, eval_end, h))
+
+                self.quarterly_results.append(
+                    {
+                        "quarter": i + 1,
+                        "train_end": q_end,
+                        "eval_start": eval_start,
+                        "eval_end": eval_end,
+                        "hedge_ratio": h,
+                        "half_life": bundle.half_life,
+                        "z_entry": z_entry,
+                        "z_exit": z_exit,
+                        "hawkes_active": bundle.hawkes_active,
+                        "n_jumps_fdr": bundle.n_jumps_fdr,
+                        "n_jumps_nominal": bundle.n_jumps_nominal,
+                        "branching_ratio": bundle.hawkes_inference.get("branching_ratio"),
+                        "lr_pvalue": bundle.hawkes_inference.get(
+                            "lr_p_bootstrap", bundle.hawkes_inference.get("lr_p_chi2_df2")
+                        ),
+                        "bundle": bundle,
+                    }
+                )
+                self._log(
+                    f"  {label}: h={h:.4f}, HL={bundle.half_life:.0f}d, "
+                    f"z=({z_entry},{z_exit}), hawkes={'on' if bundle.hawkes_active else 'off'}"
+                )
+
+            except Exception as exc:  # noqa: BLE001 -- recorded, never silent
+                self.failures.append(
+                    {
+                        "quarter": i + 1,
+                        "train_end": str(q_end.date()),
+                        "eval_start": str(eval_start.date()),
+                        "eval_end": str(eval_end.date()),
+                        "error_type": type(exc).__name__,
+                        "error": str(exc),
+                    }
+                )
+                self._log(f"  {label}: FAILED -- {type(exc).__name__}: {exc}")
                 continue
 
-            if not result or 'equity_curve' not in result:
-                continue
+        if not signal_frames:
+            raise RuntimeError(
+                f"No quarter produced signals. {len(self.failures)} failed: "
+                f"{[f['error_type'] for f in self.failures]}"
+            )
 
-            self.quarterly_results.append({
-                'quarter':    i + 1,
-                'train_end':  q_end,
-                'eval_start': eval_start,
-                'eval_end':   eval_end,
-                'bundle':     bundle,
-                'metrics':    result['metrics'],
-                'equity_curve': result['equity_curve'],
-            })
-            all_equity_curves.append(result['equity_curve'])
+        # -------- one continuous backtest over the concatenated signals --------
+        combined = pd.concat(signal_frames).sort_index()
+        combined = combined[~combined.index.duplicated(keep="last")]
+        self.signals = combined
 
-        if not all_equity_curves:
-            print("\nNo quarterly results were collected.")
-            return {}
+        spread_for_bt = full_spread.loc[combined.index]
+        mean_hedge = float(np.mean([h for _, _, h in hedge_by_period])) if hedge_by_period else 1.0
 
-        self.oos_equity_curve = self._stitch_equity_curves(
-            all_equity_curves, base_capital=cfg.backtest.initial_capital
+        bt = cfg.backtest
+        engine = BacktestEngine(
+            initial_capital=bt.initial_capital,
+            commission_rate=bt.commission_rate,
+            slippage_bps=bt.slippage_bps,
+            max_position_pct=bt.max_position_pct,
+            stop_loss_pct=bt.stop_loss_pct,
+            trailing_stop_pct=bt.trailing_stop_pct,
+            trailing_activation_pct=bt.trailing_activation_pct,
+            profit_target_pct=bt.profit_target_pct,
+            execution_delay=bt.execution_delay,
+            execution_price=bt.execution_price,
+            risk_free_rate=bt.risk_free_rate,
+            credit_idle_cash=bt.credit_idle_cash,
+            long_financing_rate=bt.long_financing_rate,
+            short_rebate_rate=bt.short_rebate_rate,
+            borrow_rate_a=bt.borrow_rates.get(cfg.data.asset_a_symbol, bt.default_borrow_rate),
+            borrow_rate_b=bt.borrow_rates.get(cfg.data.asset_b_symbol, bt.default_borrow_rate),
+            use_intraday_stops=bt.use_intraday_stops,
+            stop_mode=bt.stop_mode,
+            stop_loss_sigma=bt.stop_loss_sigma,
+            trailing_stop_sigma=bt.trailing_stop_sigma,
+            trailing_activation_sigma=bt.trailing_activation_sigma,
+            profit_target_sigma=bt.profit_target_sigma,
+            stop_floor_pct=bt.stop_floor_pct,
+            stop_cap_pct=bt.stop_cap_pct,
+            verbose=self.verbose,
         )
 
-        temp_engine = BacktestEngineV2(initial_capital=cfg.backtest.initial_capital)
-        temp_engine.equity_curve = self.oos_equity_curve
-        oos_metrics = temp_engine.calculate_performance_metrics(
-            risk_free_rate=cfg.backtest.risk_free_rate
+        self._log(f"\nRunning ONE continuous backtest over {len(combined)} bars")
+        self.equity_curve = engine.run_backtest(
+            combined,
+            spread_for_bt,
+            full_cleaned["asset_a"]["Close"].loc[combined.index],
+            full_cleaned["asset_b"]["Close"].loc[combined.index],
+            hedge_ratio=mean_hedge,
+            asset_a_ohlc=full_cleaned["asset_a"].loc[combined.index],
+            asset_b_ohlc=full_cleaned["asset_b"].loc[combined.index],
         )
 
-        oos_metrics['total_trades'] = sum(
-            qr['metrics'].get('total_trades', 0) for qr in self.quarterly_results
+        # Metrics from the REAL trade list on the REAL curve.
+        metrics = engine.calculate_performance_metrics(risk_free_rate=bt.risk_free_rate)
+        metrics.update(compute_alpha_tstat(self.equity_curve, bt.benchmark_csv, bt.risk_free_rate))
+        metrics.update(
+            engine.bootstrap_metrics(
+                n_boot=cfg.statistics.bootstrap_reps,
+                mean_block=cfg.statistics.bootstrap_mean_block,
+                seed=cfg.statistics.seed,
+            )
         )
-        total_winning = sum(
-            qr['metrics'].get('total_trades', 0) *
-            qr['metrics'].get('win_rate_pct', 0) / 100.0
-            for qr in self.quarterly_results
-        )
-        if oos_metrics['total_trades'] > 0:
-            oos_metrics['win_rate_pct'] = 100.0 * total_winning / oos_metrics['total_trades']
-        else:
-            oos_metrics['win_rate_pct'] = 0.0
 
-        oos_alpha = compute_alpha_tstat(
-            self.oos_equity_curve,
-            cfg.backtest.benchmark_csv,
-            cfg.backtest.risk_free_rate,
-        )
-        oos_metrics.update(oos_alpha)
-        self.oos_metrics = oos_metrics
+        metrics["quarters_evaluated"] = len(self.quarterly_results)
+        metrics["quarters_failed"] = len(self.failures)
+        metrics["configurations_tried"] = self.total_configurations_tried
 
+        if self.total_configurations_tried > 0:
+            dsr = deflated_sharpe_ratio(
+                observed_sharpe=metrics.get("sharpe_ratio", 0.0),
+                n_trials=max(self.total_configurations_tried, 1),
+                n_obs=len(self.equity_curve),
+            )
+            if "error" not in dsr:
+                metrics["deflated_sharpe_probability"] = dsr["deflated_sharpe_probability"]
+                metrics["expected_max_sharpe_from_search"] = dsr[
+                    "expected_max_sharpe_annualized"
+                ]
+                metrics["deflated_sharpe_passes"] = dsr["passes_at_95pct"]
+
+        power = power_statement(
+            n_obs=len(self.equity_curve),
+            annual_volatility=metrics["annualized_volatility_pct"] / 100.0,
+            target_effect_annual=cfg.statistics.power_target_effect,
+        )
+        if "error" not in power:
+            metrics["power_to_detect_target"] = power["achieved_power"]
+            metrics["mde_annualized_pct"] = power["mde_at_80pct_power_annual_pct"]
+            metrics["power_statement"] = power["statement"]
+
+        self.metrics = metrics
+        self.engine = engine
         self._print_summary()
 
         return {
-            'oos_metrics':        oos_metrics,
-            'quarterly_results':  self.quarterly_results,
-            'oos_equity_curve':   self.oos_equity_curve,
+            "metrics": metrics,
+            "equity_curve": self.equity_curve,
+            "signals": combined,
+            "quarterly_results": self.quarterly_results,
+            "failures": self.failures,
+            "engine": engine,
         }
 
-    @staticmethod
-    def _stitch_equity_curves(curves: List[pd.DataFrame],
-                              base_capital: float) -> pd.DataFrame:
-        """Chain quarterly equity curves into one continuous compound curve."""
-        rescaled = []
-        running_equity = base_capital
+    # ------------------------------------------------------------------ #
 
-        for ec in curves:
-            if ec is None or ec.empty:
-                continue
-            start_eq = float(ec['equity'].iloc[0])
-            if start_eq <= 0:
-                continue
-            scale = running_equity / start_eq
-            scaled_eq = ec['equity'] * scale
-            rescaled.append(scaled_eq)
-            running_equity = float(scaled_eq.iloc[-1])
+    def quarterly_frame(self) -> pd.DataFrame:
+        rows = []
+        for q in self.quarterly_results:
+            row = {k: v for k, v in q.items() if k != "bundle"}
+            row["eval_start"] = str(q["eval_start"].date())
+            row["eval_end"] = str(q["eval_end"].date())
+            row["train_end"] = str(q["train_end"].date())
+            rows.append(row)
+        return pd.DataFrame(rows)
 
-        if not rescaled:
-            return pd.DataFrame(columns=['equity', 'returns'])
+    def failures_frame(self) -> pd.DataFrame:
+        return pd.DataFrame(self.failures)
 
-        oos_equity  = pd.concat(rescaled).sort_index()
-        oos_equity  = oos_equity[~oos_equity.index.duplicated(keep='last')]
-        oos_returns = oos_equity.pct_change().fillna(0.0)
+    def _print_summary(self) -> None:
+        m = self.metrics
+        self._log("\n" + "=" * 72)
+        self._log("WALK-FORWARD OUT-OF-SAMPLE SUMMARY")
+        self._log("=" * 72)
+        self._log(f"  Quarters evaluated : {m.get('quarters_evaluated', 0)}")
+        self._log(f"  Quarters FAILED    : {m.get('quarters_failed', 0)}")
+        if self.failures:
+            kinds: Dict[str, int] = {}
+            for f in self.failures:
+                kinds[f["error_type"]] = kinds.get(f["error_type"], 0) + 1
+            self._log(f"    failure types    : {kinds}")
 
-        return pd.DataFrame({'equity': oos_equity, 'returns': oos_returns})
+        self._log(f"\n  Annualised return  : {m.get('annualized_return_pct', 0):.3f}%")
+        self._log(f"  Annualised vol     : {m.get('annualized_volatility_pct', 0):.3f}%")
+        self._log(f"  Sharpe             : {m.get('sharpe_ratio', 0):.3f} "
+                  f"(HAC SE {m.get('sharpe_se_hac', float('nan')):.3f})")
+        self._log(f"  Max drawdown       : {m.get('max_drawdown_pct', 0):.2f}%")
+        if "car_annualized_return_pct" in m:
+            self._log(f"  On capital at risk : {m['car_annualized_return_pct']:.2f}% return, "
+                      f"{m.get('car_max_drawdown_pct', 0):.2f}% drawdown "
+                      f"({m.get('car_scale_factor', 1):.1f}x scale)")
 
-    def _print_summary(self):
-        m = self.oos_metrics
+        self._log(f"\n  HEADLINE TEST -- H0: mean excess return = 0 (Newey-West)")
+        self._log(f"    mean excess     : {m.get('nw_mean_excess_annualized_pct', 0):+.3f}%/yr")
+        self._log(f"    t-statistic     : {m.get('nw_tstat', 0):.3f}")
+        self._log(f"    p-value         : {m.get('nw_pvalue', 1):.4f}")
+        self._log(f"    95% CI          : [{m.get('nw_ci95_low_pct', 0):+.3f}%, "
+                  f"{m.get('nw_ci95_high_pct', 0):+.3f}%]")
 
-        print("\n" + "=" * 76)
-        print("WALK-FORWARD OOS PERFORMANCE SUMMARY")
-        print(f"  Quarters evaluated: {len(self.quarterly_results)}")
-        if self.oos_equity_curve is not None and not self.oos_equity_curve.empty:
-            print(f"  OOS span: {self.oos_equity_curve.index[0].date()} → "
-                  f"{self.oos_equity_curve.index[-1].date()}")
-        print("=" * 76)
+        self._log(f"\n  Neutrality check (CAPM vs SPY, NOT the headline)")
+        self._log(f"    beta            : {m.get('beta', 0):.4f}   R^2 {m.get('r_squared', 0):.5f}")
 
-        print(f"\n  Returns")
-        print(f"    Total Return:      {m.get('total_return_pct', 0):.2f}%")
-        print(f"    Annualized Return: {m.get('annualized_return_pct', 0):.2f}%")
-        print(f"    Annualized Vol:    {m.get('annualized_volatility_pct', 0):.2f}%")
+        self._log(f"\n  Trades             : {m.get('total_trades', 0)}")
+        self._log(f"  Win rate           : {m.get('win_rate_pct', 0):.1f}%")
+        self._log(f"  Profit factor      : {m.get('profit_factor', float('nan')):.3f}")
+        self._log(f"  Avg duration       : {m.get('avg_trade_duration_days', 0):.1f} trading days")
 
-        print(f"\n  Risk-Adjusted")
-        print(f"    Sharpe Ratio:      {m.get('sharpe_ratio', 0):.3f}")
-        print(f"    Sortino Ratio:     {m.get('sortino_ratio', 0):.3f}")
-        print(f"    Max Drawdown:      {m.get('max_drawdown_pct', 0):.2f}%")
-        print(f"    Calmar Ratio:      {m.get('calmar_ratio', 0):.3f}")
+        if "deflated_sharpe_probability" in m:
+            self._log(f"\n  Configurations tried : {m.get('configurations_tried', 0)}")
+            self._log(f"  Deflated Sharpe prob : {m['deflated_sharpe_probability']:.4f} "
+                      f"({'passes' if m.get('deflated_sharpe_passes') else 'FAILS'} at 95%)")
 
-        print(f"\n  Alpha vs SPY (HEADLINE)")
-        print(f"    Alpha (annualized): {m.get('alpha_annualized', 0) * 100:.4f}%")
-        print(f"    Alpha T-Stat:       {m.get('alpha_tstat', 0):.3f}")
-        print(f"    Alpha P-Value:      {m.get('alpha_pvalue', 1):.4f}")
-        print(f"    Beta:               {m.get('beta', 0):.3f}")
-        print(f"    R²:                 {m.get('r_squared', 0):.4f}")
-        print(f"    Information Ratio:  {m.get('information_ratio', 0):.3f}")
-
-        print(f"\n  Trading Activity")
-        print(f"    Total Trades: {m.get('total_trades', 0)}")
-        print(f"    Win Rate:     {m.get('win_rate_pct', 0):.2f}%")
-
-        print(f"\n  Per-Quarter Performance:")
-        print(f"  {'Q':<4} {'Train ≤':<12} {'Eval window':<28} "
-              f"{'Ann.Ret%':>10} {'Sharpe':>8} {'Trades':>8}")
-        print(f"  {'-' * 76}")
-        for qr in self.quarterly_results:
-            qm    = qr['metrics']
-            ann   = qm.get('annualized_return_pct', 0)
-            shrp  = qm.get('sharpe_ratio', 0)
-            trd   = qm.get('total_trades', 0)
-            ev    = f"{qr['eval_start'].date()} → {qr['eval_end'].date()}"
-            print(f"  Q{qr['quarter']:<3} {str(qr['train_end'].date()):<12} "
-                  f"{ev:<28} {ann:>10.2f} {shrp:>8.3f} {trd:>8}")
-        print("=" * 76)
-
-
-def main():
-    """Run a walk-forward backtest with the default configured pair."""
-    config = ConfigV2()
-
-    config.trading.z_entry_threshold = 2.0
-    config.trading.z_exit_threshold  = 0.5
-    config.trading.lambda_threshold  = 0.15
-
-    engine  = WalkForwardEngine(config, min_train_days=504)
-    results = engine.run()
-
-    print("\n" + "=" * 70)
-    print("WALK-FORWARD EXECUTION COMPLETE")
-    print("=" * 70)
-
-    return engine, results
-
-
-if __name__ == "__main__":
-    try:
-        engine, results = run_with_output_capture("walk_forward_output.txt", main)
-    except Exception:
-        sys.exit(1)
+        if "power_statement" in m:
+            self._log(f"\n  POWER: {m['power_statement']}")
+        self._log("=" * 72)

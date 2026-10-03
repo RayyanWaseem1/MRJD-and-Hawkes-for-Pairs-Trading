@@ -1,2 +1,2 @@
-is_tradeable,is_stationary,adf_pvalue,half_life,half_life_ok,stable_mean,mean_drift,range_in_std,reasonable_range,no_regime_change,mean_shift
-True,True,1.2655754016429226e-10,50.68698718477334,True,True,0.19535588254301586,7.119543216403026,True,True,0.4253181603989873
+is_tradeable,is_stationary,adf_pvalue,eg_pvalue,decisive_pvalue,stationarity_test,half_life,half_life_ok,stable_mean,mean_drift,range_in_std,reasonable_range,no_regime_change,mean_shift,n_checks_gating
+False,False,0.10865452153745359,0.2657826730516668,0.2657826730516668,engle_granger,49.519320613668214,True,False,0.6344757029343482,6.096027536477827,True,False,1.1973589374981342,5

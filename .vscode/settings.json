@@ -1,3 +1,37 @@
 {
-    "python.REPL.enableREPLSmartSend": false
+    "python.defaultInterpreterPath": "/opt/anaconda3/bin/python",
+    "python.analysis.extraPaths": [
+        "/opt/anaconda3/lib/python3.13/site-packages"
+    ],
+    "python.REPL.enableREPLSmartSend": false,
+    "files.watcherExclude": {
+        "**/.git/objects/**": true,
+        "**/.git/subtree-cache/**": true,
+        "**/.hg/store/**": true,
+        "**/venv/**": true,
+        "**/__pycache__/**": true,
+        "**/.matplotlib_cache/**": true,
+        "**/* Outputs/**": true
+    },
+    "search.exclude": {
+        "**/venv": true,
+        "**/__pycache__": true,
+        "**/.matplotlib_cache": true,
+        "**/* Outputs": true
+    },
+    "files.exclude": {
+        "**/venv": true,
+        "**/__pycache__": true,
+        "**/.matplotlib_cache": true,
+        "**/* Outputs": true
+    },
+    "python.analysis.exclude": [
+        "**/venv",
+        "**/__pycache__",
+        "**/.matplotlib_cache",
+        "**/outputs",
+        "**/* Outputs"
+    ],
+    "python.analysis.diagnosticMode": "openFilesOnly",
+    "python.analysis.indexing": false
 }

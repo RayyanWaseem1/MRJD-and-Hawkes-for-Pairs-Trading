@@ -1,372 +1,350 @@
-"""
-Configuration for Self-Exciting Pairs Trading
+""" Configuration for the self-exciting pairs trading study"""
 
-UPDATED VERSION:
-- LOW TRANSACTION COSTS (2bp round trip - institutional level)
-- Relaxed filtering defaults
-"""
+from __future__ import annotations
 
-import numpy as np 
-import pandas as pd
-from dataclasses import dataclass
-from typing import Dict, List, Optional
-from pathlib import Path
+from dataclasses import dataclass, field 
+from pathlib import Path 
+from typing import Dict, Optional, Tuple 
 
 PROJECT_ROOT = Path(__file__).resolve().parent
 
 
+# Pair registry -- the CLI iterates over these, so one command regenerates
+# every artifact. Previously reproducing five pairs meant hand-editing 
+# DataConfig five times and moving files by hand 
+
+PAIRS: Dict[str, Tuple[str, str]] = {
+    "CVX_XOM": ("CVX", "XOM"),
+    "AMD_NVDA": ("AMD", "NVDA"),
+    "SPY_IVV": ("SPY", "IVV"),
+    "GS_MS": ("GS", "MS"),
+    "GLD_GDX": ("GLD", "GDX"),
+}
+
 @dataclass
 class DataConfig:
-    """Data acquisition and processing params"""
+    """ Data loading and spread construction"""
+
     asset_a_symbol: str = "CVX"
     asset_b_symbol: str = "XOM"
     asset_a_csv: str = str(PROJECT_ROOT / "OHLCV_CVX.csv")
     asset_b_csv: str = str(PROJECT_ROOT / "OHLCV_XOM.csv")
-    frequency: str = "1d"
     date_columns: str = "ts_event"
-    hedge_ratio_method: str = 'cointegration'
-    lookback_period: int = 30
 
+    # Hedge-ratio estimator: 'johansen' | 'engle_granger' | 'ols' | 'tls'
+    hedge_ratio_method: str = "johansen"
+
+    # 'static' (primary) | 'periodic' | 'rolling' (robustness only)
+    hedge_mode: str = "static"
+
+    # Rolling-mode window. Only used when hedge_mode == 'rolling'.
+    lookback_period: int = 30 
+
+    # Adjust for the corporate actions in corporate_actions.SPLIT_TABLE
+    adjust_splits: bool = True 
+
+    # Flag (never delete) single-day moves above this size 
+    large_move_flag_threshold: float = 0.25
+
+    def apply_pair(self, key: str) -> None:
+        """ Point this config at one of the registered pairs"""
+        if key not in PAIRS:
+            raise KeyError(f"Unknown pair '{key}'. Known pairs: {sorted(PAIRS)}")
+        a, b = PAIRS[key]
+        self.asset_a_symbol, self.asset_b_symbol = a, b
+        self.asset_a_csv = str(PROJECT_ROOT / f"OHLCV_{a}.csv")
+        self.asset_b_csv = str(PROJECT_ROOT / f"OHLCV_{b}.csv")
 
 @dataclass 
 class JumpDetectionConfig:
-    """Jump detection parameters"""
-    method: str = 'bipower_variation'
-    window_size: int = 20
-    significance_level: float = 0.05
-    threshold_sigma: float = 3.0
-    min_jump_size: float = 0.01
+    """ Jump detection."""
 
+    # 'lee_mykland' (primary) | 'bipower' (robustness) | 'threshold'
+    method: str = "lee_mykland"
+
+    # local bipower volatility window, in trading days
+    window_size: int = 20
+
+    significance_level: float = 0.05 
+
+    # Benjamini_Hochberg FDR control across all tested observations
+    # At nominal alpha = 0.05 over ~1,950 tests, ~98 false positives are
+    # expected by chance, so this is on by default 
+    apply_fdr: bool = True 
+
+    # Detection basis used to FIT the Hawkes layer when FDR leaves too few 
+    # events. Recorded in the artifacts; never silently substituted
+    min_jumps_for_hawkes: int = 10 
+    fallback_to_nominal_for_hawkes: bool = True 
+
+    # k-sigma for the naive detector in the comparison table 
+    threshold_sigma: float = 4.0
 
 @dataclass
-class HawkesConfig:
-    """Hawkes process calibration"""
+class HawkesConfig: 
+    """ Hawkes calibration. Every field here is now read by the estimator """
+
     kernel: str = "exponential"
-    baseline_bounds: tuple = (0.001, 10.0)
-    excitation_bounds: tuple = (0.1, 5.0)
-    decay_bounds: tuple = (0.1, 10.0)
+    baseline_bounds: Tuple[float, float] = (1e-6, 10.0)
+    excitation_bounds: Tuple[float, float] = (1e-6, 5.0)
+    decay_bounds: Tuple[float, float] = (1e-4, 10.0)
     estimation_method: str = "MLE"
     max_iterations: int = 1000
-    tolerance: float = 1e-6
-    test_fraction: float = 0.2
+    tolerance: float = 1e-8
+    n_restarts: int = 4
 
+    # Parametric bootstrap replications for the LR test against Poisson 
+    # Needed because beta is unidentified under H0 (the Davies problem), so 
+    # the LR statistic is not asymptotically chi-squared. 0 disables it
+    lr_bootstrap_reps: int = 200 
 
 @dataclass
 class MRJDConfig:
-    """MRJD model parameters"""
-    kappa_init: float = 0.5
-    theta_init: float = 0.0
-    sigma_init: float = 0.1
-    jump_mean_init: float = 0.0
-    jump_std_init: float = 0.05
-    estimation_method: str = "MLE"
-    dt: float = 1/252
-    kappa_bounds: tuple = (0.01, 10.0)
-    theta_bounds: tuple = (-10.0, 10.0)
-    sigma_bounds: tuple = (0.001, 20.0)
-    jump_mean_bounds: tuple = (-0.5, 0.5)
-    jump_std_bounds: tuple = (0.001, 0.5)
+    """ MRJD estimation. dt is in TRADING DAYS and must stay 1.0"""
 
+    # 1.0 == one trading day. A dt of 1/252 makes kappa per-YEAR while
+    # half-lives and holding periods are in days -- the factor-of-252 bug
+    dt: float = 1.0
+
+    estimation_method: str = "MLE"
+
+    # Run the joint MLE over (kappa, theta, sigma, mu_J, sigma_J)
+    joint_refinement: bool = False 
+
+    # Raise (rather than only report) when the model and empirical half-lives
+    # disagree by more than 50%
+    raise_on_half_life_mismatch: bool = False
 
 @dataclass
 class TradingConfig:
-    """
-    Trading parameters with RELAXED FILTERING
-    
-    Key changes from original:
-    - min_lambda_decay_pct: 0.0 (DISABLED - was 0.15)
-    - disable_crisis_block: True (ALLOW crisis entries)
-    - skip_decay_in_calm: True (bypass decay check when calm)
-    """
-    # Entry conditions
+    """ Signal generation """
+
     z_entry_threshold: float = 2.0
-    lambda_threshold: float = 0.5
-    
-    # Position sizing
-    max_position_size: float = 0.25
-    scaling_constant: float = 0.1
-    
-    # Exit conditions  
     z_exit_threshold: float = 0.5
-    max_holding_period: int = 30
-    stop_loss_sigma: float = 2.5
-    profit_target_z: float = 0.5
-    
-    # Risk management
-    max_drawdown_threshold: float = 0.15
-    position_limit: float = 2.0
-    
-    # RELAXED FILTERING OPTIONS (NEW)
-    min_lambda_decay_pct: float = 0.0      # DISABLED (was 0.15)
-    skip_decay_in_calm: bool = True        # Skip decay check in calm regimes
-    adaptive_for_low_jumps: bool = True    # Auto-relax for low-jump pairs
-    disable_crisis_block: bool = True      # ALLOW crisis entries (was False)
-    
-    # Features
-    use_empirical_zscore: bool = True
-    use_jump_entries: bool = True
+
+    # 'empirical' (rolling z-score) | 'mrjd' (OU stationary z-score)
+    z_score_basis: str = "empirical"
     z_score_lookback: int = 60
 
+    max_position_size: float = 0.25 
+    min_position_size: float = 0.10 
+
+    # Hawkes regime machinery. When False the generator is the CONTROL ARM
+    # a plain z-score strategy with no Hawkes layer at all 
+    use_hawkes_regimes: bool = True
+    use_jump_entries: bool = True 
+
+    # Regime cut-points on EXCESS intensity (lambda_t - lambda_bar) / lambda_bar
+    # Percentile bucketing was degenerate: lambda(t) >= lambda_bar always, so 
+    # p25 equalled lambda_bar exactly on two pairs and CALM never fired 
+    regime_excess_calm: float = 0.05
+    regime_excess_elevated: float = 1.0 
+    regime_excess_crisis: float = 5.0 
+
+    # only enter once a jump cascade is subsiding 
+    lambda_decay_lookback: int = 5
+    min_lambda_decay_pct: float = 0.15
+
+    # Holding period as multiples of the spread half-life 
+    min_hold_fraction: float = 0.5
+    target_hold_fraction: float = 0.8
+    max_hold_fraction: float = 1.5
+    max_holding_period_cap: int = 120
+
+    # Use the MRJD conditional distribution to set the holding period 
+    use_mrjd_holding_period: bool = False 
+
+    # Emergency exit when z moves this far against the entry level 
+    emergency_z_move: float = 2.5 
+
+@dataclass
+class BacktestConfig:
+    """ Backtest execution, costs, and reporting """
+
+    initial_capital: float = 1_000_000.0
+
+    commission_rate: float = 0.002 #2bp per side
+    slippage_bps: float = 1.0 #1bp per side 
+
+    # Bars between signal generation and execution. Read by the engine
+    execution_delay: int = 1 
+
+    # 'next_open' | 'next_close'
+    execution_price: str = "next_open"
+
+    risk_free_rate: float = 0.02 
+
+    # Credit idle cash at the risk free rate. Without this the engine charges
+    # rf/252 every day while ~90% of the book sits in uncredited cash, which
+    # mechanically produces an "alpha" of -rf for every pair 
+    credit_idle_cash: bool = True 
+
+    # Financing and borrow, annualized
+    long_financing_rate: float = 0.02 
+    short_rebate_rate: float = 0.015
+    default_borrow_rate: float = 0.0030 
+    borrow_rates: Dict[str, float] = field(
+        default_factory = lambda: {
+            "CVX": 0.0025, "XOM": 0.0025,
+            "GS": 0.0030, "MS": 0.0030,
+            "SPY": 0.0020, "IVV": 0.0025,
+            "AMD": 0.0075, "NVDA": 0.0050,
+            "GLD": 0.0030, "GDX": 0.0100,
+        }
+    )
+
+    # Risk limits. 
+    max_position_pct: float = 0.25 
+
+    #: Stop sizing. 'fixed' uses the *_pct values below as fractions of gross
+    #: notional. 'volatility' scales them by the spread's own daily standard
+    #: deviation, which is the default because fixed percentages are in
+    #: structural conflict with mean reversion:
+    #:
+    #:   a spread with a 50-70 day half-life routinely moves several percent
+    #:   AGAINST the position before reverting -- that is what mean reversion
+    #:   IS -- so a fixed 3% stop exits at systematically the worst moment.
+    #:   Measured on the training window, the shipped 3% stop caused 85-100%
+    #:   of trades to exit via stop at an average of 1.7-12 days against a
+    #:   design intending 25-107, and removing stops entirely improved the
+    #:   Sharpe on all five pairs (see diagnostics.stop_sensitivity).
+    #:
+    #: The multipliers are in units of the spread's STATIONARY standard
+    #: deviation -- the strategy's own state variable -- not daily sigma.
+    #: Daily sigma is the wrong scale: at a 60-day half-life, 6 daily sigma is
+    #: still only ~3% and reproduces the defect.
+    #:
+    #: Entry is at z = 2. A stop at 4 stationary sigma therefore triggers only
+    #: after the spread has moved a further 2 sigma against the position, which
+    #: is a genuine tail event rather than ordinary mean-reverting behaviour.
+    #: Normal risk control is the z-based emergency exit in signal_generation
+    #: (entry_z +/- emergency_z_move), expressed in the same units; this price
+     #: stop is a catastrophe backstop for a cointegration break.
+
+    stop_mode: str = "volatility"
+    stop_loss_sigma: float = 4.0
+    trailing_stop_sigma: float = 3.0
+    trailing_activation_sigma: float = 1.5
+    profit_target_sigma: float = 5.0 
+
+    # Used only when stop_mode == 'fixed.' Retained so the shipped 
+    # configuration remains reproducible for comparison 
+    stop_loss_pct: float = 0.03
+    trailing_stop_pct: float = 0.015
+    trailing_activation_pct: float = 0.01
+    profit_target_pct: float = 0.06
+
+    # Hard floor and cap on the resulting stop, as a fraction of notioanl
+    # so a degenerate volatility estimate cannot produce an absurd level
+    stop_floor_pct: float = 0.01
+    stop_cap_pct: float = 0.50
+
+    # check stops against the intraday High/Low rather than the close only 
+    use_intraday_stops: bool = True 
+
+    # Entry-lambda split for the regime performance breakdown
+    regime_threshold: float = 0.3
+
+    # Report metrics on capital at risk in addition to notional
+    report_capital_at_risk: bool = True 
+    # Optional volatility target for a scaled reporting variant. None disables
+    target_volatility: Optional[float] = 0.10 
+
+    benchmark_csv: str = str(PROJECT_ROOT / "OHLCV_SPY.csv")
 
 @dataclass
 class TrainValConfig:
-    """Windows for train/validation split"""
+    """ In-sample / out-of-sample split """
+
     train_start: str = "2018-05-01"
     train_end: str = "2022-12-31"
     val_start: str = "2023-01-01"
     val_end: str = "2024-12-31"
 
+@dataclass
+class WalkForwardConfig:
+    """ Quarterly walk-forward"""
+
+    min_train_days: int = 504
+
+    # Grid-search entry/exit thresholds on each quarter's TRAINING window and
+    # apply the winner to the next quarter. 
+    tune_thresholds: bool = True 
+    z_entry_grid: Tuple[float, ...] = (1.5, 2.0, 2.5)
+    z_exit_grid: Tuple[float, ...] = (0.25, 0.5, 0.75)
+
+    # Re-estimate the hedge ratio at each quarter boundary and hold it fixed
+    # within the quarter 
+    reestimate_hedge_each_quarter: bool = True
 
 @dataclass
-class BacktestConfig:
-    """
-    Backtesting parameters with LOW TRANSACTION COSTS
-    
-    Cost scenarios:
-    - ZERO:          commission=0,       slippage=0      -> 0bp RT
-    - MINIMAL:       commission=0.00005, slippage=0      -> 1bp RT
-    - LOW (DEFAULT): commission=0.00005, slippage=0.5   -> 2bp RT
-    - MODERATE:      commission=0.0001,  slippage=0.5   -> 3bp RT
-    - ORIGINAL:      commission=0.0002,  slippage=1.0   -> 6bp RT
-    """
-    initial_capital: float = 1_000_000
-    
-    # LOW TRANSACTION COSTS (institutional level)
-    commission_rate: float = 0.00005     # 0.5bp per side (was 0.0002 = 2bp)
-    slippage_bps: float = 0.5            # 0.5bp per side (was 1.0)
-    # Total: ~2bp round trip (was ~6bp)
-    
-    execution_delay: int = 1
-    risk_free_rate: float = 0.02
-    target_sharpe: float = 2.0
-    regime_threshold: float = 0.3
-    benchmark_csv: str = str(PROJECT_ROOT / "OHLCV_SPY.csv")
-    
-    # Stop loss and profit target
-    max_position_pct: float = 0.25
-    stop_loss_pct: float = 0.03          # 3% hard stop
-    trailing_stop_pct: float = 0.015     # 1.5% trailing
-    trailing_activation_pct: float = 0.01
-    profit_target_pct: float = 0.06
+class StatisticsConfig:
+    """ Inference settings"""
 
+    bootstrap_reps: int = 1000
+    bootstrap_mean_block: float = 20.0
+    power_target_effect: float = 0.01
+    seed: int = 42
 
 @dataclass
 class VisualizationConfig:
-    """Visualization params"""
-    figure_size: tuple = (14, 8)
-    style: str = "seaborn-v0_8-darkgrid"
-    long_color: str = "#2ecc71"
-    short_color: str = "#e74c3c"
-    neutral_color: str = "#95a5a6"
-    jump_color: str = "#f39c12"
-    save_plots: bool = True
+    figure_size: Tuple[float, float] = (14.0, 8.0)
+    save_plots: bool = True 
     plot_format: str = "png"
-    dpi: int = 300
+    dpi: int = 150
 
+class Config:
+    """ Master configuration"""
 
-class ConfigV2:
-    """Master configuration - UPDATED with low costs and relaxed filtering"""
-    def __init__(self):
+    def __init__(self) -> None:
         self.data = DataConfig() 
-        self.jump_detection = JumpDetectionConfig() 
-        self.hawkes = HawkesConfig() 
-        self.mrjd = MRJDConfig() 
+        self.jump_detection = JumpDetectionConfig()
+        self.hawkes = HawkesConfig()
+        self.mrjd = MRJDConfig()
         self.trading = TradingConfig()
-        self.backtest = BacktestConfig() 
-        self.visualization = VisualizationConfig() 
+        self.backtest = BacktestConfig()
         self.train_val = TrainValConfig()
+        self.walk_forward = WalkForwardConfig()
+        self.statistics = StatisticsConfig()
+        self.visualization = VisualizationConfig()
+
+    def for_pair(self, key: str) -> "Config":
+        self.data.apply_pair(key)
+        return self 
+
+    def as_control_arm(self) -> "Config":
+        """ 
+        Strip the Hawkes layer: plain rolling z-score, no regimes, no jump 
+        entries, no lambda-decay filter 
+
+        This is the CONTROL. Without it "hawkes doesn't add alpha" is not a 
+        measurable claim, because there is nothing to compare against
+        """
+
+        self.trading.use_hawkes_regimes = False 
+        self.trading.use_jump_entries = False 
+        self.trading.z_score_basis = "empirical"
+        return self 
 
     def to_dict(self) -> Dict:
         return {
-            'data': self.data.__dict__,
-            'jump_detection': self.jump_detection.__dict__,
-            'hawkes': self.hawkes.__dict__,
-            'mrjd': self.mrjd.__dict__,
-            'trading': self.trading.__dict__,
-            'backtest': self.backtest.__dict__,
-            'visualization': self.visualization.__dict__
-        }
-    
-    def print_cost_summary(self):
-        """Print transaction cost summary"""
-        commission_rt = self.backtest.commission_rate * 2 * 10000  # bp
-        slippage_rt = self.backtest.slippage_bps * 2              # bp
-        total_rt = commission_rt + slippage_rt
-        
-        print("\n" + "=" * 50)
-        print("TRANSACTION COST CONFIGURATION")
-        print("=" * 50)
-        print(f"  Commission: {self.backtest.commission_rate*10000:.1f}bp per side")
-        print(f"  Slippage:   {self.backtest.slippage_bps:.1f}bp per side")
-        print(f"  TOTAL:      {total_rt:.1f}bp round trip")
-        print("=" * 50)
-    
-    def print_filtering_summary(self):
-        """Print filtering configuration summary"""
-        print("\n" + "=" * 50)
-        print("FILTERING CONFIGURATION")
-        print("=" * 50)
-        print(f"  Lambda decay required: {self.trading.min_lambda_decay_pct*100:.0f}%")
-        print(f"  Skip decay in calm:    {self.trading.skip_decay_in_calm}")
-        print(f"  Adaptive low-jump:     {self.trading.adaptive_for_low_jumps}")
-        print(f"  Crisis block disabled: {self.trading.disable_crisis_block}")
-        
-        if self.trading.min_lambda_decay_pct == 0 and self.trading.disable_crisis_block:
-            print("\n  MODE: MINIMAL FILTERING (maximum trades)")
-        elif self.trading.min_lambda_decay_pct < 0.10:
-            print("\n  MODE: MODERATE FILTERING")
-        else:
-            print("\n  MODE: AGGRESSIVE FILTERING")
-        print("=" * 50)
-
-
-# Preset configurations
-def get_config_minimal_costs():
-    """Zero transaction costs for gross edge analysis"""
-    config = ConfigV2()
-    config.backtest.commission_rate = 0.0
-    config.backtest.slippage_bps = 0.0
-    return config
-
-
-def get_config_low_costs():
-    """Low/institutional transaction costs (2bp RT) - DEFAULT"""
-    config = ConfigV2()
-    config.backtest.commission_rate = 0.00005  # 0.5bp/side
-    config.backtest.slippage_bps = 0.5         # 0.5bp/side
-    return config
-
-
-def get_config_original_costs():
-    """Original transaction costs (6bp RT) for comparison"""
-    config = ConfigV2()
-    config.backtest.commission_rate = 0.0002   # 2bp/side
-    config.backtest.slippage_bps = 1.0         # 1bp/side
-    return config
-
-
-def diagnose_signal_generation(spread: pd.Series,
-                                lambda_intensity: pd.Series,
-                                z_score: pd.Series,
-                                config: Optional[TradingConfig] = None) -> Dict:
-    """
-    Diagnose why signals aren't being generated.
-
-    Returns statistics about threshold crossings and possible entries.
-    """
-    if config is None:
-        config = TradingConfig()
-
-    common_idx = spread.index.intersection(lambda_intensity.index).intersection(z_score.index)
-    spread = spread.loc[common_idx]
-    lambda_intensity = lambda_intensity.loc[common_idx]
-    z_score = z_score.loc[common_idx]
-
-    n = len(spread)
-    if n == 0:
-        return {
-            'total_observations': 0,
-            'z_score_stats': {
-                'mean': np.nan,
-                'std': np.nan,
-                'min': np.nan,
-                'max': np.nan,
-                'pct_above_entry': 0.0,
-                'pct_below_neg_entry': 0.0,
-            },
-            'lambda_stats': {
-                'mean': np.nan,
-                'std': np.nan,
-                'min': np.nan,
-                'max': np.nan,
-                'pct_below_threshold': 0.0,
-            },
-            'entry_opportunities': {
-                'long_signals_possible': 0,
-                'short_signals_possible': 0,
-                'total_opportunities': 0,
-                'pct_of_data': 0.0,
-            },
-            'recommended_thresholds': {
-                'z_entry': np.nan,
-                'lambda_threshold': np.nan,
-            }
+            "data": dict(self.data.__dict__),
+            "jump_detection": dict(self.jump_detection.__dict__),
+            "hawkes": dict(self.hawkes.__dict__),
+            "mrjd": dict(self.mrjd.__dict__),
+            "trading": dict(self.trading.__dict__),
+            "backtest": dict(self.backtest.__dict__),
+            "train_val": dict(self.train_val.__dict__),
+            "walk_forward": dict(self.walk_forward.__dict__),
+            "statistics": dict(self.statistics.__dict__),
+            "visualization": dict(self.visualization.__dict__),
         }
 
-    z_extreme_high = (z_score > config.z_entry_threshold).sum()
-    z_extreme_low = (z_score < -config.z_entry_threshold).sum()
-    lambda_safe = (lambda_intensity < config.lambda_threshold).sum()
+def set_seeds(seed: int = 42) -> None:
+    """ Seed every stochastic path in the project."""
+    import random 
 
-    long_opportunities = ((z_score < -config.z_entry_threshold) &
-                          (lambda_intensity < config.lambda_threshold)).sum()
-    short_opportunities = ((z_score > config.z_entry_threshold) &
-                           (lambda_intensity < config.lambda_threshold)).sum()
+    import numpy as np 
 
-    return {
-        'total_observations': n,
-        'z_score_stats': {
-            'mean': z_score.mean(),
-            'std': z_score.std(),
-            'min': z_score.min(),
-            'max': z_score.max(),
-            'pct_above_entry': 100 * z_extreme_high / n,
-            'pct_below_neg_entry': 100 * z_extreme_low / n,
-        },
-        'lambda_stats': {
-            'mean': lambda_intensity.mean(),
-            'std': lambda_intensity.std(),
-            'min': lambda_intensity.min(),
-            'max': lambda_intensity.max(),
-            'pct_below_threshold': 100 * lambda_safe / n,
-        },
-        'entry_opportunities': {
-            'long_signals_possible': long_opportunities,
-            'short_signals_possible': short_opportunities,
-            'total_opportunities': long_opportunities + short_opportunities,
-            'pct_of_data': 100 * (long_opportunities + short_opportunities) / n,
-        },
-        'recommended_thresholds': {
-            'z_entry': z_score.std() * 1.5,
-            'lambda_threshold': lambda_intensity.quantile(0.8),
-        }
-    }
-
-
-def print_diagnostics(diagnostics: Dict) -> None:
-    """Pretty print signal generation diagnostic results."""
-    print("\n" + "="*70)
-    print("SIGNAL GENERATION DIAGNOSTICS")
-    print("="*70)
-
-    print(f"\nTotal observations: {diagnostics['total_observations']}")
-
-    print("\nZ-Score Statistics:")
-    for key, value in diagnostics['z_score_stats'].items():
-        print(f"  {key}: {value:.4f}")
-
-    print("\nLambda (Jump Intensity) Statistics:")
-    for key, value in diagnostics['lambda_stats'].items():
-        print(f"  {key}: {value:.6f}")
-
-    print("\nEntry Opportunities:")
-    for key, value in diagnostics['entry_opportunities'].items():
-        if isinstance(value, float):
-            print(f"  {key}: {value:.2f}")
-        else:
-            print(f"  {key}: {value}")
-
-    print("\nRecommended Thresholds (based on data):")
-    for key, value in diagnostics['recommended_thresholds'].items():
-        print(f"  {key}: {value:.4f}")
-
-    print("="*70)
-
-
-# Default configuration
-config_v2 = ConfigV2()
-
-
-if __name__ == "__main__":
-    config = ConfigV2()
-    config.print_cost_summary()
-    config.print_filtering_summary()
+    random.seed(seed)
+    np.random.seed(seed)
