@@ -46,6 +46,15 @@ Multiple testing:
 At nominal alpha = 0.05 across ~1,950 tests roughly 98 false positives are
 expected by chance. All detectors now return per-observation p-values and 
 apply Benjamini-Hochberg FDR control by default.
+
+Causality:
+Two parts of the test depend on the whole sample: the Gumbel normalisers
+C_n, S_n (through n) and the BH rejection cutoff (through every p-value).
+Run over a sample that extends past the training window, a flag at day t
+would then depend on later data. Callers that evaluate out of sample pass
+`n_ref` (the training length) and `p_cutoff` (the training BH cutoff, see
+`last_p_cutoff`), which reproduces the training flags exactly and makes every
+later flag a function of the past only.
 """
 
 from __future__ import annotations
@@ -124,6 +133,9 @@ class JumpDetector:
         self.jumps: Optional[pd.DataFrame] = None 
         self.jump_stats: Dict = {}
 
+        # BH p-value cutoff from the most recent FDR run, so it can be frozen
+        self.last_p_cutoff: Optional[float] = None
+
     def _log(self, *args) -> None:
         if self.verbose:
             print(*args)
@@ -131,7 +143,12 @@ class JumpDetector:
     ### dispatch ###
 
     def detect(
-        self, spread_diff: pd.Series, method: str = "lee_mykland", window: int = 20
+        self,
+        spread_diff: pd.Series,
+        method: str = "lee_mykland",
+        window: int = 20,
+        n_ref: Optional[int] = None,
+        p_cutoff: Optional[float] = None,
     ) -> pd.DataFrame:
         """
         Run one detector by name.
@@ -142,11 +159,21 @@ class JumpDetector:
             is already in logs and crosses zero, so a percentage change divides
             by numbers arbitrarily close to zero (observed max |pct_change| of 
             758.9 on AMD/NVDA)
+        n_ref: int, optional
+            Sample size for the Lee-Mykland Gumbel normalisers. Defaults to
+            len(spread_diff); pass the training length to freeze them.
+        p_cutoff: float, optional
+            Frozen FDR cutoff: flag p <= p_cutoff instead of re-running BH.
+            Only used when `apply_fdr` is True.
         """
         if method == "lee_mykland":
-            return self.detect_jumps_lee_mykland(spread_diff, window = window)
+            return self.detect_jumps_lee_mykland(
+                spread_diff, window = window, n_ref = n_ref, p_cutoff = p_cutoff
+            )
         if method in ("bipower", "bipower_variation"):
-            return self.detect_jumps_bipower_variation(spread_diff, window = window)
+            return self.detect_jumps_bipower_variation(
+                spread_diff, window = window, p_cutoff = p_cutoff
+            )
         if method == "threshold":
             return self.detect_jumps_threshold(spread_diff, window = window)
         raise ValueError(f"Unknown detector '{method}'. Choose from {DETECTORS}.")
@@ -154,7 +181,11 @@ class JumpDetector:
     ### Primary detector ###
 
     def detect_jumps_lee_mykland(
-        self, spread_diff: pd.Series, window: int = 20
+        self,
+        spread_diff: pd.Series,
+        window: int = 20,
+        n_ref: Optional[int] = None,
+        p_cutoff: Optional[float] = None,
     ) -> pd.DataFrame:
         """
         Lee - Mykland (2008) per-observation jump test. 
@@ -210,7 +241,7 @@ class JumpDetector:
         L = L.replace([np.inf, -np.inf], np.nan)
 
         c = MU_1
-        log_n = np.log(max(n, 3))
+        log_n = np.log(max(n_ref if n_ref is not None else n, 3))
         root = np.sqrt(2.0 * log_n)
         C_n = root / c - (np.log(np.pi) + np.log(log_n)) / (2.0 * c * root)
         S_n = 1.0 / (c * root)
@@ -224,9 +255,7 @@ class JumpDetector:
         threshold = C_n + beta_star * S_n
 
         if self.apply_fdr:
-            rejected = benjamini_hochberg(pvalues.to_numpy(), self.significance_level)
-            jump_indicator = pd.Series(rejected.astype(int), index = r.index)
-            rule = f"BH-FDR at {self.significance_level:.0%}"
+            jump_indicator, rule = self._fdr_indicator(pvalues, p_cutoff)
         else:
             jump_indicator = (L > threshold).fillna(False).astype(int)
             rule = f"Gumbel critical value {threshold:.3f}"
@@ -255,7 +284,10 @@ class JumpDetector:
     ### robustness detector ###
 
     def detect_jumps_bipower_variation(
-        self, spread_diff: pd.Series, window: int = 20
+        self,
+        spread_diff: pd.Series,
+        window: int = 20,
+        p_cutoff: Optional[float] = None,
     ) -> pd.DataFrame:
         """
         Barndorff-Nielsen-Shephard biipower test, log-ratio form.
@@ -307,9 +339,7 @@ class JumpDetector:
         pvalues[z_stat.isna()] = np.nan 
 
         if self.apply_fdr:
-            rejected = benjamini_hochberg(pvalues.to_numpy(), self.significance_level)
-            window_flag = pd.Series(rejected.astype(int), index = r.index)
-            rule = f"BH-FDR at {self.significance_level:.0%}"
+            window_flag, rule = self._fdr_indicator(pvalues, p_cutoff)
         else:
             crit = stats.norm.ppf(1 - self.significance_level)
             window_flag = (z_stat > crit).fillna(False).astype(int)
@@ -349,6 +379,31 @@ class JumpDetector:
 
         self.jumps = result 
         return result 
+
+    def _fdr_indicator(
+        self, pvalues: pd.Series, p_cutoff: Optional[float]
+    ) -> tuple:
+        """
+        FDR jump flags, either by running BH on these p-values or, when
+        `p_cutoff` is given, by applying a cutoff frozen on the training window.
+
+        The cutoff from a BH run is the largest rejected p-value (BH rejects
+        every p-value at or below it), or the most stringent BH level alpha/m
+        when nothing is rejected.
+        """
+        p = pvalues.to_numpy(dtype = float)
+        if p_cutoff is not None:
+            flags = np.isfinite(p) & (p <= p_cutoff)
+            self.last_p_cutoff = float(p_cutoff)
+            rule = f"frozen BH cutoff p <= {p_cutoff:.3g}"
+        else:
+            flags = benjamini_hochberg(p, self.significance_level)
+            m = max(int(np.isfinite(p).sum()), 1)
+            self.last_p_cutoff = (
+                float(np.max(p[flags])) if flags.any() else self.significance_level / m
+            )
+            rule = f"BH-FDR at {self.significance_level:.0%}"
+        return pd.Series(flags.astype(int), index = pvalues.index), rule
 
     ### naive detector ###
 

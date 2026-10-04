@@ -132,7 +132,12 @@ class TradingConfig:
     # Hawkes regime machinery. When False the generator is the CONTROL ARM
     # a plain z-score strategy with no Hawkes layer at all 
     use_hawkes_regimes: bool = True
-    use_jump_entries: bool = True 
+    use_jump_entries: bool = True
+
+    # Block new entries when the training-window pair validation fails
+    # (`is_tradeable` is False). Applies to both arms. False reproduces the
+    # ungated behaviour, where failing pairs were traded anyway
+    require_tradeable: bool = True
 
     # Regime cut-points on EXCESS intensity (lambda_t - lambda_bar) / lambda_bar
     # Percentile bucketing was degenerate: lambda(t) >= lambda_bar always, so 
@@ -163,7 +168,9 @@ class BacktestConfig:
 
     initial_capital: float = 1_000_000.0
 
-    commission_rate: float = 0.002 #2bp per side
+    # Fraction of notional per side: 0.0002 == 2bp. This was 0.002 (20bp)
+    # under a "2bp" comment, which made every round trip cost 42bp, not 6bp
+    commission_rate: float = 0.0002 #2bp per side
     slippage_bps: float = 1.0 #1bp per side 
 
     # Bars between signal generation and execution. Read by the engine

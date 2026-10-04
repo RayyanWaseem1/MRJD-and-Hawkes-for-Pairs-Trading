@@ -11,6 +11,10 @@ Discipline enforced here:
 * Evaluation windows never re-fit anything.
 * Nothing is silently skipped: a stage that cannot run records WHY in the 
     bundle, and the reason is written into the artifacts
+* Jump flags outside the training window reuse the training window's
+    Lee-Mykland normalisation and BH cutoff, so no flag depends on later data.
+* A pair that fails training-window validation opens no positions
+    (`TradingConfig.require_tradeable`).
 """
 
 from __future__ import annotations 
@@ -57,11 +61,26 @@ class ModelBundle:
     n_jumps_fdr: int = 0
     n_jumps_nominal: int = 0
 
+    # Frozen detection parameters (training window): sample size for the
+    # Lee-Mykland normalisers and the BH p-value cutoff
+    jump_n_ref: Optional[int] = None
+    jump_p_cutoff: Optional[float] = None
+
     z_entry_threshold: float = 2.0
     z_exit_threshold: float = 0.5
 
     train_start: Optional[str] = None 
     train_end: Optional[str] = None 
+
+    @property
+    def is_tradeable(self) -> bool:
+        """ All five training-window validation checks passed"""
+        return bool(self.pair_validation.get("is_tradeable", False))
+
+    @property
+    def spread_sd(self) -> float:
+        """ Training-window spread standard deviation, the stop-sizing reference"""
+        return float(self.spread_stats["std"])
 
 def validate_pair(
     spread: pd.Series,
@@ -239,6 +258,7 @@ class PairPipeline:
             spread_diff, method = cfg.jump_detection.method, window = cfg.jump_detection.window_size
         )
         n_fdr = int(jump_fdr["jump_indicator"].sum())
+        fdr_p_cutoff = det_fdr.last_p_cutoff
 
         det_nom = JumpDetector(
             cfg.jump_detection.significance_level, apply_fdr = False, verbose = False
@@ -397,6 +417,8 @@ class PairPipeline:
             detection_basis = basis,
             n_jumps_fdr=n_fdr,
             n_jumps_nominal=n_nom,
+            jump_n_ref = int(len(spread_diff)),
+            jump_p_cutoff = fdr_p_cutoff,
             z_entry_threshold=cfg.trading.z_entry_threshold,
             z_exit_threshold=cfg.trading.z_exit_threshold,
             train_start = train_start, 
@@ -409,7 +431,12 @@ class PairPipeline:
         """
         Detector output, Hawkes intensity, and z-score on the FULL sample using
         the bundle's FROZEN parameters. Causal: nothing here uses information
-        from beyond each observation
+        from beyond each observation.
+
+        Jump detection reuses the training window's sample size for the
+        Lee-Mykland normalisers and, on the FDR basis, the training BH cutoff.
+        Re-running BH over the full sample would make each flag depend on the
+        p-values of later days.
         """
         cfg = self.config 
 
@@ -423,6 +450,8 @@ class PairPipeline:
             spread_diff,
             method = cfg.jump_detection.method,
             window = cfg.jump_detection.window_size,
+            n_ref = bundle.jump_n_ref,
+            p_cutoff = bundle.jump_p_cutoff if bundle.detection_basis == "fdr" else None,
         )
         jump_times = detector.extract_jump_times(jump_df)
 
@@ -503,7 +532,8 @@ class PairPipeline:
             max_position_size= cfg.trading.max_position_size,
             min_position_size=cfg.trading.min_position_size,
             min_hold_fraction = cfg.trading.min_hold_fraction,
-            target_hold_fraction = cfg.trading.max_hold_fraction,
+            target_hold_fraction = cfg.trading.target_hold_fraction,
+            max_hold_fraction = cfg.trading.max_hold_fraction,
             max_holding_period_cap = cfg.trading.max_holding_period_cap,
             use_jump_entries = cfg.trading.use_jump_entries,
             use_hawkes_regimes= bundle.use_hawkes_regimes,
@@ -512,6 +542,7 @@ class PairPipeline:
             regime_excess_calm = cfg.trading.regime_excess_calm,
             regime_excess_elevated = cfg.trading.regime_excess_elevated,
             regime_excess_crisis = cfg.trading.regime_excess_crisis,
+            allow_entries = self.entries_allowed(bundle),
             verbose = self.verbose,
         )
         generator.set_lambda_baseline(bundle.hawkes_params.get("lambda_bar", 0.01))
@@ -565,6 +596,7 @@ class PairPipeline:
             hedge_ratio = bundle.hedge_ratio,
             asset_a_ohlc = period_cleaned["asset_a"],
             asset_b_ohlc = period_cleaned["asset_b"],
+            stop_reference_sd = bundle.spread_sd,
         )
 
         metrics = engine.calculate_performance_metrics(risk_free_rate = bt.risk_free_rate)
@@ -591,6 +623,8 @@ class PairPipeline:
                 metrics["mde_annualized_pct"] = power["mde_at_80pct_power_annual_pct"]
                 metrics["power_statement"] = power["statement"]
 
+            metrics["pair_tradeable"] = bundle.is_tradeable
+            metrics["entries_allowed"] = self.entries_allowed(bundle)
             metrics["dividend_differential_annual_pct"] = (
                 estimate_dividend_drag(symbol_a, symbol_b)["differential_annual"] * 100
             )
@@ -605,6 +639,10 @@ class PairPipeline:
             "exit_reasons": engine.analyze_by_exit_reason(),
             "signal_quality": generator.calculate_signal_quality(signals_df),
         }
+
+    def entries_allowed(self, bundle: ModelBundle) -> bool:
+        """ False when the validation gate is on and the pair failed it"""
+        return bundle.is_tradeable or not self.config.trading.require_tradeable
 
     # threshold tuning (training window only)
 
@@ -630,6 +668,11 @@ class PairPipeline:
         wf = self.config.walk_forward
         trials: List[Dict] = []
         best = (bundle.z_entry_threshold, bundle.z_exit_threshold, -np.inf)
+
+        # Nothing to tune when the gate blocks every entry: each configuration
+        # would produce the same flat book. No trials are counted.
+        if not self.entries_allowed(bundle):
+            return best[0], best[1], 0, trials
 
         was_verbose = self.verbose
         self.verbose = False 

@@ -378,7 +378,7 @@ class EquityPairsDataPipeline:
         }
 
         if method == "johansen":
-            beta, extra = self._hedge_engle_granger(log_a, log_b)
+            beta, extra = self._hedge_johansen(log_a, log_b)
         elif method == "engle_granger":
             beta, extra = self._hedge_engle_granger(log_a, log_b)
         elif method == "ols":

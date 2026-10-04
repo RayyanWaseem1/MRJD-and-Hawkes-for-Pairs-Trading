@@ -86,7 +86,16 @@ class ResultsWriter:
     # ------------------------------------------------------------------ #
 
     def write_frame(self, frame: pd.DataFrame, name: str, index: bool = True) -> None:
-        if frame is None or len(frame) == 0:
+        """
+        Write a table. A table with columns but no rows (e.g. a run with zero
+        trades) is written header-only, so it can never be mistaken for the
+        previous run's file. A frame with no columns at all is skipped, and
+        any stale file of the same name is removed.
+        """
+        if frame is None or (len(frame) == 0 and len(frame.columns) == 0):
+            stale = self.dir / name
+            if stale.exists():
+                stale.unlink()
             self._log(f"    (skipped empty {name})")
             return
         frame.to_csv(self._record(name), index=index)

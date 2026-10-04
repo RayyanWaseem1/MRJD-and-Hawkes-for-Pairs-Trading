@@ -35,6 +35,13 @@ PROJECT_ROOT = Path(__file__).resolve().parent
 OUTPUT_ROOT = PROJECT_ROOT / "outputs"
 
 
+def _dir_suffix(config: Config) -> str:
+    """
+    Ungated runs (`--ignore-validation`) write to `*_ungated` directories so
+    they never overwrite the primary, gated artifacts.
+    """
+    return "" if config.trading.require_tradeable else "_ungated"
+
 ### train/ validation ###
 
 def run_train_val(
@@ -42,7 +49,7 @@ def run_train_val(
 ) -> Dict:
     """ Fit on the training window, evaluate in and out of sample, write artifacts"""
     tv = config.train_val
-    out_dir = OUTPUT_ROOT / pair_key / "train_val"
+    out_dir = OUTPUT_ROOT / pair_key / f"train_val{_dir_suffix(config)}"
     writer = ResultsWriter(out_dir, verbose = verbose) 
 
     if verbose:
@@ -339,6 +346,7 @@ def _walk_forward_comparison(results_by_arm: Dict[str, Dict]) -> List[Dict]:
                 "nw_tstat": metrics.get("nw_tstat", 0.0),
                 "nw_pvalue": metrics.get("nw_pvalue", 1.0),
                 "quarters_evaluated": metrics.get("quarters_evaluated", 0),
+                "quarters_entries_allowed": metrics.get("quarters_entries_allowed", 0),
                 "quarters_failed": metrics.get("quarters_failed", 0),
                 "configurations_tried": metrics.get("configurations_tried", 0),
                 "deflated_sharpe_probability": metrics.get(
@@ -354,7 +362,7 @@ def run_walk_forward(
     output_dir: Optional[Path] = None,
 ) -> Dict:
     """Run Hawkes and matched no-Hawkes OOS arms using identical settings."""
-    out_dir = output_dir or OUTPUT_ROOT / pair_key / "walk_forward"
+    out_dir = output_dir or OUTPUT_ROOT / pair_key / f"walk_forward{_dir_suffix(config)}"
     results_by_arm = {
         "hawkes": _write_walk_forward_arm(
             pair_key, "hawkes", config, out_dir / "hawkes", verbose
@@ -442,7 +450,7 @@ def run_robustness(
     pair_key: str, config: Config, run_control: bool = True, verbose: bool = True
 ) -> List[Dict]:
     """Execute the fixed robustness matrix and write a pair-level summary."""
-    root = OUTPUT_ROOT / pair_key / "robustness"
+    root = OUTPUT_ROOT / pair_key / f"robustness{_dir_suffix(config)}"
     scenarios = _robustness_scenarios(config)
     writer = ResultsWriter(root, verbose=verbose)
     writer.write_json(scenarios, "scenario_definitions.json")
@@ -481,7 +489,7 @@ def run_robustness(
 
 def _write_walk_forward_portfolio(
     returns_by_pair: Dict[str, pd.Series], arm: str, risk_free_rate: float,
-    verbose: bool,
+    verbose: bool, suffix: str = "",
 ) -> Optional[Dict]:
     """Write a transparent equal-weight portfolio for one OOS strategy arm."""
     if len(returns_by_pair) < 2:
@@ -493,7 +501,7 @@ def _write_walk_forward_portfolio(
     if "error" in pooled:
         return None
     portfolio_returns = pooled.pop("portfolio_returns")
-    out_dir = OUTPUT_ROOT / "portfolio" / "walk_forward" / arm
+    out_dir = OUTPUT_ROOT / "portfolio" / f"walk_forward{suffix}" / arm
     writer = ResultsWriter(out_dir, verbose=verbose)
     pair_returns = pd.DataFrame(returns_by_pair).dropna(how="all").fillna(0.0)
     writer.write_frame(pair_returns, "pair_returns.csv")
@@ -536,6 +544,9 @@ def build_parser() -> argparse.ArgumentParser:
                         help = "use pairs surviving pair_screen.py instead of the registry")
     parser.add_argument("--no-control", action = "store_true",
                         help = "skip the no-Hawkes control arm")
+    parser.add_argument("--ignore-validation", action="store_true",
+                        help="trade pairs that fail training-window validation "
+                             "(reproduces the ungated behaviour)")
     parser.add_argument("--no-fdr", action="store_true",
                         help="use nominal jump detection instead of BH-FDR control")
     parser.add_argument("--hedge-mode", default = None, 
@@ -611,6 +622,8 @@ def main(argv: Optional[List[str]] = None) -> int:
                 config.jump_detection.method = args.detector
             if args.no_fdr:
                 config.jump_detection.apply_fdr = False 
+            if args.ignore_validation:
+                config.trading.require_tradeable = False
 
             try:
                 if mode == "train_val":
@@ -660,8 +673,9 @@ def main(argv: Optional[List[str]] = None) -> int:
 
     if args.mode == "portfolio":
         for arm, returns in portfolio_returns.items():
+            suffix = "_ungated" if args.ignore_validation else ""
             pooled = _write_walk_forward_portfolio(
-                returns, arm, Config().backtest.risk_free_rate, verbose
+                returns, arm, Config().backtest.risk_free_rate, verbose, suffix
             )
             if pooled is None:
                 continue
@@ -679,7 +693,7 @@ def main(argv: Optional[List[str]] = None) -> int:
             print(f" pooled Sharpe "
                   f"{pooled.get('pooled_sharpe_annualized', 0):+.3f} "
                   f"(HAC SE {pooled.get('pooled_se_annualized_hac', float('nan')):.3f})")
-            print(f" artifacts {OUTPUT_ROOT / 'portfolio' / 'walk_forward' / arm}")
+            print(f" artifacts {OUTPUT_ROOT / 'portfolio' / f'walk_forward{suffix}' / arm}")
             print("=" * 78)
 
     if failures:

@@ -48,6 +48,11 @@ __all__ = [
 
 TRADING_DAYS = 252
 
+# Daily return volatility below this is treated as zero. A book that never
+# trades earns exactly rf/252 a day, and floating-point noise of ~1e-19 in
+# that constant would otherwise produce an arbitrary "Sharpe ratio".
+VOL_EPS = 1e-12
+
 
 def _nw_variance(x: np.ndarray, maxlags: int) -> float:
     """Newey-West HAC long-run variance of the mean, Bartlett kernel."""
@@ -137,7 +142,7 @@ def sharpe_standard_error(
 
     excess = x - risk_free_rate / periods_per_year
     sd = float(excess.std(ddof=1))
-    if sd <= 0:
+    if sd <= VOL_EPS:
         return {"n_obs": n, "error": "zero return volatility; Sharpe undefined"}
 
     sharpe_period = float(excess.mean() / sd)
@@ -224,7 +229,7 @@ def bootstrap_metric_ci(
         if metric == "sharpe":
             excess = sample - risk_free_rate / periods_per_year
             sd = sample.std(ddof=1)
-            return float(np.sqrt(periods_per_year) * excess.mean() / sd) if sd > 0 else np.nan
+            return float(np.sqrt(periods_per_year) * excess.mean() / sd) if sd > VOL_EPS else np.nan
         if metric == "mean":
             return float(sample.mean() * periods_per_year)
         if metric == "total_return":
