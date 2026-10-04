@@ -2,7 +2,7 @@
 
 > **Abstract.** We study whether the arrival of discontinuities ("jumps") in cointegrated equity pair spreads is *self-exciting*, and whether conditioning a mean-reversion strategy on the resulting jump intensity improves risk-adjusted performance. Each spread is modelled as a Mean-Reverting Jump Diffusion (MRJD) whose jump-counting process is a univariate Hawkes process with an exponential kernel. Jumps are dated with the Lee–Mykland (2008) per-observation test under Benjamini–Hochberg false-discovery control. The Hawkes process is estimated by exact maximum likelihood in an unconstrained reparameterisation, and self-excitation is tested against a homogeneous Poisson null with a parametric-bootstrap likelihood-ratio test, which handles the non-identification of the decay parameter under the null (the Davies problem). The trading layer maps the fitted intensity into volatility regimes that modulate entry thresholds, holding periods and position size. It is evaluated against a **matched control arm**: the identical strategy with the Hawkes layer removed. Evaluation uses a frozen-parameter train/validation split and a 23-quarter **continuous-book walk-forward** (July 2020 – February 2026) with in-loop threshold tuning, Newey–West inference on mean excess returns, Lo (2002) Sharpe standard errors, stationary-bootstrap intervals, the Deflated Sharpe Ratio, and explicit power analysis.
 >
-> **Findings.** (i) Once jumps are dated correctly and controlled for multiplicity, daily equity spreads yield only 0–13 jumps per pair over 4.7 training years. Self-excitation is not established on any pair: every branching-ratio 95% CI contains zero, and three of five pairs collapse to a Poisson process. (ii) The Hawkes arm does not outperform its control on any pair. A paired Newey–West test on daily return differences gives a pooled +0.23%/yr, *t* = 0.51. (iii) Neither arm earns statistically significant excess return over cash out of sample. The only significant result is negative: SPY/IVV loses 1.1–1.2%/yr to transaction costs (*t* ≈ −7). (iv) The design is underpowered. The minimum detectable effect at 80% power is 1.5–6.3%/yr per pair, so the null results should be read as *"the design cannot resolve an edge of the size sought"*, not as proof that no edge exists. The main methodological finding is a catalogue of failure modes that, left uncorrected, **manufacture** apparent self-excitation and spurious alpha. All of them were present in an earlier version of this study.
+> **Findings.** (i) Once jumps are dated correctly and controlled for multiplicity, daily equity spreads yield only 0–13 jumps per pair over 4.7 training years. Self-excitation is not established on any pair: every branching-ratio 95% CI contains zero, and three of five pairs collapse to a Poisson process. (ii) The pairs rarely satisfy the strategy's own premises. Only 2 of 5 pass cointegration and half-life validation on the training window, and in walk-forward only 19 of 115 pair-quarters do, so the gated book is mostly in cash. (iii) The Hawkes arm does not outperform its control on any pair. A paired Newey–West test on daily return differences gives a pooled −0.23%/yr (*t* = −1.42) gated and −0.26%/yr (*t* = −0.67) when the gate is switched off. The Hawkes arm carries more exposure for a slightly lower return. (iv) Neither arm earns statistically significant excess return over cash out of sample. Ungated, SPY/IVV loses about 0.2%/yr with certainty (*t* ≈ −5) because its two-day spread cannot cover costs. (v) The design is underpowered. Detecting a 1%/yr edge on a single continuously traded pair would need well over a decade of daily data, so the nulls should be read as *"the design cannot resolve an edge of the size sought"*, not as proof that no edge exists. The main methodological finding is a catalogue of twenty failure modes that, left uncorrected, **manufacture** apparent self-excitation, spurious alpha or look-ahead. All were present in earlier versions of this study, and each is now covered by a regression test.
 
 ---
 
@@ -68,7 +68,7 @@ Self-exciting jump processes are well established in finance (Hawkes 1971; Aït-
 1. **A joint MRJD–Hawkes specification for equity pair spreads, evaluated as a controlled experiment.** Every result is reported for a *treatment* arm (Hawkes layer on) and a *control* arm (Hawkes layer off) that share data, folds, costs, execution, thresholds search and seed. That makes "does the Hawkes layer add value?" a measurable quantity rather than an anecdote.
 2. **A correct event-dating pipeline for point-process estimation on spreads.** Jumps are dated per observation (Lee–Mykland), FDR-controlled, and placed on a trading-day clock before the Hawkes likelihood ever sees them. Section 11.1 shows that a common alternative, a rolling-window bipower test whose rejection is attributed to the window's last day, **mechanically fabricates** self-excitation.
 3. **Valid inference for self-excitation.** The Hawkes MLE is reparameterised so that stationarity holds by construction and the optimum is interior. The LR test against Poisson uses a parametric-bootstrap null because the decay parameter is unidentified under $H_0$, so the usual $\chi^2$ reference is invalid. Goodness of fit uses the time-rescaling theorem.
-4. **An evaluation protocol designed against the usual backtest pathologies:** frozen training bundles, a continuous (not restarted-and-stitched) walk-forward book, threshold tuning inside the walk-forward loop with the number of trials recorded for the Deflated Sharpe Ratio, idle-cash credit so that a flat book does not "underperform" by exactly $r_f$, next-open execution, and gap-aware intraday stops.
+4. **An evaluation protocol designed against the usual backtest pathologies:** frozen training bundles, a continuous (not restarted-and-stitched) walk-forward book, threshold tuning inside the walk-forward loop with the number of trials recorded for the Deflated Sharpe Ratio, idle-cash credit so that a flat book does not "underperform" by exactly $r_f$, next-open execution, gap-aware intraday stops, a pre-specified validation gate that blocks pairs failing cointegration or half-life checks, and sizing, stops and jump flags that use only information available at the time.
 5. **Explicit power accounting.** Each null result comes with its standard error and minimum detectable effect, and a synthetic study (`intraday.py`) quantifies how many events the Hawkes layer actually needs.
 6. **A documented audit trail** of fifteen methodological errors from an earlier version of this study, each with its quantitative consequence and its fix (Section 11.1). For practitioners this is arguably the most transferable output.
 
@@ -108,7 +108,7 @@ For prices $P^A_t, P^B_t$ the log-spread is
 S_t \;=\; \log P^A_t \;-\; h\,\log P^B_t ,
 ```
 
-with hedge ratio $h$ estimated **once on the training window and then frozen** (`hedge_mode="static"`). In walk-forward it is re-estimated at each quarter boundary and held fixed within the quarter.
+with hedge ratio $h$ estimated **once on the training window and then frozen** (`hedge_mode="static"`). In walk-forward it is re-estimated at each quarter boundary and held fixed within the quarter. The default estimator is the **Johansen (1991)** cointegrating vector $(v_A, v_B)$ from a VECM with one lagged difference and an unrestricted constant, normalised on leg A, so $h = -v_B/v_A$; the trace statistic and its critical values are recorded. OLS of $\log P^A$ on $\log P^B$, the inverted reverse regression and total least squares are reported alongside, so the sensitivity to the estimator is visible. They differ materially on AMD/NVDA (Johansen 0.73 vs. OLS 0.91) and GLD/GDX (0.82 vs. 0.62).
 
 *Why not a rolling hedge ratio?* If $h_t$ varies, then
 
@@ -120,7 +120,7 @@ With a 30-day rolling OLS, the third term, an estimation artefact multiplied by 
 
 **Stationarity testing.** $S_t$ is a residual from an *estimated* cointegrating vector, so a standard ADF test, whose Dickey–Fuller critical values assume an observed series, over-rejects. Stationarity is therefore judged with the **Engle–Granger** test using Phillips–Ouliaris (1990) residual-based critical values. The naive ADF *p*-value is reported alongside so the size of the over-rejection is visible.
 
-**Pair validation.** Five checks are computed on the training window: EG stationarity ($p<0.05$); AR(1) half-life in $[5, 120]$ trading days; rolling-mean stability ($\operatorname{sd}(\bar S^{(252)}_t)/\operatorname{sd}(S_t) < 0.5$); range below $10\,\operatorname{sd}$; and a recent-vs-full-sample mean shift below $1\,\operatorname{sd}$. All five feed `is_tradeable`. (See Section 11.2: the flag is recorded but does not currently gate trading.)
+**Pair validation.** Five checks are computed on the training window: EG stationarity ($p<0.05$); AR(1) half-life in $[5, 120]$ trading days; rolling-mean stability ($\operatorname{sd}(\bar S^{(252)}_t)/\operatorname{sd}(S_t) < 0.5$); range below $10\,\operatorname{sd}$; and a recent-vs-full-sample mean shift below $1\,\operatorname{sd}$. All five feed `is_tradeable`, and **a pair that fails any of them opens no positions** in either arm (`TradingConfig.require_tradeable`). In walk-forward the gate is re-evaluated at every quarterly refit. A position carried into a quarter that fails is closed at that quarter's first bar. `--ignore-validation` disables the gate and reproduces the ungated behaviour.
 
 ### 5.2 Mean-reverting jump diffusion (MRJD)
 
@@ -175,6 +175,8 @@ S_n = \frac{1}{c\sqrt{2\log n}},\quad c=\sqrt{2/\pi}.
 This gives a per-observation *p*-value $p_i = 1-\exp\{-e^{-(\mathcal L_i - C_n)/S_n}\}$. A rejection at $i$ means *"a jump occurred at $i$"*, which is exactly the event time a point-process likelihood requires.
 
 **Multiplicity.** Roughly 1,950 tests at a nominal 5% would produce about 98 false positives. Jump flags are therefore Benjamini–Hochberg FDR-controlled at 5% by default ("FDR basis"). When FDR leaves fewer than 10 events, the Hawkes layer is fitted on the Gumbel-critical-value rule ("nominal basis"). This fallback is recorded in every artefact and never applied silently.
+
+**Causality out of sample.** Two parts of the test depend on the whole sample: the normalisers $C_n, S_n$ (through $n$) and the BH cutoff (through every *p*-value). Both are therefore **frozen on the training window**. $n$ is fixed at the training length, and on the FDR basis day $t$ is flagged iff $p_t \le p^\ast$, where $p^\ast$ is the largest *p*-value BH rejected in training (or $\alpha/m$ if it rejected none). This reproduces the training flags exactly, and every later flag depends only on data up to $t$. Re-running BH over the full sample, as an earlier version did, lets later *p*-values decide whether an earlier day counts as a jump.
 
 **Robustness: Barndorff-Nielsen–Shephard bipower test**, in log-ratio form (Huang & Tauchen 2005):
 
@@ -268,18 +270,18 @@ w_t = \operatorname{clip}\Big(0.25 \cdot \min\!\big(\tfrac{|z_t|}{3},\,1.5\big)\
 | 4 | `profit_target` | $z$ crosses through the mean past $z_{\text{out}}$ (after min hold) |
 | 5 | `mean_reversion` | $|z| < z_{\text{out}}$ (after min hold) |
 
-Holding periods scale with the training half-life: minimum $0.5\,t_{1/2}$, maximum capped at 120 days.
+Holding periods scale with the training half-life: minimum $0.5\,t_{1/2}$, maximum $1.5\,t_{1/2}$ (capped at 120 days, and scaled by the regime multiplier in the Hawkes arm).
 
 **Backtest engine** (`backtest_engine.py`), event-driven on daily bars:
 
 | Component | Implementation |
 |---|---|
-| Sizing | Leg A gets $w\cdot\text{cash}/(1+|h|)$ dollars and leg B gets $h$ times that, opposite sign, so the book tracks $\log A - h\log B$. Gross notional is ≈ $w\cdot$cash. |
+| Sizing | Leg A gets $w\cdot\text{cash}/(1+|h|)$ dollars and leg B gets $h$ times that, opposite sign, so the book tracks $\log A - h\log B$. Gross notional is ≈ $w\cdot$cash. In walk-forward, $h$ is the hedge ratio frozen for the quarter in which the position is *entered*. |
 | Execution | Signals on bar $t$, fills at the **open of $t+1$** (`execution_delay=1`) |
-| Costs | Commission + slippage per side on gross notional at entry and exit |
+| Costs | Commission 2 bp + slippage 1 bp per side on gross notional, at entry and exit (6 bp round trip) |
 | Financing | Long financing 2%/yr, short rebate 1.5%/yr, per-symbol borrow 20–100 bp/yr, accrued daily |
 | Idle cash | Credited at $r_f = 2\%$ on the undeployed share of equity. Without this a dollar-neutral book that is flat about 90% of the time shows a CAPM "alpha" of almost exactly $-r_f$, which is what the earlier version reported. |
-| Stops | Volatility-scaled backstops in units of the spread's stationary s.d.: hard stop $4\,\operatorname{sd}$, profit target $5\,\operatorname{sd}$, trailing stop activated at $1.5\,\operatorname{sd}$. All are clamped to $[1\%, 50\%]$ of notional. Fixed 3% stops structurally conflict with mean reversion: in diagnostics they caused 85–100% of trades to exit via stop at 1.7–12 days. |
+| Stops | Volatility-scaled backstops in units of the spread's stationary s.d.: hard stop $4\,\operatorname{sd}$, profit target $5\,\operatorname{sd}$, trailing stop activated at $1.5\,\operatorname{sd}$. All are clamped to $[1\%, 50\%]$ of notional. The s.d. is the **training-window** spread s.d. from the frozen bundle, and each position keeps the levels set at its entry. Measuring it on the window being traded would size stops with knowledge of that window's realised volatility. Fixed 3% stops structurally conflict with mean reversion: in an earlier run they caused 85–100% of trades to exit via stop at 1.7–12 days (see Section 11.2(b)). |
 | Stop fills | Checked against the intraday High/Low. If the open already gaps through the level, the fill is at the open. |
 | End of sample | Open positions are force-closed and **recorded** |
 | Integrity | Raises if equity ≤ 0. The earlier `max(equity, 1)` denominator floor has been removed. |
@@ -291,8 +293,8 @@ Holding periods scale with the training half-life: minimum $0.5\,t_{1/2}$, maxim
 ```mermaid
 flowchart LR
     A["Raw OHLCV"] --> B["Split adjust + verify"]
-    B --> C["Static hedge on train<br/>Engle–Granger"]
-    C --> D["Pair validation"]
+    B --> C["Static hedge on train<br/>Johansen"]
+    C --> D["Pair validation gate<br/>EG, half-life, stability"]
     C --> E["Lee–Mykland + BH-FDR"]
     E --> F["Hawkes MLE<br/>LR bootstrap, KS, CI"]
     E --> G["MRJD exact AR1 MLE"]
@@ -305,11 +307,18 @@ flowchart LR
 
 **7.1 Train / validation.** Train 2018-05-01 → 2022-12-31 (1,177 obs); validation 2023-01-01 → 2024-12-31 (≈ 502 obs). The hedge ratio, pair validation, jump detection, Hawkes and MRJD parameters and $\bar\lambda$ are fitted on train only, frozen into a `ModelBundle`, and applied unchanged to validation.
 
-**7.2 Walk-forward (headline).** After a minimum of 504 training observations, at each calendar quarter-end the procedure (a) re-estimates the hedge ratio on all data to date, (b) refits the full bundle, (c) grid-searches $z_{\text{in}}\in\{1.5,2.0,2.5\}\times z_{\text{out}}\in\{0.25,0.5,0.75\}$ **on the training window only**, maximising Sharpe, and (d) generates signals for the next quarter with frozen parameters. This yields 23 quarters (2020-07-01 → Feb 2026, about 1,414 trading days) and 9 × 23 = **207 configurations tried**, which feeds the Deflated Sharpe Ratio.
+**7.2 Walk-forward (headline).** After a minimum of 504 training observations, at each calendar quarter-end the procedure:
+
+1. Re-estimates the hedge ratio on all data to date.
+2. Refits the full bundle, including the validation gate and the frozen jump-detection cutoff.
+3. If the pair passes validation, grid-searches $z_{\text{in}}\in\{1.5,2.0,2.5\}\times z_{\text{out}}\in\{0.25,0.5,0.75\}$ **on the training window only**, maximising Sharpe.
+4. Generates signals for the next quarter with frozen parameters. Each bar carries its quarter's hedge ratio and training spread s.d., so every position is sized and stopped with information available at entry.
+
+This yields 23 quarters (2020-07-01 → Feb 2026, about 1,414 trading days). Up to 9 configurations are tried per *tradeable* quarter, and the total feeds the Deflated Sharpe Ratio.
 
 The book is **one continuous backtest**: parameters are swapped at quarter boundaries while cash and open positions carry through. The earlier engine restarted each quarter with fresh capital, silently liquidated trades that had not reached their minimum hold, and stitched the curves in a way that zeroed 23 genuine daily returns. It also wrote all-zero trade statistics that looked like measurements. Failed quarters are logged rather than dropped; there were 0 failures in the published runs.
 
-**7.3 Robustness matrix** (pre-specified, one factor at a time; published for CVX/XOM): half and double costs; fixed thresholds (1.5/0.5 and 2.5/0.5, no tuning); bipower detector; static OLS hedge.
+**7.3 Robustness matrix** (pre-specified, one factor at a time; published for CVX/XOM): half and double costs; fixed thresholds (1.5/0.5 and 2.5/0.5, no tuning); bipower detector; static OLS hedge. Separately, an **ungated sensitivity** reruns the walk-forward for every pair with the validation gate switched off (Section 9.6).
 
 **7.4 Cross-pair portfolio.** An equal-weight portfolio of the five walk-forward return streams, per arm, reports effective breadth $N_{\text{eff}} = N/(1+(N-1)\bar\rho)$.
 
@@ -337,45 +346,45 @@ The book is **one continuous backtest**: parameters are swapped at quarter bound
 
 ## 9. Results
 
-All figures are read from the artefacts in `outputs/` produced by the current code. The authoritative files are those listed in each directory's `MANIFEST.json` (see Section 13). Returns are annualised percentages unless stated otherwise.
+All figures are read from the artefacts in `outputs/` produced by the current code (seed 42). The authoritative files are those listed in each directory's `MANIFEST.json` (see Section 13). Returns are annualised percentages unless stated otherwise. The **primary specification is gated**: a pair or quarter that fails validation does not trade. The ungated sensitivity (`--ignore-validation`) is reported separately in Section 9.6.
 
 ### 9.1 Spread properties and pair validation (training window, 1,177 obs)
 
-| Pair | $h$ | EG *p* | ADF *p* | AR(1) $t_{1/2}$ (d) | Mean drift | Mean shift (sd) | Range (sd) | Tradeable | Failing checks |
-|---|---:|---:|---:|---:|---:|---:|---:|:---:|---|
-| SPY/IVV | 1.004 | **0.009** | 0.002 | **1.9** | 0.44 | 0.18 | 8.96 | ✗ | half-life < 5 d |
-| CVX/XOM | 0.720 | 0.266 | 0.109 | 49.5 | 0.63 | 1.20 | 6.10 | ✗ | EG, stable mean, regime shift |
-| GS/MS | 0.795 | **0.042** | 0.011 | 46.3 | 0.48 | 0.45 | 4.41 | ✓ | — |
-| AMD/NVDA | 0.908 | **0.016** | 0.003 | 69.8 | 0.45 | 0.15 | 5.44 | ✓ | — |
-| GLD/GDX | 0.622 | 0.671 | 0.426 | 56.6 | 0.59 | 1.39 | 4.96 | ✗ | EG, stable mean, regime shift |
+| Pair | $h$ (Johansen) | Johansen trace (95% cv 15.49) | EG *p* | ADF *p* | AR(1) $t_{1/2}$ (d) | Mean drift | Mean shift (sd) | Range (sd) | Tradeable | Failing checks |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|:---:|---|
+| SPY/IVV | 1.004 | **134.6** | **0.009** | 0.002 | **1.9** | 0.44 | 0.19 | 8.96 | ✗ | half-life < 5 d |
+| CVX/XOM | 0.710 | 8.3 | 0.266 | 0.108 | 49.4 | 0.63 | 1.24 | 6.22 | ✗ | EG, stable mean, regime shift |
+| GS/MS | 0.795 | 10.8 | **0.042** | 0.011 | 46.3 | 0.48 | 0.45 | 4.41 | ✓ | — |
+| AMD/NVDA | 0.732 | **19.9** | **0.016** | 0.001 | 71.8 | 0.47 | 0.21 | 5.23 | ✓ | — |
+| GLD/GDX | 0.821 | 10.1 | 0.671 | 0.123 | 41.8 | 0.50 | 1.04 | 5.77 | ✗ | EG, stable mean, regime shift |
 
-The ADF–EG gap is substantial (for example 0.109 vs. 0.266 on CVX/XOM), which confirms that naive ADF over-states cointegration. **Only two of the five registered pairs pass validation.** SPY/IVV is cointegrated but reverts with a ~2-day half-life, too fast to trade after costs.
+The ADF–EG gap is substantial (0.108 vs. 0.266 on CVX/XOM), which confirms that naive ADF over-states cointegration. The Johansen trace test rejects "no cointegration" only for SPY/IVV and AMD/NVDA; GS/MS passes EG at 4.2% but not Johansen. **Only two of the five registered pairs pass validation on the 2018–2022 window, so only those two trade in the train/validation experiment.** SPY/IVV is strongly cointegrated but reverts with a ~2-day half-life, too fast for the strategy's holding rules.
 
 ### 9.2 MRJD estimates (training)
 
 | Pair | $\kappa$ (1/day) | Model $t_{1/2}$ | $\sigma$ | $\operatorname{sd}_\infty$ implied / actual | $\mu_J$ | $\sigma_J$ | $|t^{\text{model}}_{1/2}/t^{\text{emp}}_{1/2}-1|$ |
 |---|---:|---:|---:|---:|---:|---:|---:|
-| SPY/IVV | 0.4115 | 1.7 | 0.0015 | 0.94 | −0.0012 | 0.0061 | 11% |
-| CVX/XOM | 0.0105 | 66.1 | 0.0118 | 1.12 | −0.0040 | 0.0485 | 33% |
+| SPY/IVV | 0.4114 | 1.7 | 0.0015 | 0.94 | −0.0012 | 0.0061 | 11% |
+| CVX/XOM | 0.0106 | 65.6 | 0.0119 | 1.12 | −0.0041 | 0.0488 | 33% |
 | GS/MS | 0.0133 | 52.2 | 0.0092 | 1.00 | −0.0039 | 0.0448 | 13% |
-| AMD/NVDA | 0.0100 | 69.4 | 0.0232 | 0.59 | −0.0083 | 0.1195 | 0.5% |
-| GLD/GDX | 0.0068 | 102.0 | 0.0092 | 1.30 | −0.0083 | 0.0691 | 80% |
+| AMD/NVDA | 0.0098 | 70.6 | 0.0230 | 0.54 | +0.0063 | 0.1157 | 2% |
+| GLD/GDX | 0.0118 | 58.7 | 0.0132 | 1.13 | −0.0068 | 0.0923 | 40% |
 
-The reparameterised fit reproduces the empirical dispersion within roughly 0.6–1.3× on every pair, whereas the earlier direct optimisation was off by up to 15.6×. The large half-life disagreement on GLD/GDX is consistent with that pair failing the EG test: on a near-unit-root series, $\kappa$ is poorly identified.
+The reparameterised fit reproduces the empirical dispersion within roughly 0.5–1.1× on every pair, whereas the earlier direct optimisation was off by up to 15.6×. The half-life disagreements on CVX/XOM and GLD/GDX are consistent with those pairs failing the EG test: on a near-unit-root series, $\kappa$ is poorly identified.
 
 ### 9.3 Jump detection and the self-excitation test (H1)
 
 | Pair | Jumps FDR / nominal | Basis | $\hat{\bar\lambda}$ | $\hat\alpha$ | $\hat\beta$ | $\hat\eta$ | 95% CI on $\eta$ | LR | $p_{\chi^2_2}$ | $p_{\text{boot}}$ (eff. reps) | KS *p* |
 |---|---:|---|---:|---:|---:|---:|---|---:|---:|---:|---:|
 | SPY/IVV | 13 / 25 | FDR | 0.0095 | 0.046 | 0.324 | 0.142 | [−0.123, 0.407] | 2.08 | 0.353 | 0.086 (198) | 0.85 |
-| CVX/XOM | 5 / 8 | nominal | 0.0068 | ≈0 | 0.500 | ≈0 | [−0.001, 0.001] | ≈0 | 1.000 | 0.706 (180) | 0.21 |
-| GS/MS | 0 / 7 | nominal | 0.0060 | ≈0 | 0.500 | ≈0 | [−0.001, 0.001] | ≈0 | 1.000 | 0.649 (171) | 0.78 |
-| AMD/NVDA | 2 / 7 | nominal | 0.0060 | ≈0 | 0.500 | ≈0 | [−0.001, 0.001] | ≈0 | 1.000 | 0.649 (171) | 0.48 |
-| GLD/GDX | 0 / 5 | nominal | 0.0027 | 0.052 | 0.146 | 0.355 | [−0.201, 0.911] | 4.83 | 0.090 | 0.008 (122) | 0.46 |
+| CVX/XOM | 5 / 8 | nominal | 0.0068 | ≈0 | 0.500 | ≈0 | [−0.002, 0.002] | ≈0 | 1.000 | 0.717 (180) | 0.21 |
+| GS/MS | 0 / 7 | nominal | 0.0060 | ≈0 | 0.500 | ≈0 | [−0.001, 0.001] | ≈0 | 1.000 | 0.643 (171) | 0.78 |
+| AMD/NVDA | 3 / 9 | nominal | 0.0077 | ≈0 | 0.500 | ≈0 | [−0.001, 0.001] | ≈0 | 1.000 | 0.690 (187) | 0.14 |
+| GLD/GDX | 0 / 5 | nominal | 0.0028 | 0.053 | 0.150 | 0.351 | [−0.205, 0.907] | 4.81 | 0.090 | 0.008 (122) | 0.50 |
 
 <p align="center">
   <img src="outputs/CVX_XOM/train_val/jump_detection.png" width="85%" alt="CVX/XOM log spread with Lee–Mykland jumps (top) and the L statistic against its Gumbel critical value (bottom)"><br>
-  <em>Figure 1. CVX/XOM: Lee–Mykland statistic vs. Gumbel critical value. Rejections are sparse and isolated; there are no visible bursts.</em>
+  <em>Figure 1. CVX/XOM: Lee–Mykland statistic vs. the training-frozen Gumbel critical value. Rejections are sparse and isolated; there are no visible bursts.</em>
 </p>
 
 **Verdict on H1: not supported.**
@@ -383,8 +392,8 @@ The reparameterised fit reproduces the empirical dispersion within roughly 0.6�
 - Four of five pairs need the nominal fallback because FDR leaves 0–5 events. With so few events, three of the fits converge to the Poisson boundary $\alpha \to 0$.
 - On those three pairs $\hat\beta = 0.500$ is exactly the optimiser's starting value. This is the Davies problem in action: once $\alpha=0$, $\beta$ has no influence on the likelihood and is not estimated at all.
 - SPY/IVV, the only pair with a well-populated FDR basis, shows modest point estimates ($\eta = 0.14$), but neither the bootstrap LR ($p=0.086$) nor the CI rejects Poisson.
-- GLD/GDX's bootstrap $p = 0.008$ rests on **five events** and only 122 usable bootstrap replications. The $\chi^2$ reference gives $p=0.09$ and the $\eta$ CI spans [−0.20, 0.91]. This is not credible evidence of excitation.
-- Across the 23 walk-forward refits, the LR test rejects at 5% in 9/23 quarters for SPY/IVV, 10/23 for GLD/GDX, 1/23 for GS/MS and 0/23 for CVX/XOM and AMD/NVDA. Without correction across 23 refits this is weak and unstable evidence.
+- GLD/GDX's bootstrap $p = 0.008$ rests on **five events** and only 122 usable bootstrap replications. The $\chi^2$ reference gives $p=0.09$ and the $\eta$ CI spans [−0.21, 0.91]. This is not credible evidence of excitation.
+- Across the 23 walk-forward refits, the LR test rejects at 5% in 9/23 quarters for SPY/IVV, 8/23 for GLD/GDX, 1/23 for GS/MS and 0/23 for CVX/XOM and AMD/NVDA. Without correction across 23 refits this is weak and unstable evidence.
 - On the α≈0 pairs the intensity-calibration GLM is degenerate (slopes of order $-10^5$), because there is no variation in $\hat\lambda(t)$ to calibrate.
 
 <p align="center">
@@ -392,111 +401,121 @@ The reparameterised fit reproduces the empirical dispersion within roughly 0.6�
   <em>Figure 2. SPY/IVV: the most active intensity in the study. Ten isolated spikes over eight years, each decaying to baseline within about a week.</em>
 </p>
 
-A direct consequence is that **the Hawkes arm is almost always in the CALM regime**. In validation it occupies CALM on 97% (SPY/IVV), 99.8% (CVX/XOM, GS/MS, AMD/NVDA) and 92% (GLD/GDX) of days, and on 60–94% of walk-forward days. In validation, the CRISIS block never binds (0 entries blocked on every pair), the decay gate binds once (SPY/IVV), and the jump-entry path fires at most once per pair.
+A direct consequence is that **the Hawkes arm is almost always in the CALM regime**. In validation it occupies CALM on 97% (SPY/IVV), 99.8% (CVX/XOM, GS/MS, AMD/NVDA) and 84% (GLD/GDX) of days, and on 77–94% of walk-forward days. In validation the CRISIS block and the decay gate never bind, and the jump-entry path fires once (GS/MS).
 
 ### 9.4 Train / validation, both arms
 
-| Pair | Window | Arm | Trades | Ann. ret | Ann. vol | Sharpe (HAC se) | Max DD | NW excess %/yr | NW *t* | *p* |
-|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|
-| SPY/IVV | Train | Hawkes | 61 | −0.12 | 0.45 | −4.72 (0.63) | −2.00 | −2.12 | −7.70 | <0.001 |
-| | | Control | 57 | 0.10 | 0.42 | −4.53 (0.63) | −0.89 | −1.90 | −7.30 | <0.001 |
-| | Val | Hawkes | 25 | −0.09 | 0.41 | −5.08 (0.89) | −0.72 | −2.08 | −5.84 | <0.001 |
-| | | Control | 19 | 0.63 | 0.31 | −4.35 (0.90) | −0.43 | −1.37 | −4.92 | <0.001 |
-| CVX/XOM | Train | Hawkes | 21 | 3.10 | 1.85 | 0.58 (0.46) | −1.45 | 1.07 | 1.27 | 0.205 |
-| | | Control | 17 | 2.18 | 1.52 | 0.11 (0.47) | −2.17 | 0.17 | 0.23 | 0.817 |
-| | Val | Hawkes | 10 | 1.69 | 1.62 | −0.19 (0.74) | −1.86 | −0.30 | −0.25 | 0.800 |
-| | | Control | 8 | 1.42 | 1.20 | −0.48 (0.73) | −1.06 | −0.58 | −0.65 | 0.513 |
-| GS/MS | Train | Hawkes | 21 | 0.58 | 1.73 | −0.81 (0.46) | −2.94 | −1.40 | −1.79 | 0.074 |
-| | | Control | 22 | 1.54 | 1.36 | −0.34 (0.48) | −1.60 | −0.46 | −0.71 | 0.475 |
-| | Val | Hawkes | 10 | 1.76 | 1.80 | −0.13 (0.62) | −1.70 | −0.24 | −0.21 | 0.830 |
-| | | Control | 8 | 1.46 | 1.38 | −0.39 (0.59) | −1.17 | −0.54 | −0.66 | 0.507 |
-| AMD/NVDA | Train | Hawkes | 19 | −0.04 | 4.90 | −0.39 (0.49) | −15.76 | −1.92 | −0.80 | 0.426 |
-| | | Control | 19 | 2.53 | 3.30 | 0.17 (0.47) | −8.05 | 0.55 | 0.36 | 0.721 |
-| | Val | Hawkes | 7 | −6.00 | 5.32 | −1.51 (0.64) | −12.66 | −8.06 | −2.36 | 0.019 |
-| | | Control | 7 | −2.28 | 3.72 | −1.14 (0.64) | −6.96 | −4.24 | −1.80 | 0.073 |
-| GLD/GDX | Train | Hawkes | 21 | 1.39 | 1.58 | −0.38 (0.41) | −1.22 | −0.61 | −0.94 | 0.347 |
-| | | Control | 21 | 1.76 | 1.54 | −0.16 (0.36) | −1.59 | −0.25 | −0.44 | 0.661 |
-| | Val | Hawkes | 8 | 1.12 | 1.51 | −0.58 (0.64) | −1.03 | −0.88 | −0.91 | 0.362 |
-| | | Control | 8 | 1.50 | 1.09 | −0.47 (0.61) | −0.73 | −0.51 | −0.76 | 0.445 |
+SPY/IVV, CVX/XOM and GLD/GDX fail validation on the training window, so **neither arm opens a position** in train or validation. Their books earn the credited risk-free rate exactly (2.02% compounded, excess return 0, Sharpe 0). The two tradeable pairs:
 
-*"Ann. ret" includes the risk-free credit on idle cash, so a positive return with a negative excess return means "earned less than cash". Beta vs. SPY lies in [−0.016, 0.031] throughout, confirming market neutrality.*
+| Pair | Window | Arm | Trades | Gross exp. | Ann. ret | Ann. vol | Sharpe (HAC se) | Max DD | NW excess %/yr | NW *t* | *p* |
+|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| GS/MS | Train | Hawkes | 21 | 14.9% | 1.47 | 1.78 | −0.30 (0.45) | −2.58 | −0.53 | −0.65 | 0.514 |
+| | | Control | 21 | 11.2% | 2.01 | 1.34 | −0.00 (0.46) | −1.69 | −0.00 | −0.00 | 0.997 |
+| | Val | Hawkes | 9 | 15.2% | 2.47 | 1.83 | 0.25 (0.63) | −1.24 | +0.46 | 0.40 | 0.689 |
+| | | Control | 8 | 10.8% | 2.11 | 1.40 | 0.07 (0.59) | −1.00 | +0.10 | 0.12 | 0.904 |
+| AMD/NVDA | Train | Hawkes | 18 | 16.4% | 2.11 | 4.99 | 0.04 (0.51) | −13.75 | +0.21 | 0.08 | 0.933 |
+| | | Control | 17 | 10.6% | 2.72 | 3.42 | 0.22 (0.50) | −8.83 | +0.74 | 0.43 | 0.665 |
+| | Val | Hawkes | 6 | 17.2% | −4.35 | 5.58 | −1.13 (0.64) | −12.95 | −6.30 | −1.75 | 0.080 |
+| | | Control | 6 | 12.2% | −2.46 | 3.84 | −1.15 (0.62) | −8.47 | −4.42 | −1.87 | 0.062 |
 
-Validation samples are 7–25 trades. Most HAC Sharpe standard errors (0.6–0.9) are larger than the differences between arms. The CVX/XOM training Sharpe of 0.58 disappears out of sample, and AMD/NVDA is the clearest case of in-sample-to-out-of-sample decay (see Section 9.8).
+*"Ann. ret" includes the risk-free credit on idle cash, so a positive return with a negative excess return means "earned less than cash". Beta vs. SPY lies in [−0.014, 0.014] throughout, confirming market neutrality.*
+
+Validation samples are 6–9 trades, and the HAC Sharpe standard errors (≈0.6) exceed every difference between arms. The Hawkes arm runs 33–55% more gross exposure than the control in every window. AMD/NVDA loses in validation in both arms; its spread has no predictive power (Section 9.9).
 
 ### 9.5 Walk-forward out-of-sample (headline): 23 quarters, 2020-07-01 → Feb 2026
 
-| Pair | Arm | Trades | Win % | Ann. ret | Ann. vol | Sharpe (HAC se) | Max DD | NW excess %/yr [95% CI] | NW *t* | *p* | DSR prob. | MDE₈₀ %/yr |
-|---|---|---:|---:|---:|---:|---:|---:|---|---:|---:|---:|---:|
-| SPY/IVV | Hawkes | 46 | 0 | 0.75 | 0.33 | −3.80 (0.55) | −0.55 | −1.25 [−1.60, −0.90] | −7.03 | <10⁻¹¹ | ≈0 | 0.39 |
-| | Control | 39 | 0 | 0.92 | 0.31 | −3.55 (0.58) | −0.43 | −1.09 [−1.43, −0.74] | −6.17 | <10⁻⁹ | ≈0 | 0.36 |
-| CVX/XOM | Hawkes | 35 | 54 | 1.76 | 1.69 | −0.14 (0.43) | −3.08 | −0.24 [−1.65, 1.18] | −0.33 | 0.740 | 0.001 | 2.00 |
-| | Control | 29 | 55 | 1.53 | 1.30 | −0.36 (0.42) | −1.80 | −0.47 [−1.54, 0.60] | −0.86 | 0.388 | <0.001 | 1.54 |
-| GS/MS | Hawkes | 21 | 62 | 1.94 | 1.60 | −0.04 (0.43) | −1.81 | −0.06 [−1.40, 1.27] | −0.09 | 0.926 | 0.002 | 1.89 |
-| | Control | 18 | 44 | 1.99 | 1.40 | −0.01 (0.42) | −1.43 | −0.01 [−1.16, 1.13] | −0.02 | 0.980 | 0.003 | 1.65 |
-| AMD/NVDA | Hawkes | 17 | 59 | 2.75 | 5.35 | 0.16 (0.38) | −10.31 | +0.86 [−3.16, 4.87] | 0.42 | 0.676 | 0.008 | 6.33 |
-| | Control | 10 | 70 | 1.54 | 4.63 | −0.08 (0.41) | −13.93 | −0.37 [−4.09, 3.35] | −0.19 | 0.847 | 0.002 | 5.48 |
-| GLD/GDX | Hawkes | 17 | 59 | 1.89 | 2.03 | −0.05 (0.36) | −2.06 | −0.11 [−1.56, 1.34] | −0.14 | 0.885 | 0.002 | 2.40 |
-| | Control | 20 | 70 | 1.99 | 1.33 | −0.01 (0.35) | −0.96 | −0.02 [−0.92, 0.88] | −0.04 | 0.968 | 0.002 | 1.57 |
+Validation is re-run at every quarterly refit on the expanding window. The number of quarters in which the pair is allowed to open positions is shown as "Tradeable Q".
 
-*Deflated Sharpe uses 207 trials; the expected maximum Sharpe under no skill is ≈ 1.17. MDE₈₀ is the smallest annual excess return detectable at 80% power and 5% size.*
+| Pair | Arm | Tradeable Q | Trades | Win % | Gross exp. | Ann. ret | Ann. vol | Sharpe (HAC se) | Max DD | NW excess %/yr [95% CI] | NW *t* | *p* | MDE₈₀ %/yr |
+|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---|---:|---:|---:|
+| SPY/IVV | both | 0 / 23 | 0 | — | 0% | 2.02 | 0.00 | 0.00 (—) | 0.00 | 0.00 | — | — | — |
+| CVX/XOM | Hawkes | 7 / 23 | 13 | 54 | 5.2% | 1.85 | 1.17 | −0.14 (0.41) | −3.09 | −0.16 [−1.10, 0.78] | −0.34 | 0.737 | 1.38 |
+| | Control | 7 / 23 | 12 | 50 | 3.5% | 1.90 | 0.90 | −0.13 (0.40) | −1.80 | −0.12 [−0.83, 0.60] | −0.32 | 0.751 | 1.06 |
+| GS/MS | Hawkes | 5 / 23 | 3 | 67 | 4.4% | 2.04 | 0.97 | 0.03 (0.35) | −1.24 | +0.03 [−0.64, 0.70] | 0.09 | 0.931 | 1.15 |
+| | Control | 5 / 23 | 3 | 67 | 1.7% | 2.02 | 0.58 | 0.01 (0.33) | −0.95 | +0.00 [−0.37, 0.37] | 0.02 | 0.983 | 0.68 |
+| AMD/NVDA | Hawkes | 4 / 23 | 3 | 33 | 3.4% | 0.80 | 1.91 | −0.62 (0.46) | −6.84 | −1.19 [−2.90, 0.53] | −1.36 | 0.175 | 2.26 |
+| | Control | 4 / 23 | 3 | 67 | 2.0% | 1.96 | 1.39 | −0.03 (0.42) | −3.26 | −0.05 [−1.19, 1.09] | −0.08 | 0.934 | 1.64 |
+| GLD/GDX | Hawkes | 3 / 23 | 6 | 50 | 1.5% | 2.03 | 0.48 | 0.03 (0.37) | −0.55 | +0.01 [−0.33, 0.36] | 0.08 | 0.938 | 0.56 |
+| | Control | 3 / 23 | 7 | 57 | 1.3% | 2.03 | 0.39 | 0.04 (0.36) | −0.46 | +0.02 [−0.26, 0.29] | 0.11 | 0.909 | 0.47 |
 
-**Paired test of H2** ($r^{\text{Hawkes}}_t - r^{\text{Control}}_t$, Newey–West; computed from `walk_forward/{hawkes,control}/walk_forward_equity_curve.csv`):
+*Tradeable quarters: CVX/XOM 2020-Q3 → 2022-Q1; GS/MS 2023-Q1 → 2024-Q1; AMD/NVDA 2022-Q1, 2022-Q3, 2022-Q4, 2023-Q1; GLD/GDX 2020-Q4, 2021-Q2, 2021-Q3. Configurations tried: 63, 45, 36 and 27 (9 per tradeable quarter); Deflated Sharpe probabilities are 0.0001–0.027 for every arm. MDE₈₀ is the smallest annual excess return on total capital detectable at 80% power. It is small here only because the book is flat 78–100% of the time.*
 
-| Pair | Mean difference %/yr | 95% CI | *t* | *p* | Corr(arms) |
-|---|---:|---|---:|---:|---:|
-| SPY/IVV | −0.16 | [−0.41, 0.08] | −1.30 | 0.193 | 0.64 |
-| CVX/XOM | +0.23 | [−0.87, 1.33] | 0.41 | 0.680 | 0.67 |
-| GS/MS | −0.05 | [−0.90, 0.81] | −0.11 | 0.911 | 0.73 |
-| AMD/NVDA | +1.22 | [−2.87, 5.32] | 0.59 | 0.559 | 0.48 |
-| GLD/GDX | −0.09 | [−1.00, 0.83] | −0.19 | 0.850 | 0.73 |
-| **Equal-weight pooled** | **+0.23** | **[−0.65, 1.11]** | **0.51** | **0.609** | — |
+**The validation gate is the dominant feature of the walk-forward.** Under its own pre-specified criteria, the strategy finds a tradeable spread in only 19 of 115 pair-quarters. The book is flat 78–93% of days on the four pairs that ever trade, and never trades SPY/IVV. Neither arm earns a statistically significant excess return on any pair.
 
-**Verdict on H2: not rejected on any pair.** **Verdict on H3: not rejected for any tradeable pair; significantly negative for SPY/IVV.**
+**Paired test of H2** ($r^{\text{Hawkes}}_t - r^{\text{Control}}_t$, Newey–West; computed from `walk_forward*/{hawkes,control}/walk_forward_equity_curve.csv`):
 
-The Hawkes arm runs higher gross exposure than the control on every pair (CVX/XOM 13.1% vs. 9.8%, GS/MS 13.6% vs. 11.4%, AMD/NVDA 20.6% vs. 16.3%, GLD/GDX 13.3% vs. 9.1%) and correspondingly higher volatility. Section 10 explains why.
+| Pair | Gated: mean diff %/yr [95% CI] | *t* | *p* | Ungated: mean diff %/yr [95% CI] | *t* | *p* |
+|---|---|---:|---:|---|---:|---:|
+| SPY/IVV | 0 (both arms flat) | — | — | −0.03 [−0.10, 0.05] | −0.78 | 0.436 |
+| CVX/XOM | −0.05 [−0.54, 0.45] | −0.18 | 0.857 | −0.19 [−1.73, 1.35] | −0.24 | 0.809 |
+| GS/MS | +0.03 [−0.66, 0.71] | 0.07 | 0.942 | −0.20 [−1.78, 1.38] | −0.25 | 0.803 |
+| AMD/NVDA | −1.14 [−2.47, 0.19] | −1.68 | 0.094 | −0.68 [−3.31, 1.95] | −0.51 | 0.612 |
+| GLD/GDX | −0.00 [−0.13, 0.12] | −0.04 | 0.969 | −0.18 [−1.03, 0.67] | −0.41 | 0.681 |
+| **Equal-weight pooled** | **−0.23 [−0.55, 0.09]** | **−1.42** | **0.157** | **−0.26 [−1.00, 0.49]** | **−0.67** | **0.502** |
 
-### 9.6 Cross-pair portfolio (walk-forward, equal weight)
+**Verdict on H2: not rejected on any pair, gated or ungated.** Every pooled and nearly every per-pair point estimate is *negative*: if the Hawkes layer does anything, it costs a little. **Verdict on H3: not rejected for any pair.**
+
+### 9.6 Ungated sensitivity (`--ignore-validation`)
+
+This run uses the same corrected engine (Johansen hedge, 6 bp round trip, 1.5 × half-life maximum hold, frozen stops and jump flags, per-quarter sizing) but lets every pair trade in every quarter. It isolates the effect of the gate and answers "what happens if the validation checks are ignored". It is *not* the primary specification.
+
+| Pair | Arm | Trades | Gross exp. | Ann. vol | Sharpe (HAC se) | Max DD | NW excess %/yr [95% CI] | NW *t* | *p* |
+|---|---|---:|---:|---:|---:|---:|---|---:|---:|
+| SPY/IVV | Hawkes | 46 | 3.3% | 0.11 | −2.05 (0.39) | −0.08 | −0.22 [−0.30, −0.14] | −5.30 | <0.001 |
+| | Control | 36 | 3.2% | 0.11 | −1.72 (0.39) | −0.07 | −0.19 [−0.27, −0.11] | −4.41 | <0.001 |
+| CVX/XOM | Hawkes | 28 | 15.5% | 1.89 | −0.07 (0.42) | −3.09 | −0.12 [−1.67, 1.42] | −0.16 | 0.876 |
+| | Control | 27 | 11.1% | 1.38 | 0.05 (0.42) | −1.80 | +0.07 [−1.06, 1.19] | 0.12 | 0.908 |
+| GS/MS | Hawkes | 17 | 15.3% | 1.95 | −0.27 (0.48) | −6.83 | −0.53 [−2.36, 1.30] | −0.57 | 0.570 |
+| | Control | 17 | 10.2% | 1.75 | −0.19 (0.54) | −6.65 | −0.33 [−2.17, 1.51] | −0.35 | 0.727 |
+| AMD/NVDA | Hawkes | 14 | 20.2% | 5.78 | −0.13 (0.41) | −14.56 | −0.73 [−5.39, 3.93] | −0.31 | 0.758 |
+| | Control | 11 | 16.3% | 5.00 | −0.01 (0.40) | −10.51 | −0.05 [−3.98, 3.87] | −0.03 | 0.979 |
+| GLD/GDX | Hawkes | 22 | 12.3% | 2.61 | −0.11 (0.38) | −6.51 | −0.29 [−2.23, 1.65] | −0.29 | 0.770 |
+| | Control | 25 | 10.6% | 1.84 | −0.06 (0.38) | −3.23 | −0.11 [−1.47, 1.25] | −0.16 | 0.873 |
+
+Ungated, the strategy trades 11–46 times per arm, and the result does not change: no pair earns significant excess return, and the Hawkes arm carries 1.0–1.5× the control's exposure for a lower point estimate on every pair. SPY/IVV is the only significant result, and it is negative: even at 6 bp round trip, a two-day tracking-error spread does not cover its costs.
+
+### 9.7 Cross-pair portfolio (gated walk-forward, equal weight)
 
 | Arm | Mean pairwise ρ | $N_{\text{eff}}$ | Excess %/yr | SE | *t* | *p* | 95% CI | Sharpe (HAC se) |
 |---|---:|---:|---:|---:|---:|---:|---|---:|
-| Hawkes | −0.028 | 5.00 | −0.16 | 0.47 | −0.35 | 0.726 | [−1.08, 0.75] | −0.14 (0.40) |
-| Control | +0.001 | 4.98 | −0.39 | 0.43 | −0.92 | 0.356 | [−1.23, 0.44] | −0.38 (0.41) |
+| Hawkes | 0.012 | 4.77 | −0.26 | 0.22 | −1.21 | 0.225 | [−0.69, 0.16] | −0.52 (0.43) |
+| Control | 0.017 | 4.68 | −0.03 | 0.16 | −0.21 | 0.836 | [−0.34, 0.28] | −0.09 (0.43) |
 
-The pair return streams are essentially uncorrelated, so breadth delivers its full $\sqrt{5}\approx 2.2\times$ reduction in standard error. Even so, the pooled confidence interval is ±0.9%/yr wide and contains zero.
+The pair return streams are essentially uncorrelated, so breadth delivers close to its full $\sqrt{5}$ reduction in standard error. The pooled intervals are tight mainly because the gated book holds cash most of the time, and both contain zero.
 
-### 9.7 Robustness (CVX/XOM walk-forward)
+### 9.8 Robustness (CVX/XOM gated walk-forward, 7 tradeable quarters)
 
-| Scenario | Hawkes: excess %/yr (*t*) | Control: excess %/yr (*t*) | Note |
-|---|---:|---:|---|
-| Baseline | −0.24 (−0.33) | −0.47 (−0.86) | |
-| Half cost | +0.16 (+0.22) | −0.12 (−0.22) | The only scenario with a positive point estimate |
-| Double cost | **−1.78 (−2.42)** | −0.39 (−0.61) | The higher-turnover Hawkes arm degrades fastest |
-| Fixed 1.5 / 0.5 | −0.86 (−1.20) | −0.75 (−1.34) | No tuning |
-| Fixed 2.5 / 0.5 | −1.35 (−2.11) | −0.96 (−1.26) | |
-| Bipower detector | −0.48 (−0.71) | −0.47 (−0.86) | Control unchanged by construction |
-| Static OLS hedge | −0.24 (−0.33) | −0.47 (−0.86) | Identical to baseline; see Section 11.2(a) |
+| Scenario | Hawkes: trades, excess %/yr (*t*) | Control: trades, excess %/yr (*t*) |
+|---|---:|---:|
+| Baseline | 13, −0.16 (−0.34) | 12, −0.12 (−0.32) |
+| Half cost (3 bp RT) | 13, −0.14 (−0.28) | 12, −0.10 (−0.27) |
+| Double cost (12 bp RT) | 13, −0.21 (−0.44) | 12, −0.15 (−0.42) |
+| Fixed 1.5 / 0.5, no tuning | 15, −0.30 (−0.68) | 18, −0.11 (−0.33) |
+| Fixed 2.5 / 0.5, no tuning | 10, −0.43 (−0.98) | 4, +0.23 (+0.40) |
+| Bipower detector | 15, −0.08 (−0.15) | 12, −0.12 (−0.32) |
+| Static OLS hedge | 13, +0.00 (+0.01) | 12, −0.11 (−0.31) |
 
-No pre-specified perturbation produces a significantly positive result. Cost sensitivity dominates every other design choice.
+No pre-specified perturbation produces a significant result in either direction. At the corrected cost level, costs are no longer the deciding factor: halving or doubling them moves the estimate by about 0.05%/yr. The hedge estimator (Johansen vs. OLS) now changes the Hawkes-arm result, which it could not before because both settings ran OLS.
 
-### 9.8 Diagnostics: ceiling, predictability and costs
+### 9.9 Diagnostics: ceiling, predictability and costs
 
 | Pair | $t_{1/2}$ (d) | Indep. trips/yr | Sharpe ceiling $\sqrt{252\kappa/\pi}$ | Edge/trip % | Cost/trip % (RT + borrow) | Cost share of edge | Predictive *t*, 20 d (train / val) | Predictive *t*, 60 d (train / val) |
 |---|---:|---:|---:|---:|---:|---:|---|---|
-| SPY/IVV | 1.7 | 74.8 | 5.75 | 0.12 | 0.42 + 0.00 | **343%** | −18.8 / −15.5 | −14.2 / −11.5 |
-| CVX/XOM | 66.1 | 1.9 | 0.92 | 7.12 | 0.42 + 0.13 | 7.7% | −2.59 / −0.91 | −2.14 / −3.16 |
-| GS/MS | 52.2 | 2.4 | 1.03 | 4.71 | 0.42 + 0.12 | 11.6% | −1.38 / −1.50 | −2.64 / −0.47 |
-| AMD/NVDA | 69.4 | 1.8 | 0.89 | 12.93 | 0.42 + 0.28 | 5.4% | −0.25 / +0.35 | −0.16 / −0.46 |
-| GLD/GDX | 102.0 | 1.2 | 0.74 | 7.33 | 0.42 + 0.81 | 16.8% | −1.03 / −2.46 | −4.36 / −1.93 |
+| SPY/IVV | 1.7 | 74.8 | 5.74 | 0.12 | 0.06 + 0.00 | **51%** | −18.8 / −15.5 | −14.2 / −11.5 |
+| CVX/XOM | 65.6 | 1.9 | 0.92 | 7.17 | 0.06 + 0.13 | 2.7% | −2.58 / −0.94 | −2.08 / −3.21 |
+| GS/MS | 52.2 | 2.4 | 1.03 | 4.71 | 0.06 + 0.12 | 3.9% | −1.38 / −1.50 | −2.64 / −0.47 |
+| AMD/NVDA | 70.6 | 1.8 | 0.89 | 14.20 | 0.06 + 0.28 | 2.4% | −0.48 / +0.18 | −0.41 / −0.37 |
+| GLD/GDX | 58.7 | 2.1 | 0.97 | 7.09 | 0.06 + 0.47 | 7.4% | −0.93 / −2.66 | −4.07 / −2.04 |
 
 The ceiling assumes OU trading with position proportional to $(\theta - S_t)$: daily Sharpe $=\kappa\,\mathbb E|\theta-S|/\sigma = \sqrt{\kappa/\pi}$. It assumes perfect parameters, continuous rebalancing and zero cost, so it is an *upper bound*, not a forecast. "Edge/trip" is $(2.0-0.5)\operatorname{sd}_\infty/(1+h)$.
 
 Three conclusions follow:
 
-1. **SPY/IVV** is extremely predictable ($|t| > 10$) and economically worthless: the edge per round trip is about a third of the round-trip cost. The table shows the difference between statistical and economic significance in a single row.
+1. **SPY/IVV** is extremely predictable ($|t| > 10$) and economically marginal: even at 6 bp round trip, cost consumes about half of the idealised edge per trip, before slippage against the model. The table shows the difference between statistical and economic significance in a single row.
 2. **AMD/NVDA** has *no* predictability in either window ($|t| < 0.5$). The z-score does not forecast the spread, so no overlay can rescue it. The structural break in NVDA during the AI cycle is the obvious candidate cause.
-3. For the other pairs, **independent round trips per year (1.2–2.4) are the binding constraint**. Over a two-year validation window that is roughly four effective observations, which is why every CI in Section 9.4 is wide.
+3. For the other pairs, **independent round trips per year (about 2) are the binding constraint**. Over a two-year validation window that is roughly four effective observations, which is why every CI in Section 9.4 is wide. With costs at 3–7% of edge, the failure is in the signal, not the friction.
 
-### 9.9 Cross-sectional screen (45 candidate pairs, training window)
+### 9.10 Cross-sectional screen (45 candidate pairs, training window)
 
 | | Count |
 |---|---:|
@@ -511,18 +530,18 @@ Three conclusions follow:
 The number of nominally cointegrated pairs (5) is barely above what noise alone produces (2.25). The original five pairs fail the screen for different reasons:
 
 - CVX/XOM and GDX/GLD are not cointegrated.
-- GS/MS and AMD/NVDA are not predictive.
-- IVV/SPY fails on half-life and on edge versus cost (0.31×).
+- GS/MS and AMD/NVDA are not predictive at 20 days (t = −1.38 and −0.44).
+- IVV/SPY fails on half-life and on edge versus cost (2.1×, below the 5× requirement).
 
 Selecting pairs on nominal *p*-values and trading the winner is the cross-sectional analogue of the time-series multiplicity error that FDR addresses in jump detection.
 
-### 9.10 Per-pair interpretation
+### 9.11 Per-pair interpretation
 
-- **SPY/IVV.** Statistically the best-behaved pair: cointegrated, the most jumps, the only sensible Hawkes fit. Economically it is a pure cost drain: all 85 walk-forward trades across both arms lose money. The near-identical ETFs are kept in line by the creation/redemption arbitrage, so the residual tracking-error "spread" reverts within about two days, by amounts far below 42 bp round-trip cost.
-- **CVX/XOM.** The best realised Sharpe in training (0.58), but not cointegrated by EG and with a mean that shifted during the 2022 energy shock. Walk-forward excess return is indistinguishable from zero in both arms. Of 35 walk-forward Hawkes-arm trades, 16 exit on `max_hold` with a net loss of about $45k, which offsets the gains from mean-reversion and profit-target exits.
-- **GS/MS.** Passes validation and is marginally cointegrated, but the z-score has no reliable short-horizon predictive power. Excess returns are ≈ 0 in both arms.
-- **AMD/NVDA.** Cointegrated in training, yet the spread is unpredictable and has the highest volatility and drawdown (−10% to −14%). The best walk-forward point estimate (+0.86%/yr, Hawkes arm) comes with an MDE of 6.3%/yr. It is noise.
-- **GLD/GDX.** Not cointegrated, with a 100-day model half-life. It produces the study's most "significant" Hawkes fit, which rests on five events. Excess return ≈ 0.
+- **SPY/IVV.** Statistically the best-behaved pair: cointegrated on both tests, the most jumps, the only sensible Hawkes fit. Its ~2-day half-life fails validation at every refit, so the gated strategy never trades it. Ungated, all of its trades together lose 0.19–0.22%/yr with certainty (t ≈ −5). The near-identical ETFs are kept in line by the creation/redemption arbitrage, so the residual tracking-error "spread" reverts within about two days, by amounts too small to trade.
+- **CVX/XOM.** The pair that trades most under the gate (seven quarters, 2020-Q3 to 2022-Q1), but it is not cointegrated by EG on the full training window and its mean shifted during the 2022 energy shock. Excess return is indistinguishable from zero in both arms. In the Hawkes arm, 4 of 13 trades exit on `max_hold` (−$21k) and one is closed by the gate at a quarter boundary (−$8k), roughly offsetting the mean-reversion and profit-target gains.
+- **GS/MS.** The only pair that passes every check on the 2018–2022 window. It is tradeable in walk-forward only from 2023, and the z-score has no reliable short-horizon predictive power. Three trades per arm; excess return ≈ 0.
+- **AMD/NVDA.** Cointegrated in training (both tests), yet the spread is unpredictable and has the highest volatility and drawdowns. It loses in validation in both arms. In walk-forward the Hawkes arm's −1.19%/yr comes from three trades: one mean-reversion exit lost $55k.
+- **GLD/GDX.** Not cointegrated in training, and tradeable in only three walk-forward quarters. It produces the study's most "significant" Hawkes fit, which rests on five events. Excess return ≈ 0.
 
 ---
 
@@ -535,15 +554,15 @@ Selecting pairs on nominal *p*-values and trading the winner is the cross-sectio
 | Detection rate | 50% | 90% | 100% | 100% | 100% |
 | Median CI width on $\eta$ | 0.86 | 0.52 | 0.27 | 0.14 | 0.07 |
 
-Even for a strong effect, the daily event count gives coin-flip power and an uninformative interval. Weaker excitation, or the five to eight events available on four of the five pairs, is worse still. **The null on H1 is a statement about the estimator's power, not a demonstration that equity spread jumps are Poisson.**
+Even for a strong effect, the daily event count gives coin-flip power and an uninformative interval. Weaker excitation, or the five to nine events available on four of the five pairs, is worse still. **The null on H1 is a statement about the estimator's power, not a demonstration that equity spread jumps are Poisson.**
 
-**2. As implemented, the Hawkes arm is mostly a re-parameterised control.** Because $\hat\lambda(t) \approx \bar\lambda$ almost everywhere, the regime is CALM on 92–100% of validation days. In CALM the Hawkes arm enters at $0.85\,z_{\text{in}}$, exits at $0.85\,z_{\text{out}}$, holds up to 1.2× longer, and sizes at $f_\lambda f_{\text{regime}} = 1.5 \times 1.2 = 1.8$ times the control's multiplier, up to the 25% cap. The arm-level differences in Section 9.5 (more trades, higher exposure and volatility, faster degradation under double cost) are therefore **the result of looser bands and more leverage, not of information extracted from jump clustering**. A cleaner H2 design would hold thresholds and sizing fixed in CALM; see Section 12.
+**2. As implemented, the Hawkes arm is mostly a re-parameterised control.** Because $\hat\lambda(t) \approx \bar\lambda$ almost everywhere, the regime is CALM on 84–100% of validation days. In CALM the Hawkes arm enters at $0.85\,z_{\text{in}}$, exits at $0.85\,z_{\text{out}}$, holds up to 1.2× longer, and sizes at $f_\lambda f_{\text{regime}} = 1.5 \times 1.2 = 1.8$ times the control's multiplier, up to the 25% cap. The arm-level differences in Sections 9.4–9.6 (higher gross exposure than the control in every window, up to 2.6×, with higher volatility and slightly lower returns) are therefore **the result of looser bands and more leverage, not of information extracted from jump clustering**. A cleaner H2 design would hold thresholds and sizing fixed in CALM; see Section 12.
 
-**3. The premise of mean reversion is weak out of sample.** The predictability regressions show that the z-score forecasts the spread reliably only for SPY/IVV, where the edge is too small to trade. Elsewhere $|t| \lesssim 2.5$ in training and often vanishes in validation. A risk overlay can reshape a return distribution, but it cannot create a first moment that the base signal lacks.
+**3. The pairs rarely satisfy the strategy's own premises.** The validation gate admits only 2 of 5 pairs on the 2018–2022 window and 19 of 115 pair-quarters in the walk-forward. The predictability regressions show that the z-score forecasts the spread reliably only for SPY/IVV, whose half-life is too short to trade. Elsewhere $|t| \lesssim 2.6$ in training and often vanishes in validation. A risk overlay can reshape a return distribution, but it cannot create a first moment that the base signal lacks.
 
-**4. Bets per year limit what the data can show.** With half-lives of 50–100 days, each pair supports about 1–2.5 independent round trips per year. Since $\text{MDE}_{80\%} \approx 2.8\,\sigma_{\text{ann}}/\sqrt{\text{years}}$, detecting a 1%/yr edge on a single pair at 1.3–2.0% annual volatility needs roughly 13–31 years of data. Breadth across five uncorrelated pairs helps (SE falls by √5), but 5.6 years of five pairs still leaves a ±0.9%/yr interval (Section 9.6). The fundamental law of active management, $IR \approx IC\sqrt{\text{breadth}}$, captures the same problem.
+**4. Bets per year limit what the data can show.** With half-lives of 45–70 days, each pair supports about two independent round trips per year. Since $\text{MDE}_{80\%} \approx 2.8\,\sigma_{\text{ann}}/\sqrt{\text{years}}$, detecting a 1%/yr edge on a single pair traded continuously at 1.4–2.6% annual volatility (Section 9.6; AMD/NVDA runs at about 5%) needs roughly 15–53 years of data. Breadth across five uncorrelated pairs helps (SE falls by about √5), but it does not close that gap. The fundamental law of active management, $IR \approx IC\sqrt{\text{breadth}}$, captures the same problem.
 
-**5. Costs dominate small edges.** At the configured 21 bp per side, round-trip cost absorbs 5–17% of the theoretical edge per trip on the slow pairs before any estimation error, and 343% on SPY/IVV. On CVX/XOM, halving costs moves the point estimate from −0.24 to +0.16%/yr, and doubling them makes the Hawkes arm significantly negative.
+**5. Costs are not the explanation.** At 6 bp round trip, cost is 2–7% of the idealised edge per trip on the slow pairs. On CVX/XOM, halving or doubling costs moves the excess return by about 0.05%/yr (Section 9.8). The earlier version charged 42 bp round trip, which made costs look decisive; correcting it did not produce an edge.
 
 **What the negative result does and does not say.** It does *not* say that jump clustering is absent from equity spreads, or that intensity-aware execution is useless. It says that **daily bars on a handful of pairs cannot identify self-excitation, and an overlay built on an unidentified intensity cannot add measurable value**. The rigour of the protocol is what makes this negative result credible. An earlier, less careful version of the same code reported strong self-excitation ($\eta \approx 0.82$–0.85 on three pairs) for reasons that turned out to be artefacts (Section 11.1).
 
@@ -572,32 +591,34 @@ Each of these was present in an earlier version of this repository. Several of t
 | 13 | **Uncredited idle cash + CAPM headline** | A dollar-neutral book flat about 90% of the time "earned" an alpha of ≈ $-r_f$ on every pair with $R^2\approx 0.0005$ | Cash credit; NW mean-excess headline; CAPM for neutrality only |
 | 14 | **Restarted-and-stitched walk-forward** | Fresh capital each quarter, positions silently liquidated, 23 returns zeroed, all-zero trade metrics, failed quarters dropped (survivorship) | One continuous book; failures logged |
 | 15 | **Thresholds chosen on the full sample** | The "OOS" quarters reused $(2.0, 0.5)$ chosen with hindsight | Tuning inside the loop on train data; trial count fed to the DSR |
+| 16 | **"Johansen" hedge was OLS** | `method="johansen"` dispatched to the Engle–Granger OLS routine; the Johansen estimator was never called, and the "static OLS hedge" robustness scenario was identical to the baseline | Dispatch to the Johansen vector; regression test against `coint_johansen` |
+| 17 | **Costs 10× the stated level** | `commission_rate = 0.002` (20 bp) under a "2bp" comment, so a round trip cost 42 bp rather than 6 bp | Set to 0.0002 |
+| 18 | **Maximum hold not wired** | `max_hold_fraction = 1.5` was never passed to the signal generator, so trades exited at the class default of 0.8 × half-life | Passed in both pipelines; class default aligned with config |
+| 19 | **Validation gate did not gate** | `is_tradeable` was computed and saved but never consulted, so pairs failing every check were traded anyway | Entries blocked in both arms; per-quarter in walk-forward; `--ignore-validation` for the ungated sensitivity |
+| 20 | **Look-ahead in sizing, stops and jump flags** | Stops were scaled by the traded window's own spread s.d.; the walk-forward book was sized with the mean of all 23 quarterly hedges and stopped with the full-sample-hedge spread; BH and the Gumbel normalisers ran over the full sample, so later data decided earlier flags | Training-window stop reference frozen per position; per-quarter hedge per position; detection cutoff and $n$ frozen from training |
 
-The general lesson for point-process work on financial data: **apparent self-excitation is easy to fabricate.** Misdating, temporal aggregation of tests, calendar-time clocks and boundary-constrained optimisers each bias $\hat\eta$ upward, and they compound.
+The general lesson for point-process work on financial data: **apparent self-excitation is easy to fabricate.** Misdating, temporal aggregation of tests, calendar-time clocks and boundary-constrained optimisers each bias $\hat\eta$ upward, and they compound. Rows 16–20 were corrected in the current revision. Every published output was regenerated afterwards, and each fix has a regression test in `tests/test_fixes.py` that fails on the previous code.
+
+**What rows 16–20 changed.** Before them, the walk-forward traded every pair in every quarter at 42 bp round trip. It showed a pooled Hawkes-minus-control difference of +0.23%/yr (t = 0.51) and a significantly negative SPY/IVV (−1.25%/yr, t = −7.0). After them, the gated walk-forward trades 19 of 115 pair-quarters with a pooled difference of −0.23%/yr (t = −1.42), and the ungated sensitivity gives −0.26%/yr (t = −0.67). The qualitative conclusion, that there is no detectable value from the Hawkes layer, is unchanged.
 
 ### 11.2 Known implementation caveats in the current code
 
-These are disclosed so that readers can judge their effect. None of them plausibly reverses the qualitative conclusions, but several affect specific numbers.
+These are disclosed so that readers can judge their effect. None of them plausibly reverses the qualitative conclusions.
 
-- **(a) "Johansen" hedge is Engle–Granger OLS.** In `estimate_hedge_ratio_static`, `method="johansen"` dispatches to `_hedge_engle_granger`, so the hedge ratio is the OLS slope of $\log A$ on $\log B$ with an intercept. `hedge_ratio_diagnostics.csv` shows `hedge_ratio` equal to `h_ols_a_on_b` to 14 digits, and the `static_ols_hedge` robustness scenario is identical to the baseline. `_hedge_johansen` is implemented but never called.
-- **(b) Transaction costs are 10× the inline comment.** `BacktestConfig.commission_rate = 0.002` is annotated "2bp per side" but equals 20 bp. With 1 bp slippage the effective cost is 21 bp per side and 42 bp round trip, which is consistent with the 0.42% used in Sections 9.8–9.9. That is conservative for liquid large-cap equities and ETFs, where institutional all-in costs are typically single-digit bp. Given Section 9.7, this choice materially depresses every excess-return estimate. All published numbers use 42 bp RT.
-- **(c) Maximum holding period is not wired from config.** `TradingConfig.max_hold_fraction = 1.5` is not passed to `TradingSignals`. In train/val it is passed as `target_hold_fraction`, and walk-forward passes neither. The effective maximum hold is therefore the class default of **0.8 × half-life** (0.96× in CALM), not 1.5×. This probably contributes to the large number of loss-making `max_hold` exits on CVX/XOM.
-- **(d) Trailing-stop distance uses the activation multiplier.** In volatility mode the trailing distance is set to `trailing_activation_sigma` (1.5 sd), not `trailing_stop_sigma` (3 sd). In fixed mode, `__init__` similarly assigns the activation percentage to the trailing distance.
-- **(e) The stop-sensitivity diagnostic is inert.** `diagnostics.stop_sensitivity` overrides the *fixed* stop percentages, but the default `stop_mode="volatility"` ignores them. All four configurations in `outputs/diagnostics/*/stop_sensitivity.csv` are therefore identical, and the claim that fixed 3% stops harmed performance rests on the earlier run described in the config docstring, not on the published table.
-- **(f) The validation gate does not gate.** `is_tradeable` is computed and saved but never blocks trading. SPY/IVV, CVX/XOM and GLD/GDX fail validation on the training window yet are traded in both pipelines. Their results should be read as "what happens if the gate is ignored".
-- **(g) Look-ahead in the risk overlay and sizing.** In train/val, stop levels are scaled by the *evaluation window's own* spread s.d. In walk-forward, the continuous book is sized with the **mean of all 23 quarterly hedge ratios**, including those estimated after the trade date, and stops are scaled by the s.d. of the full-sample-hedge spread over the whole OOS period. Signals are causal, but the P&L book tracks $\log A - \bar h\log B$ rather than each quarter's signalled spread. Stops rarely bind (Section 9.10), so the effect on returns is small, but these are leaks.
-- **(h) Jump flags are not strictly causal.** `compute_artifacts` runs Lee–Mykland and BH over the *full* sample. The Gumbel normalisers $C_n, S_n$ depend on $n$, and the BH threshold depends on the full *p*-value distribution, so whether day $t$ is flagged depends weakly on later data. The intensity is causal given the flags.
-- **(i) Lee–Mykland + BH is doubly conservative.** The Gumbel *p*-value is the probability that the *maximum* of $n$ null statistics exceeds $\mathcal L_i$, which is already a family-wise adjustment. Applying BH on top over-corrects, and even the "nominal" basis is a family-wise 5% rule. This pushes event counts down and compounds the scarcity in Section 10. A per-observation (non-maximal) calibration followed by BH would be the internally consistent alternative.
-- **(j) Detector-comparison column.** `JumpDetector.calculate_jump_statistics` computes inter-jump times from jump *sizes*, so `mean_inter_jump_days` in `jump_detector_comparison.csv` is not meaningful. The other columns are unaffected.
-- **(k) Deflated Sharpe trial count.** The 207 trials are nine configurations on each of 23 *different* expanding windows, not 207 strategies on the same series. Treating them as one search is conservative, and the DSR here should be read as indicative.
-- **(l) Capital-at-risk extrapolation.** `car_*` metrics scale excess return linearly by 1/mean exposure. For SPY/IVV (about 2% mean exposure, 46× scale) this produces meaningless figures (−55%/yr) and should be ignored.
+- **(a) Trailing-stop distance uses the activation multiplier.** In volatility mode the trailing distance is set to `trailing_activation_sigma` (1.5 sd), not `trailing_stop_sigma` (3 sd). In fixed mode, `__init__` similarly assigns the activation percentage to the trailing distance. No trade in the gated walk-forward and 7 of 243 trades in the ungated sensitivity exit via a trailing stop.
+- **(b) The stop-sensitivity diagnostic is inert.** `diagnostics.stop_sensitivity` overrides the *fixed* stop percentages, but the default `stop_mode="volatility"` ignores them. All four configurations in `outputs/diagnostics/*/stop_sensitivity.csv` are therefore identical, and the claim that fixed 3% stops harmed performance rests on the earlier run described in the config docstring, not on the published table.
+- **(c) Positions carried across a quarter boundary.** Each quarter's signal generator starts flat and does not know about a position carried in from the previous quarter. The backtest closes such a position on the new quarter's first close signal, a resting stop or target, or the gate's `pair_untradeable` exit. It is not subject to the new quarter's `max_hold`.
+- **(d) Lee–Mykland + BH is doubly conservative.** The Gumbel *p*-value is the probability that the *maximum* of $n$ null statistics exceeds $\mathcal L_i$, which is already a family-wise adjustment. Applying BH on top over-corrects, and even the "nominal" basis is a family-wise 5% rule. This pushes event counts down and compounds the scarcity in Section 10. A per-observation (non-maximal) calibration followed by BH would be the internally consistent alternative.
+- **(e) Detector-comparison column.** `JumpDetector.calculate_jump_statistics` computes inter-jump times from jump *sizes*, so `mean_inter_jump_days` in `jump_detector_comparison.csv` is not meaningful. That table is also a descriptive full-sample comparison: it re-runs BH over the whole series and is not used for trading. The other columns are unaffected.
+- **(f) Deflated Sharpe trial count.** The 27–63 trials (207 ungated) are up to nine configurations on each of several *different* expanding windows, not that many strategies on the same series. Treating them as one search is conservative, and the DSR here should be read as indicative.
+- **(g) Capital-at-risk and MDE on a mostly flat book.** `car_*` metrics scale excess return linearly by 1/mean exposure, which is meaningless at the 1–5% mean exposures of the gated walk-forward. The MDE, likewise, is computed on total capital and is small only because the book holds cash.
 
 ### 11.3 Data and design limitations
 
-- **Dividends excluded.** The omitted dividend differential (up to about 1.3%/yr gross on the long/short legs, roughly 9–17 bp/yr on capital at observed exposures) is of the **same order as the effects being tested** for CVX/XOM, GS/MS and GLD/GDX. The SPY benchmark is a price series, which affects only the neutrality regression.
+- **Dividends excluded.** The omitted dividend differential (up to about 1.3%/yr gross on the long/short legs, roughly 9–17 bp/yr on capital at ungated exposures) is of the **same order as the effects being tested** for CVX/XOM, GS/MS and GLD/GDX. The SPY benchmark is a price series, which affects only the neutrality regression.
 - **Ex-post pair selection.** The five registered pairs are well-known textbook pairs chosen with general hindsight. The FDR-corrected screen selects none of them.
-- **Small universe.** Ten symbols and five pairs. Effective breadth is the main constraint on power.
-- **Regime composition.** Training includes the 2020 COVID dislocation and the 2022 energy shock. Validation and walk-forward include the NVDA AI-driven re-rating. Stationarity of the cointegrating relation across these periods is doubtful for CVX/XOM, AMD/NVDA and GLD/GDX.
+- **Small universe.** Ten symbols and five pairs. Effective breadth is the main constraint on power, and the validation gate shrinks it further.
+- **Regime composition.** Training includes the 2020 COVID dislocation and the 2022 energy shock. Validation and walk-forward include the NVDA AI-driven re-rating. Stationarity of the cointegrating relation across these periods is doubtful for CVX/XOM, AMD/NVDA and GLD/GDX, which is what the gate detects.
 - **Daily frequency.** Jump detection, BNS asymptotics and Hawkes identification all favour intraday data. `intraday.py` provides frequency-aware infrastructure, but **no intraday data ships with this repository and no intraday P&L is claimed.**
 - **Execution realism.** Open-auction fills with no market impact, no borrow recalls, a constant borrow table, and a single cost level for every symbol regardless of liquidity.
 - **Univariate Hawkes.** Jumps in the two legs, in the market, and in spreads across pairs plausibly *cross*-excite. A univariate model on the spread cannot capture this.
@@ -619,7 +640,7 @@ These are disclosed so that readers can judge their effect. None of them plausib
 2. **Multivariate / marked Hawkes.** Model cross-excitation between legs, the market and sector ETFs, with jump size as a mark (Aït-Sahalia et al. 2015).
 3. **A cleaner H2 design.** Fix thresholds and sizing at control values in CALM and let the Hawkes layer act only when $e_t$ is elevated, so the treatment isolates information content. Alternatively, use $\lambda(t)$ purely as a *risk* input (volatility forecasting, position caps) rather than a signal.
 4. **Breadth.** A sector-neutral universe of hundreds of pairs, screened with FDR control, in the spirit of Avellaneda & Lee (2010), to trade breadth for per-pair power.
-5. **Fixes to Section 11.2**, in particular (a), (b), (c), (f) and (g), followed by a rerun of the published matrix.
+5. **The remaining caveats in Section 11.2**: the trailing-stop distance, a working stop-sensitivity diagnostic, explicit handling of positions carried across quarters, and a non-maximal Lee–Mykland calibration under BH.
 6. **Model-based execution.** Use the MRJD conditional distribution for optimal entry and exit bands (Bertram 2010) instead of fixed z-thresholds.
 
 ---
@@ -641,10 +662,14 @@ python main.py --pair GS_MS  --mode walk_forward --no-control
 # Cross-pair equal-weight portfolio of walk-forward returns
 python main.py --pair all --mode portfolio
 
+# Ungated sensitivity (writes to outputs/<PAIR>/walk_forward_ungated/, never over the gated run)
+python main.py --pair all --mode walk_forward --ignore-validation
+
 # Pre-specified robustness matrix (published for CVX_XOM)
 python main.py --pair CVX_XOM --mode robustness
 
 # Options: --detector {lee_mykland,bipower,threshold}  --hedge-mode {static,periodic,rolling}
+#          --ignore-validation (trade pairs that fail the training-window gate)
 #          --no-fdr  --seed N  --quiet  --screened (trade FDR-surviving screen pairs only)
 
 python pair_screen.py --out outputs/pair_screen.csv   # 45-pair screen
@@ -653,10 +678,10 @@ python intraday.py                                    # synthetic Hawkes power s
 python hawkes_calibration.py                          # synthetic recovery check
 python mrjd_estimation.py                             # synthetic recovery check
 
-pytest -q                                             # 62 tests (all passing)
+pytest -q                                             # 77 tests (all passing)
 ```
 
-**Test suite.** The 62 tests are regression tests for the failure modes in Section 11.1 and for estimator validity. They cover:
+**Test suite.** The 77 tests are regression tests for the failure modes in Section 11.1 and for estimator validity. They cover:
 
 - Hawkes: parameter recovery, CI coverage, an interior optimum, and the LR test rejecting on clustered data but not on Poisson data.
 - MRJD: recovery of OU parameters in day units, rejection of year units and explosive series.
@@ -668,8 +693,11 @@ pytest -q                                             # 62 tests (all passing)
 - An exact risk-free return for a zero-trade book.
 - Next-bar fills.
 - Pooling and effective breadth.
+- `tests/test_fixes.py` (15 tests) covers rows 16–20 of Section 11.1. It checks that the Johansen vector is used, the 2 bp cost, the hold-fraction wiring in both pipelines, the validation gate, flags unchanged when later data is appended, per-quarter hedge and stop inputs on every walk-forward bar, a zero Sharpe for a flat book, and that zero-trade runs cannot leave a previous run's trade file in place. Each of the original 12 fails on the previous code.
 
-**Artefacts.** Every file is written by `results_io.ResultsWriter`, and each output directory contains a `MANIFEST.json` listing exactly the files the current run produced. **Files present in `outputs/` but not listed in the adjacent manifest are legacy artefacts from earlier versions** and should not be cited. These include `train_val/performance_metrics.csv`, `train_val/hawkes_suitability.csv`, and the `walk_forward/quarterly_*` and `walk_forward/walk_forward_*` files at the root of `walk_forward/`. Current walk-forward results live in `walk_forward/hawkes/`, `walk_forward/control/` and `walk_forward/oos_arm_comparison.csv`.
+**Artefacts.** Every file is written by `results_io.ResultsWriter`, and each output directory contains a `MANIFEST.json` listing exactly the files the current run produced. **Files present in `outputs/` but not listed in the adjacent manifest are legacy artefacts from earlier versions** and should not be cited. These include `train_val/performance_metrics.csv`, `train_val/hawkes_suitability.csv`, and the `walk_forward/quarterly_*` and `walk_forward/walk_forward_*` files at the root of `walk_forward/`. Current walk-forward results live in `walk_forward/hawkes/`, `walk_forward/control/` and `walk_forward/oos_arm_comparison.csv`. A run with zero trades writes header-only trade files, so a previous run's trades can never persist unnoticed.
+
+The published walk-forward, robustness and ungated outputs were generated by calling `main.run_walk_forward` in four parallel processes (one per pair or scenario, single-threaded BLAS). This is about 10× faster on four cores than the sequential CLI, and was verified to produce byte-identical CSV and JSON files to `python main.py --pair GS_MS --mode walk_forward [--ignore-validation]`. The CLI commands above reproduce every file. Set `OMP_NUM_THREADS=1` to avoid BLAS oversubscription, which makes the sequential walk-forward several times slower.
 
 ```text
 outputs/
@@ -679,11 +707,13 @@ outputs/
 ├── <PAIR>/walk_forward/
 │   ├── hawkes/  control/      continuous-book equity, signals, trades, metrics, quarterly parameters, run_config.json
 │   └── oos_arm_comparison.csv
+├── <PAIR>/walk_forward_ungated/   same layout; --ignore-validation sensitivity (Section 9.6)
 ├── CVX_XOM/robustness/<scenario>/   per-scenario walk-forward (both arms) + walk_forward_robustness.csv
 ├── portfolio/walk_forward/{hawkes,control}/   pooled returns, correlation, metrics
 ├── diagnostics/<PAIR>/        ceiling_analysis, predictability_test, stop_sensitivity
 ├── pair_screen.csv
-└── summary_all_pairs*.csv     cross-pair summaries (+ captured terminal logs *_terminal.txt)
+└── summary_all_pairs*.csv     cross-pair summaries: summary_all_pairs.csv (last run: robustness),
+                               summary_all_pairs_walk_forward[_ungated].csv; terminal logs *_terminal.txt
 ```
 
 The paired H2 statistics in Section 9.5 can be reproduced with:
@@ -691,10 +721,15 @@ The paired H2 statistics in Section 9.5 can be reproduced with:
 ```python
 import pandas as pd
 from statistics_tools import newey_west_mean_test
-for p in ["SPY_IVV", "CVX_XOM", "GS_MS", "AMD_NVDA", "GLD_GDX"]:
-    h = pd.read_csv(f"outputs/{p}/walk_forward/hawkes/walk_forward_equity_curve.csv", index_col=0)["returns"]
-    c = pd.read_csv(f"outputs/{p}/walk_forward/control/walk_forward_equity_curve.csv", index_col=0)["returns"]
-    print(p, newey_west_mean_test((h - c).dropna().iloc[1:].values))
+for run in ("walk_forward", "walk_forward_ungated"):
+    diffs = {}
+    for p in ["SPY_IVV", "CVX_XOM", "GS_MS", "AMD_NVDA", "GLD_GDX"]:
+        h = pd.read_csv(f"outputs/{p}/{run}/hawkes/walk_forward_equity_curve.csv", index_col=0)["returns"]
+        c = pd.read_csv(f"outputs/{p}/{run}/control/walk_forward_equity_curve.csv", index_col=0)["returns"]
+        diffs[p] = (h - c).dropna().iloc[1:]
+        print(run, p, newey_west_mean_test(diffs[p].values))
+    pooled = pd.DataFrame(diffs).fillna(0.0).mean(axis=1)
+    print(run, "pooled", newey_west_mean_test(pooled.values))
 ```
 
 ---
@@ -720,7 +755,7 @@ for p in ["SPY_IVV", "CVX_XOM", "GS_MS", "AMD_NVDA", "GLD_GDX"]:
 | `diagnostics.py` | Sharpe ceiling, predictability, stop sensitivity |
 | `intraday.py` | Frequency abstraction, intraday loaders, synthetic Hawkes power study |
 | `results_io.py` | All artefact and figure writing, manifests |
-| `tests/` | 62 regression and estimator-validity tests |
+| `tests/` | 77 regression and estimator-validity tests |
 
 ---
 
