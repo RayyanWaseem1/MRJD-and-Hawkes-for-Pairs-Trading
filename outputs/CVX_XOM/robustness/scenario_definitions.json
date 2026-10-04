@@ -1,0 +1,34 @@
+{
+  "baseline": {
+    "description": "Shipped walk-forward specification."
+  },
+  "half_cost": {
+    "description": "Half the baseline commissions and slippage.",
+    "commission_multiplier": 0.5,
+    "slippage_multiplier": 0.5
+  },
+  "double_cost": {
+    "description": "Twice the baseline commissions and slippage.",
+    "commission_multiplier": 2.0,
+    "slippage_multiplier": 2.0
+  },
+  "fixed_entry_1_5": {
+    "description": "Fixed z-entry 1.5 and exit 0.5; no threshold tuning.",
+    "z_entry": 1.5,
+    "z_exit": 0.5
+  },
+  "fixed_entry_2_5": {
+    "description": "Fixed z-entry 2.5 and exit 0.5; no threshold tuning.",
+    "z_entry": 2.5,
+    "z_exit": 0.5
+  },
+  "bipower_detector": {
+    "description": "Use the pre-specified bipower jump detector.",
+    "detector": "bipower"
+  },
+  "static_ols_hedge": {
+    "description": "Use a static OLS hedge estimator rather than Johansen.",
+    "hedge_mode": "static",
+    "hedge_ratio_method": "ols"
+  }
+}

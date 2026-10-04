@@ -1,0 +1,2 @@
+max_hold_count,max_hold_win_rate,max_hold_avg_return,max_hold_total_pnl,mean_reversion_count,mean_reversion_win_rate,mean_reversion_avg_return,mean_reversion_total_pnl,profit_target_count,profit_target_win_rate,profit_target_avg_return,profit_target_total_pnl,emergency_stop_count,emergency_stop_win_rate,emergency_stop_avg_return,emergency_stop_total_pnl
+6,0.0,-4.880958876069279,-73075.67206996118,11,54.54545454545454,0.5992352701313369,16305.840721078459,3,100.0,3.306060105999444,24762.497981542423,1,0.0,-3.8755346039023273,-9829.384465425708

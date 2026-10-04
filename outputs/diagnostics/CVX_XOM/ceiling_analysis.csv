@@ -1,0 +1,2 @@
+pair,half_life_days,kappa,spread_sd,sharpe_ceiling,independent_trips_per_yr,edge_per_trip_pct,round_trip_cost_pct,borrow_pct,cost_share_of_edge_pct,hedge_ratio
+CVX_XOM,66.07071799185424,0.010490989073940476,0.08169044160407886,0.9173468022490234,1.9070475367852724,7.1237576122522945,0.42,0.13109269442828222,7.735983232787802,0.7200987045848772

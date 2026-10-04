@@ -1,0 +1,22 @@
+{
+  "lr_statistic": 2.0825005863182753,
+  "lr_p_chi2_df2": 0.3530130361387687,
+  "lr_p_bootstrap": 0.08585858585858586,
+  "lr_n_bootstrap": 198,
+  "ll_hawkes": -70.51171260535826,
+  "ll_poisson": null,
+  "branching_ratio": 0.14223936912592136,
+  "se_branching_ratio": 0.13525142760914574,
+  "branching_ci95_low": -0.1228534289880043,
+  "branching_ci95_high": 0.407332167239847,
+  "se_lambda_bar": 0.002996126887639846,
+  "se_alpha": 0.05484815111918745,
+  "se_beta": 0.27851060645955744,
+  "ks_statistic": 0.15849915490663627,
+  "ks_pvalue": 0.8504063738433854,
+  "gof_is_good": true,
+  "intensity_poisson_slope": 1.11808552137958,
+  "intensity_poisson_pvalue": 0.05112665405678697,
+  "n_jumps_fitted": 13,
+  "detection_basis": "fdr"
+}

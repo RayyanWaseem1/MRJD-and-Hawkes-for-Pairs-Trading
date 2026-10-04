@@ -1,0 +1,2 @@
+n_pairs,mean_pairwise_correlation,effective_independent_pairs,breadth_gain_vs_single,n_obs,pooled_mean_annualized_excess_pct,pooled_se_annualized_pct,pooled_t_statistic,pooled_p_value,pooled_ci95_low_pct,pooled_ci95_high_pct,pooled_sharpe_annualized,pooled_se_annualized_hac,pooled_t_statistic_hac
+5,-0.028154930658625187,5.0,2.23606797749979,1416,-0.16424595504837147,0.4678048767191734,-0.35109927925563184,0.725566135664033,-1.0811435134179515,0.7526516033212085,-0.1397304126615883,0.3979874850731189,-0.35109247878967054

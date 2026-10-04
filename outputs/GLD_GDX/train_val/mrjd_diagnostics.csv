@@ -1,0 +1,2 @@
+model_half_life_days,empirical_half_life_days,implied_stationary_sd,actual_spread_sd,sd_ratio,time_units,dt,half_life_relative_error
+101.99865730579266,56.6341898475656,0.0792720443163785,0.061208721824526933,1.2951102711086744,trading_day,1.0,0.8010084999949378

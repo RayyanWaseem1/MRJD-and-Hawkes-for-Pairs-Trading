@@ -1,0 +1,4 @@
+detector,n_jumps,jump_frequency_pct,mean_inter_jump_days,clustering_coef,overlap_with_bipower,overlap_with_threshold,overlap_with_lee_mykland
+lee_mykland,3,0.1531393568147014,0.06997222864056185,0.0,3.0,3.0,
+bipower,23,1.174068402246044,-0.006882300618830328,0.043478260869565216,,12.0,3.0
+threshold,20,1.0209290454313424,0.008368575389963957,0.0,12.0,,3.0

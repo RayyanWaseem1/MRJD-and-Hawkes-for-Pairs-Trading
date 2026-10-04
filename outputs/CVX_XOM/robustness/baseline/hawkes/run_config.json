@@ -1,0 +1,151 @@
+{
+  "pair": "CVX_XOM",
+  "arm": "hawkes",
+  "config": {
+    "data": {
+      "asset_a_symbol": "CVX",
+      "asset_b_symbol": "XOM",
+      "asset_a_csv": "/Users/rayyanwaseem/Desktop/Projects/MRJD-and-Hawkes-for-Pairs-Trading/OHLCV_CVX.csv",
+      "asset_b_csv": "/Users/rayyanwaseem/Desktop/Projects/MRJD-and-Hawkes-for-Pairs-Trading/OHLCV_XOM.csv",
+      "date_columns": "ts_event",
+      "hedge_ratio_method": "johansen",
+      "hedge_mode": "static",
+      "lookback_period": 30,
+      "adjust_splits": true,
+      "large_move_flag_threshold": 0.25
+    },
+    "jump_detection": {
+      "method": "lee_mykland",
+      "window_size": 20,
+      "significance_level": 0.05,
+      "apply_fdr": true,
+      "min_jumps_for_hawkes": 10,
+      "fallback_to_nominal_for_hawkes": true,
+      "threshold_sigma": 4.0
+    },
+    "hawkes": {
+      "kernel": "exponential",
+      "baseline_bounds": [
+        1e-06,
+        10.0
+      ],
+      "excitation_bounds": [
+        1e-06,
+        5.0
+      ],
+      "decay_bounds": [
+        0.0001,
+        10.0
+      ],
+      "estimation_method": "MLE",
+      "max_iterations": 1000,
+      "tolerance": 1e-08,
+      "n_restarts": 4,
+      "lr_bootstrap_reps": 200
+    },
+    "mrjd": {
+      "dt": 1.0,
+      "estimation_method": "MLE",
+      "joint_refinement": false,
+      "raise_on_half_life_mismatch": false
+    },
+    "trading": {
+      "z_entry_threshold": 2.0,
+      "z_exit_threshold": 0.5,
+      "z_score_basis": "empirical",
+      "z_score_lookback": 60,
+      "max_position_size": 0.25,
+      "min_position_size": 0.1,
+      "use_hawkes_regimes": true,
+      "use_jump_entries": true,
+      "regime_excess_calm": 0.05,
+      "regime_excess_elevated": 1.0,
+      "regime_excess_crisis": 5.0,
+      "lambda_decay_lookback": 5,
+      "min_lambda_decay_pct": 0.15,
+      "min_hold_fraction": 0.5,
+      "target_hold_fraction": 0.8,
+      "max_hold_fraction": 1.5,
+      "max_holding_period_cap": 120,
+      "use_mrjd_holding_period": false,
+      "emergency_z_move": 2.5
+    },
+    "backtest": {
+      "initial_capital": 1000000.0,
+      "commission_rate": 0.002,
+      "slippage_bps": 1.0,
+      "execution_delay": 1,
+      "execution_price": "next_open",
+      "risk_free_rate": 0.02,
+      "credit_idle_cash": true,
+      "long_financing_rate": 0.02,
+      "short_rebate_rate": 0.015,
+      "default_borrow_rate": 0.003,
+      "borrow_rates": {
+        "CVX": 0.0025,
+        "XOM": 0.0025,
+        "GS": 0.003,
+        "MS": 0.003,
+        "SPY": 0.002,
+        "IVV": 0.0025,
+        "AMD": 0.0075,
+        "NVDA": 0.005,
+        "GLD": 0.003,
+        "GDX": 0.01
+      },
+      "max_position_pct": 0.25,
+      "stop_mode": "volatility",
+      "stop_loss_sigma": 4.0,
+      "trailing_stop_sigma": 3.0,
+      "trailing_activation_sigma": 1.5,
+      "profit_target_sigma": 5.0,
+      "stop_loss_pct": 0.03,
+      "trailing_stop_pct": 0.015,
+      "trailing_activation_pct": 0.01,
+      "profit_target_pct": 0.06,
+      "stop_floor_pct": 0.01,
+      "stop_cap_pct": 0.5,
+      "use_intraday_stops": true,
+      "regime_threshold": 0.3,
+      "report_capital_at_risk": true,
+      "target_volatility": 0.1,
+      "benchmark_csv": "/Users/rayyanwaseem/Desktop/Projects/MRJD-and-Hawkes-for-Pairs-Trading/OHLCV_SPY.csv"
+    },
+    "train_val": {
+      "train_start": "2018-05-01",
+      "train_end": "2022-12-31",
+      "val_start": "2023-01-01",
+      "val_end": "2024-12-31"
+    },
+    "walk_forward": {
+      "min_train_days": 504,
+      "tune_thresholds": true,
+      "z_entry_grid": [
+        1.5,
+        2.0,
+        2.5
+      ],
+      "z_exit_grid": [
+        0.25,
+        0.5,
+        0.75
+      ],
+      "reestimate_hedge_each_quarter": true
+    },
+    "statistics": {
+      "bootstrap_reps": 1000,
+      "bootstrap_mean_block": 20.0,
+      "power_target_effect": 0.01,
+      "seed": 42
+    },
+    "visualization": {
+      "figure_size": [
+        14.0,
+        8.0
+      ],
+      "save_plots": true,
+      "plot_format": "png",
+      "dpi": 150
+    }
+  }
+}

@@ -1,0 +1,7 @@
+{
+  "arm": "hawkes",
+  "weighting": "equal weight across pairs",
+  "missing_return_policy": "Missing pair returns are treated as 0.0 (flat).",
+  "risk_free_rate": 0.02,
+  "source": "Continuous walk-forward out-of-sample daily returns."
+}

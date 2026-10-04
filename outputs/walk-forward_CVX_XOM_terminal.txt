@@ -1,0 +1,255 @@
+(venv) (base) rayyanwaseem@Rayyans-MacBook-Pro MRJD-and-Hawkes-for-Pairs-Trading % python main.py --pai
+r CVX_XOM --mode all --seed 42
+========================================================================
+MRJD + HAWKES PAIRS TRADING
+ pairs: CVX_XOM
+ modes: train_val, walk_forward
+ seed: 42
+========================================================================
+
+ DIVIDEND TREATMENT
+Dividends are exluded from this study, in both the spread construction and 
+the backtest PnL. This is a real, unmodelled cash flow for a long/short book:
+the position is long one name and short the other, so the strategy pays the 
+dividend on the short leg and receives it on the long leg, and the net is the 
+dividend *differential* between the two names. 
+
+Estimated size of the omission (trailing indicative gross yields):
+
+    CVX/XOM    ~4.2% vs ~3.3%   ->  ~0.9%/yr differential
+    GS/MS      ~2.2% vs ~3.0%   ->  ~0.8%/yr differential
+    GLD/GDX    0.0% vs ~1.3%    ->  ~1.3%/yr differential
+    SPY/IVV    ~1.2% vs ~1.2%   ->  ~0.0%/yr differential (near-identical)
+    AMD/NVDA   0.0% vs ~0.02%   ->  ~0.0%/yr differential
+    
+Against realized average gross exposure of roughly 10% of capital, a 0.9%/yr
+gross differential is on the order of 9bp/yr on total capital -- small next to 
+the strategy's own noise, but the SAME order of magnitude as the alpha being 
+tested for. It is therefore a material omission for the CVX/XOM, GS/MS and
+GLD/GDX pairs and must be stated, not assumed away.
+
+The SPY benchmark used for the beta regression is likewise a PRICE series, not 
+a total-return series. Comparisons against it understate the benchmark by 
+roughly its ~1.2%/yr dividend yield. Because the headline test is now a direct
+test of mean excess return (not a CAPM alpha), this affects only the 
+neutrality regression, where it is second-order.
+
+
+========================================================================
+TRAIN / VALIDATION -- CVX_XOM
+ train 2018-05-01 -> 2022-12-31
+ val 2023-01-01 -> 2024-12-31
+========================================================================
+Laoding equity pairs data...
+ Asset A(CVX): /Users/rayyanwaseem/Desktop/Projects/MRJD-and-Hawkes-for-Pairs-Trading/OHLCV_CVX.csv
+ Asset B(XOM): /Users/rayyanwaseem/Desktop/Projects/MRJD-and-Hawkes-for-Pairs-Trading/OHLCV_XOM.csv
+ Asset A: 1958 observations
+ Asset B: 1958 observations
+ Date range: 2018-05-01 to 2026-02-12
+ Dividend differential (disclosed, NOT modelled): +0.90%/yr
+Cleaning data...
+ Cleaned: 1958 observations (0 dropped for missing values, 0 dropped for size)
+Constructing spread: STATIC hedge h = 0.7201 (johansen, fit on 1177 obs to 2022-12-31)
+ sensitivity: OLS(A~B) = 0.7201 OLS(B~A)^-1 = 0.8063 TLS = 0.7504
+ Spread range: [1.5020, 1.9452]
+ Spread mean: 1.6963
+ Spread std: 0.0768
+
+ Fitting on 1177 training observations
+ Pair validation (engle_granger) p = 0.2658:
+ stationary False
+ half-life 49.5d ok=True
+ stable mean False (drift 0.634)
+ reasonable range True (6.096027536477827 sd)
+ no regime change False (shift 1.20 sd)
+ => tradeable: False (all 5 checks gate)
+ [ADF would say p = 0.1087; EG is the correct test here]
+Detecting jumps: Lee-Mykland (window = 20 trading_days)
+ 5 jumps (0.43% of 1176 obs), rule: BH-FDR at 5%
+ Jumps on training: 5 (FDR) / 8 (nominal)
+ FDR basis has 5 jumps (, 10);  fitting Hawkes on the NOMINAL basis (8). Disclosed in artifacts.
+ WARNING: config bounds clipped the optimum: {'alpha': (np.float64(3.980859469387354e-09), 1e-06)}
+ Hawkes fit (8 jumps over T = 1175 trading_days):
+ lambda_bar = 0.006809
+ alpha = 0.000001
+ beta = 0.499874
+ branching = 0.0000
+ LR vs Poisson = -0.00, p = 0.7056 | KS p = 0.2104
+ branching ratio 0.0000 CI95 [-0.0011, 0.0011]
+Fitting MRJD model
+ [1/3] OU parameters (AR(1) closed-form conditional MLE)
+ phi = 0.989564 -> kappa = 0.010491, half-life = 66.1 trading_days
+ [2/3] Jump size distribution
+ [3/3] Joint MLE refinement: disabled by caller
+ half-life check: model 66.1d vs empirical 49.5d (33% apart)
+ MRJD parameters:
+ kappa = 0.010491 (half-life 66.1 trading_days)
+ theta = 1.7398
+ sigma = 0.011833
+ mu_J = -0.0040
+ sigma_j = 0.0485
+
+ Evaluating: train
+ Half life 49.5d -> hold [24, 39] trading days (target 74)
+Generating trading signals...
+ 10 long, 11 short, 21 close (1 jump-assisted)
+ blocked: 0 by CRISIS regime, 0 by lambda decay
+ signal exit reasons: {'mean_reversion': 11, 'profit_target': 7, 'max_hold': 3}
+ regime days: {'calm': 1176, 'normal': 1}
+ Stops (scaled to stationary sigma 4.23%, daily 0.72%): stop 16.91%, trail 6.34%, target 21.13%
+Backtest: h = 0.7201 (sized), delay = 1 bar(s), fill at next open, intraday stops on
+ 21 trades, final equity $1,153,316 (+15.33%)
+ avg gross exposure 13.1%, flat 46 % of days, cash credit $87,271
+ exit reasons: {'mean_reversion': 11, 'profit_target': 6, 'max_hold': 3, 'trailing_stop': 1}
+
+ Evaluating: validation
+ Half life 49.5d -> hold [24, 39] trading days (target 74)
+Generating trading signals...
+ 6 long, 5 short, 11 close (1 jump-assisted)
+ blocked: 0 by CRISIS regime, 0 by lambda decay
+ signal exit reasons: {'max_hold': 1, 'mean_reversion': 5, 'profit_target': 3, 'emergency_stop': 2}
+ regime days: {'calm': 501, 'normal': 1}
+ Stops (scaled to stationary sigma 3.27%, daily 0.49%): stop 13.08%, trail 4.90%, target 16.35%
+Backtest: h = 0.7201 (sized), delay = 1 bar(s), fill at next open, intraday stops on
+ 10 trades, final equity $1,034,016 (+3.40%)
+ avg gross exposure 13.8%, flat 44 % of days, cash credit $34,896
+ exit reasons: {'max_hold': 1, 'mean_reversion': 5, 'profit_target': 3, 'emergency_stop': 1}
+
+ -- CONTROL ARM: plain z-score, no Hawkes layer ---
+ control train: 17 trades, ann +2.176%, Sharpe +0.109
+ control validation: 8 trades, ann +1.423%, Sharpe -0.480
+    wrote 39 artifacts to /Users/rayyanwaseem/Desktop/Projects/MRJD-and-Hawkes-for-Pairs-Trading/outputs/CVX_XOM/train_val
+
+==============================================================================
+RESULTS -- CVX_XOM
+==============================================================================
+
+  Hedge ratio (frozen on train): 0.7201
+  Half-life: 49.5 trading days
+  Jumps on train: 5 (FDR) / 8 (nominal)
+
+  HAWKES SELF-EXCITATION TEST (H0: alpha = 0, homogeneous Poisson)
+    LR statistic  : -0.000
+    p-value       : 0.7056  -> CANNOT reject Poisson
+    branching     : 0.0000  CI95 [-0.0011, 0.0011]
+    KS on residuals p = 0.2104
+
+  --- TRAIN ---
+
+  metric                                      Hawkes arm         Control arm
+  ------------------------------------------------------------------------
+  trades                                              21                  17
+  annualised return %                              3.101               2.176
+  annualised vol %                                 1.854               1.524
+  Sharpe                                           0.579               0.109
+  Sharpe HAC SE                                    0.457               0.471
+  max drawdown %                                   -1.45               -2.17
+  return on capital-at-risk %                      10.43                4.20
+  mean excess %/yr (NW)                            1.074               0.166
+  NW t-stat                                        1.268               0.231
+  NW p-value                                      0.2050              0.8170
+  beta vs SPY                                    -0.0109             -0.0089
+
+  --- VALIDATION ---
+
+  metric                                      Hawkes arm         Control arm
+  ------------------------------------------------------------------------
+  trades                                              10                   8
+  annualised return %                              1.693               1.423
+  annualised vol %                                 1.623               1.204
+  Sharpe                                          -0.187              -0.480
+  Sharpe HAC SE                                    0.741               0.733
+  max drawdown %                                   -1.86               -1.06
+  return on capital-at-risk %                      -0.21               -4.12
+  mean excess %/yr (NW)                           -0.304              -0.577
+  NW t-stat                                       -0.253              -0.655
+  NW p-value                                      0.8004              0.5131
+  beta vs SPY                                     0.0073              0.0043
+
+  POWER: Over 2.0 years at 1.62% annualised volatility, the standard error of the mean return is 1.15%/yr. Power to detect a 1.0%/yr edge at alpha=0.05 is 14.0%; the smallest effect detectable at 80% power is 3.22%/yr. A null result here means the design could not resolve an edge of the size sought, not that no edge exists.
+==============================================================================
+
+========================================================================
+WALK-FORWARD (continuous book, quarterly parameter swap)
+  min training: 504 days
+========================================================================
+
+Full sample 2018-05-01 -> 2026-02-12 (1958 obs), 23 quarters
+  Q1 2020-07-01->2020-09-30: h=0.5942, HL=12d, z=(2.0,0.25), hawkes=on
+  Q2 2020-10-01->2020-12-31: h=0.5867, HL=11d, z=(2.0,0.25), hawkes=on
+  Q3 2021-01-04->2021-03-31: h=0.5803, HL=12d, z=(2.0,0.25), hawkes=on
+  Q4 2021-04-01->2021-06-30: h=0.5805, HL=12d, z=(2.0,0.25), hawkes=on
+  Q5 2021-07-01->2021-09-30: h=0.5799, HL=12d, z=(2.0,0.25), hawkes=on
+  Q6 2021-10-01->2021-12-31: h=0.5813, HL=12d, z=(2.0,0.25), hawkes=on
+  Q7 2022-01-03->2022-03-31: h=0.5827, HL=15d, z=(2.0,0.25), hawkes=on
+  Q8 2022-04-01->2022-06-30: h=0.6189, HL=39d, z=(2.5,0.5), hawkes=on
+  Q9 2022-07-01->2022-09-30: h=0.6746, HL=45d, z=(2.0,0.5), hawkes=on
+  Q10 2022-10-03->2022-12-30: h=0.6941, HL=46d, z=(1.5,0.5), hawkes=on
+  Q11 2023-01-03->2023-03-31: h=0.7201, HL=50d, z=(2.0,0.25), hawkes=on
+  Q12 2023-04-03->2023-06-30: h=0.7214, HL=48d, z=(2.0,0.25), hawkes=on
+  Q13 2023-07-03->2023-09-29: h=0.7148, HL=47d, z=(2.0,0.25), hawkes=on
+  Q14 2023-10-02->2023-12-29: h=0.7103, HL=47d, z=(1.5,0.25), hawkes=on
+  Q15 2024-01-02->2024-03-28: h=0.7018, HL=47d, z=(2.0,0.25), hawkes=on
+  Q16 2024-04-01->2024-06-28: h=0.6950, HL=48d, z=(1.5,0.25), hawkes=on
+  Q17 2024-07-01->2024-09-30: h=0.6847, HL=48d, z=(2.0,0.5), hawkes=on
+  Q18 2024-10-01->2024-12-31: h=0.6672, HL=55d, z=(1.5,0.5), hawkes=on
+  Q19 2025-01-02->2025-03-31: h=0.6551, HL=54d, z=(1.5,0.5), hawkes=on
+  Q20 2025-04-01->2025-06-30: h=0.6530, HL=51d, z=(1.5,0.25), hawkes=on
+  Q21 2025-07-01->2025-09-30: h=0.6440, HL=54d, z=(1.5,0.25), hawkes=on
+  Q22 2025-10-01->2025-12-31: h=0.6414, HL=52d, z=(1.5,0.25), hawkes=on
+  Q23 2026-01-02->2026-02-12: h=0.6343, HL=54d, z=(1.5,0.25), hawkes=on
+
+Running ONE continuous backtest over 1412 bars
+ Stops (scaled to stationary sigma 4.51%, daily 0.58%): stop 18.05%, trail 6.77%, target 22.56%
+Backtest: h = 0.6485 (sized), delay = 1 bar(s), fill at next open, intraday stops on
+ 35 trades, final equity $1,102,733 (+10.27%)
+ avg gross exposure 13.1%, flat 43 % of days, cash credit $103,182
+ NOTE: open position force-closed at the final bar and RECORDED
+ exit reasons: {'profit_target': 4, 'mean_reversion': 12, 'max_hold': 16, 'emergency_stop': 2, 'forced_close_period_end': 1}
+
+========================================================================
+WALK-FORWARD OUT-OF-SAMPLE SUMMARY
+========================================================================
+  Quarters evaluated : 23
+  Quarters FAILED    : 0
+
+  Annualised return  : 1.761%
+  Annualised vol     : 1.686%
+  Sharpe             : -0.142 (HAC SE 0.428)
+  Max drawdown       : -3.08%
+  On capital at risk : 0.17% return, -23.49% drawdown (7.6x scale)
+
+  HEADLINE TEST -- H0: mean excess return = 0 (Newey-West)
+    mean excess     : -0.239%/yr
+    t-statistic     : -0.331
+    p-value         : 0.7404
+    95% CI          : [-1.654%, +1.176%]
+
+  Neutrality check (CAPM vs SPY, NOT the headline)
+    beta            : -0.0122   R^2 0.01532
+
+  Trades             : 35
+  Win rate           : 54.3%
+  Profit factor      : 1.204
+  Avg duration       : 23.1 trading days
+
+  Configurations tried : 207
+  Deflated Sharpe prob : 0.0009 (FAILS at 95%)
+
+  POWER: Over 5.6 years at 1.69% annualised volatility, the standard error of the mean return is 0.71%/yr. Power to detect a 1.0%/yr edge at alpha=0.05 is 29.0%; the smallest effect detectable at 80% power is 2.00%/yr. A null result here means the design could not resolve an edge of the size sought, not that no edge exists.
+========================================================================
+    (skipped empty quarter_failures.csv)
+    wrote 8 artifacts to /Users/rayyanwaseem/Desktop/Projects/MRJD-and-Hawkes-for-Pairs-Trading/outputs/CVX_XOM/walk_forward
+
+==============================================================================
+SUMMARY -- ALL PAIRS
+==============================================================================
+   pair         mode     arm     window  total_trades  annualized_return_pct  sharpe_ratio  nw_tstat  nw_pvalue
+CVX_XOM    train_val  hawkes      train            21               3.101112      0.579294  1.268245   0.204962
+CVX_XOM    train_val control      train            17               2.175913      0.108972  0.231420   0.817029
+CVX_XOM    train_val  hawkes validation            10               1.693358     -0.187428 -0.252920   0.800434
+CVX_XOM    train_val control validation             8               1.422534     -0.479658 -0.654549   0.513059
+CVX_XOM walk_forward  hawkes        oos            35               1.760610     -0.141894 -0.331397   0.740394
+
+ Wrote /Users/rayyanwaseem/Desktop/Projects/MRJD-and-Hawkes-for-Pairs-Trading/outputs/summary_all_pairs.csv
+(venv) (base) rayyanwaseem@Rayyans-MacBook-Pro MRJD-and-Hawkes-for-Pairs-Trading % 

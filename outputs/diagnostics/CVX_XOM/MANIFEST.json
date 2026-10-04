@@ -1,0 +1,10 @@
+{
+  "files": [
+    "MANIFEST.json",
+    "ceiling_analysis.csv",
+    "diagnostics_metadata.json",
+    "predictability_test.csv",
+    "stop_sensitivity.csv"
+  ],
+  "n_files": 5
+}

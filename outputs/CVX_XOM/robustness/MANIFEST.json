@@ -1,0 +1,8 @@
+{
+  "files": [
+    "MANIFEST.json",
+    "scenario_definitions.json",
+    "walk_forward_robustness.csv"
+  ],
+  "n_files": 3
+}

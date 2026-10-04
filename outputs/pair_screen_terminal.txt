@@ -1,0 +1,51 @@
+(venv) (base) rayyanwaseem@Rayyans-MacBook-Pro MRJD-and-Hawkes-for-Pairs-Trading % python pair_screen.p
+y --out outputs/pair_screen.csv
+Screening 45 candidate pairs from 10 symbols on 2018-05-01..2022-12-31 (training window only)
+ ...10/45
+ ...20/45
+ ...30/45
+ ...40/45
+
+==============================================================================
+SCREEN CRITERIA (fixed in advance, training window only)
+==============================================================================
+  COINT_P_MAX            0.05
+  MIN_HALF_LIFE          5.0
+  MAX_HALF_LIFE          120.0
+  PREDICT_T_MAX          -1.5
+  EDGE_COST_MULTIPLE     5.0
+  MAX_HEDGE              5.0
+  PREDICT_HORIZON        20
+  MULTIPLICITY_ALPHA     0.05
+
+==============================================================================
+MULTIPLICITY ACROSS THE SCREEN
+==============================================================================
+  candidates tested                 45
+  expected false positives at 5%    2.2
+  pass cointegration, nominal       5
+  economically sensible hedge       38
+  pass cointegration, BH-FDR        0
+  pass cointegration, Bonferroni    0
+  smallest cointegration p-value    0.0093
+
+  SELECTED after FDR correction     0
+  SELECTED uncorrected (unsafe)     1
+
+==============================================================================
+UNCORRECTED SURVIVORS: 1 of 45 candidates
+  (shown to demonstrate what multiplicity produces, NOT to trade)
+==============================================================================
+  pair  hedge_ratio  coint_pvalue  half_life  predict_t  predict_r2  edge_cost_multiple  trips_per_year  sharpe_ceiling
+IVV_MS       0.5294        0.0426    40.8539     -2.679      0.0625             10.2712          3.0842          1.1666
+
+==============================================================================
+ORIGINAL FIVE PAIRS -- how each fares under the screen
+==============================================================================
+    pair  coint_pvalue  half_life  predict_t  edge_cost_multiple  cointegrated  half_life_ok  predictive  edge_covers_cost  hedge_sensible  selected
+ CVX_XOM        0.2658    49.5193    -2.6008             12.2338         False          True        True              True            True     False
+   GS_MS        0.0420    46.2747    -1.3828              8.8642          True          True       False              True            True     False
+AMD_NVDA        0.0158    69.7901    -0.2319             31.7033          True          True       False              True            True     False
+
+Wrote outputs/pair_screen.csv
+(venv) (base) rayyanwaseem@Rayyans-MacBook-Pro MRJD-and-Hawkes-for-Pairs-Trading % 

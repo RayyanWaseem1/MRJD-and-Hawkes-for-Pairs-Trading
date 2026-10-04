@@ -1,0 +1,12 @@
+{
+  "files": [
+    "MANIFEST.json",
+    "pair_return_correlation.csv",
+    "pair_returns.csv",
+    "portfolio_definition.json",
+    "portfolio_metrics.csv",
+    "portfolio_returns.csv",
+    "weights.csv"
+  ],
+  "n_files": 7
+}

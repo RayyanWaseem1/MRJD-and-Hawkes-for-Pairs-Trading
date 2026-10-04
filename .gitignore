@@ -3,5 +3,4 @@ __pycache__/
 *.py[cod]
 .matplotlib_cache/
 venv/
-outputs/
 * Outputs/

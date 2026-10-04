@@ -43,10 +43,8 @@ strategy alpha against SPY using Newey-West adjusted t-statistics.
 .
 |-- main.py                         # Train/validation pipeline and model bundle logic
 |-- walk_forward.py                 # Quarterly walk-forward OOS engine
-|-- config.py                       # Updated configuration with relaxed filters and low-cost presets
-|-- config_old.py                   # V2 configuration used by the current V4 main/walk-forward scripts
-|-- signal_generation.py            # Relaxed-filter signal generator variant
-|-- signal_generation_old.py        # V4 signal generator used by current main.py imports
+|-- config.py                       # Active configuration and pair registry
+|-- signal_generation.py            # Active signal generator
 |-- backtest_engine.py              # Dollar-neutral backtester and alpha evaluator
 |-- hawkes_calibration.py           # Hawkes MLE calibration
 |-- mrjd_estimation.py              # MRJD estimation
@@ -54,15 +52,12 @@ strategy alpha against SPY using Newey-West adjusted t-statistics.
 |-- equity_pairs_loader.py          # Data loading and spread construction
 |-- outputs/<PAIR>/train_val/       # Train/validation CSV artifacts
 |-- outputs/<PAIR>/walk_forward/    # Quarterly walk-forward CSV artifacts
-|-- ETF Outputs/                    # Terminal logs for SPY/IVV runs
-|-- Energy Outputs/                 # Terminal logs for CVX/XOM runs
-|-- Finance Outputs/                # Terminal logs for GS/MS runs
-|-- Tech Outputs/                   # Terminal logs for AMD/NVDA runs
-`-- Gold Outputs/                   # Terminal logs for GLD/GDX runs
+`-- outputs/portfolio/              # Cross-pair portfolio results
 ```
 
-The canonical structured results are in `outputs/`. The sector folders contain
-captured terminal output from the same experiments.
+The canonical structured results are in `outputs/`. Each current run includes
+a `MANIFEST.json` that lists its artifacts; the repository publishes these
+structured outputs for review alongside the code that produced them.
 
 ## Pairs Tested
 
@@ -296,10 +291,9 @@ The current configuration work added:
 - Empirical z-score as the default signal statistic.
 - Half-life-aware holding periods.
 
-Note: `main.py` and `walk_forward.py` currently import `ConfigV2` from
-`config_old.py`, while `config.py` contains the newer low-cost and relaxed
-filtering configuration. The saved result CSVs in `outputs/` are the source of
-truth for the tables below.
+`main.py` and `walk_forward.py` use the active configuration in `config.py`.
+The saved result CSVs in `outputs/` are the source of truth for the tables
+below.
 
 ## Pair Validation and Hawkes Suitability
 

@@ -1,0 +1,2 @@
+hedge_mode,method,n_obs,direction,eg_statistic,eg_pvalue,eg_crit_1pct,eg_crit_5pct,eg_crit_10pct,intercept,h_ols_a_on_b,h_ols_b_on_a_inverted,h_tls,hedge_ratio,estimated_on
+static,johansen,1177,A regressed on B (A is the dependent leg),-3.920045785977829,0.009305379136302937,-3.905777082783794,-3.3413305968288673,-3.0480584293581376,-0.029116831234535567,1.0041483091938384,1.0042349885366646,1.0041918292178464,1.004148309193842,{'2018-05-01 .. 2022-12-30 (1177 obs)'}

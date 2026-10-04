@@ -1,0 +1,2 @@
+mean_reversion_count,mean_reversion_win_rate,mean_reversion_avg_return,mean_reversion_total_pnl,max_hold_count,max_hold_win_rate,max_hold_avg_return,max_hold_total_pnl,profit_target_count,profit_target_win_rate,profit_target_avg_return,profit_target_total_pnl,regime_crisis_count,regime_crisis_win_rate,regime_crisis_avg_return,regime_crisis_total_pnl
+14,64.28571428571429,0.08512368926832545,-99.92887029760493,2,0.0,-2.5347788776156572,-13346.926620799972,3,100.0,2.129385737900811,16647.103002780445,2,50.0,-1.5417143428242508,-7864.071735401974

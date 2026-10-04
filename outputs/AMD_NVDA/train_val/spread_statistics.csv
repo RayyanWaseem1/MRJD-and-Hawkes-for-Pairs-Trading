@@ -1,0 +1,2 @@
+mean,std,adf_statistic,adf_pvalue,adf_says_stationary,eg_statistic,eg_pvalue,eg_crit_5pct,eg_says_cointegrated,adf_eg_pvalue_gap,ar1_beta,half_life,half_life_units
+1.9027848374287533,0.28098510761514717,-3.798501366957965,0.002922685239803025,True,-3.7497193153182744,0.015796159421079394,-3.3413305968288673,True,0.012873474181276368,-0.009931887239112036,69.79007754239429,trading_days

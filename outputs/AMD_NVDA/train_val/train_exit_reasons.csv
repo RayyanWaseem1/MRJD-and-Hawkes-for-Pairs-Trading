@@ -1,0 +1,2 @@
+stop_loss_count,stop_loss_win_rate,stop_loss_avg_return,stop_loss_total_pnl,mean_reversion_count,mean_reversion_win_rate,mean_reversion_avg_return,mean_reversion_total_pnl,max_hold_count,max_hold_win_rate,max_hold_avg_return,max_hold_total_pnl,profit_target_count,profit_target_win_rate,profit_target_avg_return,profit_target_total_pnl
+1,0.0,-47.894006770182706,-119944.25237595089,11,36.36363636363637,-0.4931930060495737,-12288.55428503979,2,0.0,-7.683674936677506,-35422.63445285648,5,100.0,9.069334078803054,102911.90147088672
