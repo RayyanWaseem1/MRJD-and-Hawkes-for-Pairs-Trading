@@ -1,2 +1,2 @@
-hedge_mode,method,n_obs,direction,eg_statistic,eg_pvalue,eg_crit_1pct,eg_crit_5pct,eg_crit_10pct,intercept,h_ols_a_on_b,h_ols_b_on_a_inverted,h_tls,hedge_ratio,estimated_on
-static,johansen,1177,A regressed on B (A is the dependent leg),-2.5305073046561306,0.2657826730516668,-3.905777082783794,-3.3413305968288673,-3.0480584293581376,1.7284936109741604,0.7200987045848747,0.8063473191250771,0.7503536770311026,0.7200987045848772,{'2018-05-01 .. 2022-12-30 (1177 obs)'}
+hedge_mode,method,n_obs,direction,johansen_trace_stat,johansen_crit_90,johansen_crit_95,johansen_crit_99,johansen_rejects_no_coint_95,h_ols_a_on_b,h_ols_b_on_a_inverted,h_tls,hedge_ratio,estimated_on
+static,johansen,1177,A regressed on B (A is the dependent leg),8.28743507312892,13.4294,15.4943,19.9349,False,0.720098704584875,0.8063473191250778,0.7503536770311027,0.7095840909075334,{'2018-05-01 .. 2022-12-30 (1177 obs)'}

@@ -1,5 +1,6 @@
 {
   "files": [
+    "MANIFEST.json",
     "arm_comparison.csv",
     "causal_artifacts.csv",
     "control_train_equity_curve.csv",
@@ -39,5 +40,5 @@
     "validation_trading_signals.csv",
     "z_score.png"
   ],
-  "n_files": 38
+  "n_files": 39
 }

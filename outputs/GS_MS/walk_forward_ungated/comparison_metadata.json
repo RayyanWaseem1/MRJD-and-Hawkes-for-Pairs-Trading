@@ -1,0 +1,8 @@
+{
+  "pair": "GS_MS",
+  "comparison_definition": "Each arm uses the same data, walk-forward folds, execution settings, costs and seed. The control disables only Hawkes regimes and jump entries.",
+  "arms": [
+    "hawkes",
+    "control"
+  ]
+}
