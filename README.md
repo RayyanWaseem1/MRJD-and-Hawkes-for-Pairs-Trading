@@ -1,6 +1,6 @@
 # Self-Exciting Jumps in Equity Pair Spreads: A Controlled Test of Hawkes-Driven Mean-Reverting Jump Diffusions for Statistical Arbitrage
 
-> **Abstract.** We study whether the arrival of discontinuities ("jumps") in cointegrated equity pair spreads is *self-exciting*, and whether conditioning a mean-reversion strategy on the resulting jump intensity improves risk-adjusted performance. Each spread is modelled as a Mean-Reverting Jump Diffusion (MRJD) whose jump-counting process is a univariate Hawkes process with an exponential kernel. Jumps are dated with the Lee–Mykland (2008) per-observation test under Benjamini–Hochberg false-discovery control. The Hawkes process is estimated by exact maximum likelihood in an unconstrained reparameterisation, and self-excitation is tested against a homogeneous Poisson null with a parametric-bootstrap likelihood-ratio test, which handles the non-identification of the decay parameter under the null (the Davies problem). The trading layer maps the fitted intensity into volatility regimes that modulate entry thresholds, holding periods and position size. It is evaluated against a **matched control arm**: the identical strategy with the Hawkes layer removed. Evaluation uses a frozen-parameter train/validation split and a 23-quarter **continuous-book walk-forward** (July 2020 – February 2026) with in-loop threshold tuning, Newey–West inference on mean excess returns, Lo (2002) Sharpe standard errors, stationary-bootstrap intervals, the Deflated Sharpe Ratio, and explicit power analysis.
+> **Abstract.** We study whether the arrival of discontinuities ("jumps") in cointegrated equity pair spreads is *self-exciting*, and whether conditioning a mean-reversion strategy on the resulting jump intensity improves risk-adjusted performance. Each spread is modelled as a Mean-Reverting Jump Diffusion (MRJD) whose jump-counting process is a univariate Hawkes process with an exponential kernel. Jumps are dated with the Lee–Mykland (2008) per-observation test under Benjamini–Hochberg false-discovery control. The Hawkes process is estimated by exact maximum likelihood in an unconstrained reparameterisation, and self-excitation is tested against a homogeneous Poisson null with a parametric-bootstrap likelihood-ratio test, which handles the non-identification of the decay parameter under the null (the Davies problem). The trading layer maps the fitted intensity into volatility regimes that modulate entry thresholds, holding periods and position size. It is evaluated against a **matched control arm**: the identical strategy with the Hawkes layer removed. Evaluation uses a frozen-parameter train/validation split and a 23-quarter **continuous-book walk-forward** (July 2020 – February 2026) with in-loop threshold tuning, Newey–West inference on mean excess returns, autocorrelation-robust Sharpe standard errors, stationary-bootstrap intervals, the Deflated Sharpe Ratio, and explicit power analysis.
 >
 > **Findings.** (i) Once jumps are dated correctly and controlled for multiplicity, daily equity spreads yield only 0–13 jumps per pair over 4.7 training years. Self-excitation is not established on any pair: every branching-ratio 95% CI contains zero, and three of five pairs collapse to a Poisson process. (ii) The pairs rarely satisfy the strategy's own premises. Only 2 of 5 pass cointegration and half-life validation on the training window, and in walk-forward only 19 of 115 pair-quarters do, so the gated book is mostly in cash. (iii) The Hawkes arm does not outperform its control on any pair. A paired Newey–West test on daily return differences gives a pooled −0.23%/yr (*t* = −1.42) gated and −0.26%/yr (*t* = −0.67) when the gate is switched off. The Hawkes arm carries more exposure for a slightly lower return. (iv) Neither arm earns statistically significant excess return over cash out of sample. Ungated, SPY/IVV loses about 0.2%/yr with certainty (*t* ≈ −5) because its two-day spread cannot cover costs. (v) The design is underpowered. Detecting a 1%/yr edge on a single continuously traded pair would need well over a decade of daily data, so the nulls should be read as *"the design cannot resolve an edge of the size sought"*, not as proof that no edge exists. The main methodological finding is a catalogue of twenty failure modes that, left uncorrected, **manufacture** apparent self-excitation, spurious alpha or look-ahead. All were present in earlier versions of this study, and each is now covered by a regression test.
 
@@ -63,7 +63,7 @@ The intuition is appealing, but it rests on an empirical premise: that there are
 
 ## 3. Contributions and Positioning
 
-Self-exciting jump processes are well established in finance (Hawkes 1971; Aït-Sahalia, Cacho-Diaz & Laeven 2015; Bacry, Mastromatteo & Muzy 2015). OU-based pairs trading is equally standard (Elliott, van der Hoek & Malcolm 2005; Gatev, Goetzmann & Rouwenhorst 2006; Avellaneda & Lee 2010; Bertram 2010). The project does not claim a new model class. Its contributions are:
+Self-exciting jump processes are well established in finance (Hawkes 1971; Aït-Sahalia, Cacho-Diaz & Laeven 2015). Pairs trading is equally standard (Gatev, Goetzmann & Rouwenhorst 2006). The project does not claim a new model class. Its contributions are:
 
 1. **A joint MRJD–Hawkes specification for equity pair spreads, evaluated as a controlled experiment.** Every result is reported for a *treatment* arm (Hawkes layer on) and a *control* arm (Hawkes layer off) that share data, folds, costs, execution, thresholds search and seed. That makes "does the Hawkes layer add value?" a measurable quantity rather than an anecdote.
 2. **A correct event-dating pipeline for point-process estimation on spreads.** Jumps are dated per observation (Lee–Mykland), FDR-controlled, and placed on a trading-day clock before the Hawkes likelihood ever sees them. Section 11.1 shows that a common alternative, a rolling-window bipower test whose rejection is attributed to the window's last day, **mechanically fabricates** self-excitation.
@@ -108,7 +108,7 @@ For prices $P^A_t, P^B_t$ the log-spread is
 S_t \;=\; \log P^A_t \;-\; h\,\log P^B_t ,
 ```
 
-with hedge ratio $h$ estimated **once on the training window and then frozen** (`hedge_mode="static"`). In walk-forward it is re-estimated at each quarter boundary and held fixed within the quarter. The default estimator is the **Johansen (1991)** cointegrating vector $(v_A, v_B)$ from a VECM with one lagged difference and an unrestricted constant, normalised on leg A, so $h = -v_B/v_A$; the trace statistic and its critical values are recorded. OLS of $\log P^A$ on $\log P^B$, the inverted reverse regression and total least squares are reported alongside, so the sensitivity to the estimator is visible. They differ materially on AMD/NVDA (Johansen 0.73 vs. OLS 0.91) and GLD/GDX (0.82 vs. 0.62).
+with hedge ratio $h$ estimated **once on the training window and then frozen** (`hedge_mode="static"`). In walk-forward it is re-estimated at each quarter boundary and held fixed within the quarter. The default estimator is the **Johansen** cointegrating vector $(v_A, v_B)$ from a VECM with one lagged difference and an unrestricted constant, normalised on leg A, so $h = -v_B/v_A$; the trace statistic and its critical values are recorded. OLS of $\log P^A$ on $\log P^B$, the inverted reverse regression and total least squares are reported alongside, so the sensitivity to the estimator is visible. They differ materially on AMD/NVDA (Johansen 0.73 vs. OLS 0.91) and GLD/GDX (0.82 vs. 0.62).
 
 *Why not a rolling hedge ratio?* If $h_t$ varies, then
 
@@ -118,7 +118,7 @@ with hedge ratio $h$ estimated **once on the training window and then frozen** (
 
 With a 30-day rolling OLS, the third term, an estimation artefact multiplied by a *price level*, accounted for 99.2–99.8% of $\mathbb{E}|\Delta S_t|$ across all five pairs and inflated spread volatility by 4.8× to 81.9×. A daily-moving hedge is also not a position anyone can hold. The rolling mode survives only as a labelled robustness option.
 
-**Stationarity testing.** $S_t$ is a residual from an *estimated* cointegrating vector, so a standard ADF test, whose Dickey–Fuller critical values assume an observed series, over-rejects. Stationarity is therefore judged with the **Engle–Granger** test using Phillips–Ouliaris (1990) residual-based critical values. The naive ADF *p*-value is reported alongside so the size of the over-rejection is visible.
+**Stationarity testing.** $S_t$ is a residual from an *estimated* cointegrating vector, so a standard ADF test, whose Dickey–Fuller critical values assume an observed series, over-rejects. Stationarity is therefore judged with the **Engle–Granger** test using Phillips–Ouliaris residual-based critical values. The naive ADF *p*-value is reported alongside so the size of the over-rejection is visible.
 
 **Pair validation.** Five checks are computed on the training window: EG stationarity ($p<0.05$); AR(1) half-life in $[5, 120]$ trading days; rolling-mean stability ($\operatorname{sd}(\bar S^{(252)}_t)/\operatorname{sd}(S_t) < 0.5$); range below $10\,\operatorname{sd}$; and a recent-vs-full-sample mean shift below $1\,\operatorname{sd}$. All five feed `is_tradeable`, and **a pair that fails any of them opens no positions** in either arm (`TradingConfig.require_tradeable`). In walk-forward the gate is re-evaluated at every quarterly refit. A position carried into a quarter that fails is closed at that quarter's first bar. `--ignore-validation` disables the gate and reproduces the ungated behaviour.
 
@@ -178,7 +178,7 @@ This gives a per-observation *p*-value $p_i = 1-\exp\{-e^{-(\mathcal L_i - C_n)/
 
 **Causality out of sample.** Two parts of the test depend on the whole sample: the normalisers $C_n, S_n$ (through $n$) and the BH cutoff (through every *p*-value). Both are therefore **frozen on the training window**. $n$ is fixed at the training length, and on the FDR basis day $t$ is flagged iff $p_t \le p^\ast$, where $p^\ast$ is the largest *p*-value BH rejected in training (or $\alpha/m$ if it rejected none). This reproduces the training flags exactly, and every later flag depends only on data up to $t$. Re-running BH over the full sample, as an earlier version did, lets later *p*-values decide whether an earlier day counts as a jump.
 
-**Robustness: Barndorff-Nielsen–Shephard bipower test**, in log-ratio form (Huang & Tauchen 2005):
+**Robustness: Barndorff-Nielsen–Shephard bipower test**, in log-ratio form:
 
 ```math
 Z = \frac{\log RV - \log BV}{\sqrt{\frac{\vartheta}{m}\max\!\big(1, TP/BV^2\big)}},\qquad \vartheta = \tfrac{\pi^2}{4}+\pi-5 \approx 0.609 .
@@ -196,7 +196,7 @@ BNS asymptotics require $\Delta\to 0$, meaning many *intraday* returns per teste
 
 The **branching ratio** $\eta = \alpha/\beta$ is the expected number of direct "offspring" per event. In the cluster representation, each exogenous event spawns a cascade of expected total size $1/(1-\eta)$. The process is stationary iff $\eta<1$, with long-run mean intensity $\bar\lambda/(1-\eta)$. A value $\eta = 0$ is the homogeneous Poisson process.
 
-**Exact log-likelihood** with the $O(n)$ recursion of Ozaki (1979):
+**Exact log-likelihood** with the standard $O(n)$ recursion:
 
 ```math
 \ell(\bar\lambda,\alpha,\beta) = \sum_{i=1}^n \log\!\big(\bar\lambda + \alpha R_i\big) \;-\; \bar\lambda T \;-\; \frac{\alpha}{\beta}\sum_{i=1}^n\big(1-e^{-\beta(T-t_i)}\big),
@@ -217,10 +217,10 @@ so $0<\eta<1$ holds *by construction*, the objective is smooth everywhere, and L
 |---|---|
 | $\operatorname{se}(\bar\lambda,\alpha,\beta)$ | Inverse of the numerical Hessian of $-\ell$ in natural parameters |
 | CI on $\eta$ | Delta method: $\nabla\eta = (1/\beta,\, -\alpha/\beta^2)$ |
-| $H_0: \alpha = 0$ | $LR = 2(\ell_{\text{Hawkes}} - \ell_{\text{Poisson}})$, with $\ell_{\text{Poisson}} = n\log(n/T) - n$. Under $H_0$ the decay $\beta$ is **unidentified** (Davies 1977, 1987), so $LR \not\sim \chi^2$. The $\chi^2_2$ *p*-value is reported only as a reference; the quoted *p*-value comes from a **parametric bootstrap** (200 Poisson replications refitted with the full Hawkes MLE). |
-| Goodness of fit | Time-rescaling theorem (Ogata 1988; Brown et al. 2002): $\tau_i = \Lambda(t_i) - \Lambda(t_{i-1}) \overset{iid}{\sim}\text{Exp}(1)$ under correct specification. Tested by KS and visualised by QQ plot. |
+| $H_0: \alpha = 0$ | $LR = 2(\ell_{\text{Hawkes}} - \ell_{\text{Poisson}})$, with $\ell_{\text{Poisson}} = n\log(n/T) - n$. Under $H_0$ the decay $\beta$ is **unidentified** (the Davies problem), so $LR \not\sim \chi^2$. The $\chi^2_2$ *p*-value is reported only as a reference; the quoted *p*-value comes from a **parametric bootstrap** (200 Poisson replications refitted with the full Hawkes MLE). |
+| Goodness of fit | Time-rescaling theorem: $\tau_i = \Lambda(t_i) - \Lambda(t_{i-1}) \overset{iid}{\sim}\text{Exp}(1)$ under correct specification. Tested by KS and visualised by QQ plot. |
 | Intensity calibration | Poisson GLM of next-day jump indicator on $\log\hat\lambda(t)$. A well-calibrated intensity has slope ≈ 1. |
-| Estimator validity | Synthetic recovery via Ogata (1981) thinning in the test suite: known parameters recovered, LR rejects on clustered data and does not reject on Poisson data, CI covers truth. |
+| Estimator validity | Synthetic recovery via Ogata thinning in the test suite: known parameters recovered, LR rejects on clustered data and does not reject on Poisson data, CI covers truth. |
 
 The intensity used for trading, `compute_intensity_at_times`, sums only over events **strictly before** each evaluation time, so it is causal.
 
@@ -334,9 +334,9 @@ The book is **one continuous backtest**: parameters are swapped at quarter bound
 
 | Statistic | Definition and rationale |
 |---|---|
-| **Headline test** | $H_0: \mathbb{E}[r_t - r_f]=0$ with a Newey–West (Bartlett) long-run variance, lag $\lfloor 4(n/100)^{2/9}\rfloor$ (Newey & West 1994). For a dollar-neutral book $\beta\approx 0$ by construction, so a CAPM intercept mostly measures cash accounting. The CAPM regression vs. SPY (HAC, 5 lags) is reported **only to demonstrate neutrality**. |
-| Sharpe SE | Lo (2002): $\operatorname{se}(\widehat{SR}) \approx \sqrt{(1+\widehat{SR}^2/2)/n}$ per period, inflated by $\sqrt{\widehat{LRV}/\hat\sigma^2}$ to account for serial dependence from multi-week holding |
-| Bootstrap CIs | Politis–Romano (1994) stationary bootstrap, mean block 20 days, 1,000 replications, for Sharpe, mean return and max drawdown |
+| **Headline test** | $H_0: \mathbb{E}[r_t - r_f]=0$ with a Newey–West (Bartlett) long-run variance, lag $\lfloor 4(n/100)^{2/9}\rfloor$. For a dollar-neutral book $\beta\approx 0$ by construction, so a CAPM intercept mostly measures cash accounting. The CAPM regression vs. SPY (HAC, 5 lags) is reported **only to demonstrate neutrality**. |
+| Sharpe SE | Lo's approximation: $\operatorname{se}(\widehat{SR}) \approx \sqrt{(1+\widehat{SR}^2/2)/n}$ per period, inflated by $\sqrt{\widehat{LRV}/\hat\sigma^2}$ to account for serial dependence from multi-week holding |
+| Bootstrap CIs | Politis–Romano stationary bootstrap, mean block 20 days, 1,000 replications, for Sharpe, mean return and max drawdown |
 | Deflated Sharpe | Bailey & López de Prado (2014), with expected maximum Sharpe under no skill after $N$ trials $E[\max SR] \approx \sqrt{V}\big[(1-\gamma)\Phi^{-1}(1-\tfrac1N) + \gamma\Phi^{-1}(1-\tfrac1{Ne})\big]$ |
 | Power / MDE | $\text{MDE}_{80\%} = (z_{0.975}+z_{0.80})\,\sigma_{\text{ann}}/\sqrt{\text{years}}$; achieved power against a 1%/yr target |
 | Capital-at-risk view | *Excess* return scaled by $1/\overline{\text{gross exposure}}$; the risk-free credit is not levered |
@@ -639,9 +639,9 @@ These are disclosed so that readers can judge their effect. None of them plausib
 1. **Intraday data (5-minute or finer).** This increases events by one to two orders of magnitude, puts BNS in its valid asymptotic regime, and allows the Hawkes layer to be identified. This is the change most likely to make the title hypothesis testable.
 2. **Multivariate / marked Hawkes.** Model cross-excitation between legs, the market and sector ETFs, with jump size as a mark (Aït-Sahalia et al. 2015).
 3. **A cleaner H2 design.** Fix thresholds and sizing at control values in CALM and let the Hawkes layer act only when $e_t$ is elevated, so the treatment isolates information content. Alternatively, use $\lambda(t)$ purely as a *risk* input (volatility forecasting, position caps) rather than a signal.
-4. **Breadth.** A sector-neutral universe of hundreds of pairs, screened with FDR control, in the spirit of Avellaneda & Lee (2010), to trade breadth for per-pair power.
+4. **Breadth.** A sector-neutral universe of hundreds of pairs, screened with FDR control, to trade breadth for per-pair power.
 5. **The remaining caveats in Section 11.2**: the trailing-stop distance, a working stop-sensitivity diagnostic, explicit handling of positions carried across quarters, and a non-maximal Lee–Mykland calibration under BH.
-6. **Model-based execution.** Use the MRJD conditional distribution for optimal entry and exit bands (Bertram 2010) instead of fixed z-thresholds.
+6. **Model-based execution.** Use the MRJD conditional distribution for optimal entry and exit bands instead of fixed z-thresholds.
 
 ---
 
@@ -762,32 +762,10 @@ for run in ("walk_forward", "walk_forward_ungated"):
 ## 15. References
 
 - Aït-Sahalia, Y., Cacho-Diaz, J. & Laeven, R. (2015). Modeling financial contagion using mutually exciting jump processes. *Journal of Financial Economics*, 117(3), 585–606.
-- Avellaneda, M. & Lee, J.-H. (2010). Statistical arbitrage in the US equities market. *Quantitative Finance*, 10(7), 761–782.
-- Bacry, E., Mastromatteo, I. & Muzy, J.-F. (2015). Hawkes processes in finance. *Market Microstructure and Liquidity*, 1(1).
 - Bailey, D. H. & López de Prado, M. (2014). The deflated Sharpe ratio: correcting for selection bias, backtest overfitting and non-normality. *Journal of Portfolio Management*, 40(5), 94–107.
-- Barndorff-Nielsen, O. E. & Shephard, N. (2004). Power and bipower variation with stochastic volatility and jumps. *Journal of Financial Econometrics*, 2(1), 1–37.
-- Barndorff-Nielsen, O. E. & Shephard, N. (2006). Econometrics of testing for jumps in financial economics using bipower variation. *Journal of Financial Econometrics*, 4(1), 1–30.
-- Benjamini, Y. & Hochberg, Y. (1995). Controlling the false discovery rate. *Journal of the Royal Statistical Society B*, 57(1), 289–300.
-- Bertram, W. K. (2010). Analytic solutions for optimal statistical arbitrage trading. *Physica A*, 389(11), 2234–2243.
-- Brown, E. N., Barbieri, R., Ventura, V., Kass, R. E. & Frank, L. M. (2002). The time-rescaling theorem and its application to neural spike train data analysis. *Neural Computation*, 14(2), 325–346.
-- Davies, R. B. (1977; 1987). Hypothesis testing when a nuisance parameter is present only under the alternative. *Biometrika*, 64(2), 247–254; 74(1), 33–43.
-- Elliott, R. J., van der Hoek, J. & Malcolm, W. P. (2005). Pairs trading. *Quantitative Finance*, 5(3), 271–276.
-- Engle, R. F. & Granger, C. W. J. (1987). Co-integration and error correction. *Econometrica*, 55(2), 251–276.
 - Gatev, E., Goetzmann, W. N. & Rouwenhorst, K. G. (2006). Pairs trading: performance of a relative-value arbitrage rule. *Review of Financial Studies*, 19(3), 797–827.
-- Grinold, R. C. (1989). The fundamental law of active management. *Journal of Portfolio Management*, 15(3), 30–37.
 - Hawkes, A. G. (1971). Spectra of some self-exciting and mutually exciting point processes. *Biometrika*, 58(1), 83–90.
-- Huang, X. & Tauchen, G. (2005). The relative contribution of jumps to total price variance. *Journal of Financial Econometrics*, 3(4), 456–499.
-- Johansen, S. (1991). Estimation and hypothesis testing of cointegration vectors in Gaussian VAR models. *Econometrica*, 59(6), 1551–1580.
 - Lee, S. S. & Mykland, P. A. (2008). Jumps in financial markets: a new nonparametric test and jump dynamics. *Review of Financial Studies*, 21(6), 2535–2563.
-- Lo, A. W. (2002). The statistics of Sharpe ratios. *Financial Analysts Journal*, 58(4), 36–52.
-- Merton, R. C. (1976). Option pricing when underlying stock returns are discontinuous. *Journal of Financial Economics*, 3(1–2), 125–144.
-- Newey, W. K. & West, K. D. (1987). A simple, positive semi-definite, heteroskedasticity and autocorrelation consistent covariance matrix. *Econometrica*, 55(3), 703–708.
-- Newey, W. K. & West, K. D. (1994). Automatic lag selection in covariance matrix estimation. *Review of Economic Studies*, 61(4), 631–653.
-- Ogata, Y. (1981). On Lewis' simulation method for point processes. *IEEE Transactions on Information Theory*, 27(1), 23–31.
-- Ogata, Y. (1988). Statistical models for earthquake occurrences and residual analysis for point processes. *Journal of the American Statistical Association*, 83(401), 9–27.
-- Ozaki, T. (1979). Maximum likelihood estimation of Hawkes' self-exciting point processes. *Annals of the Institute of Statistical Mathematics*, 31(1), 145–155.
-- Phillips, P. C. B. & Ouliaris, S. (1990). Asymptotic properties of residual based tests for cointegration. *Econometrica*, 58(1), 165–193.
-- Politis, D. N. & Romano, J. P. (1994). The stationary bootstrap. *Journal of the American Statistical Association*, 89(428), 1303–1313.
 
 ---
 
