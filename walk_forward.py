@@ -39,7 +39,15 @@ Changes from the audited version
    Sharpe can account for the search.
 
 6. THE HEDGE RATIO IS RE-ESTIMATED at each boundary and held fixed within the
-   quarter.
+   quarter. Each position is sized with the hedge ratio of the quarter in
+   which it was entered, and its stops are scaled by that quarter's TRAINING
+   spread volatility. (The book used to be sized with the mean of all 23
+   quarterly hedge ratios, and its stops with the full-sample spread, both of
+   which use information from after the trade date.)
+
+7. THE PAIR-VALIDATION GATE APPLIES PER QUARTER. A quarter whose refit fails
+   validation opens no positions, and any position carried into it is closed
+   at the quarter's first bar.
 """
 
 from __future__ import annotations
@@ -137,6 +145,17 @@ class WalkForwardEngine:
         signal_frames: List[pd.DataFrame] = []
         hedge_by_period: List[tuple] = []
 
+        # Without per-quarter re-estimation the hedge is fitted ONCE on the
+        # first training window -- never on the full sample, which would leak
+        # every later price into every quarter's spread.
+        fixed_hedge: Optional[float] = None
+        if not wf.reestimate_hedge_each_quarter:
+            fixed_hedge, _ = loader.estimate_hedge_ratio_static(
+                full_cleaned["asset_a"]["Close"].loc[: quarter_ends[0]],
+                full_cleaned["asset_b"]["Close"].loc[: quarter_ends[0]],
+                method=cfg.data.hedge_ratio_method,
+            )
+
         for i, q_end in enumerate(quarter_ends):
             after = index[index > q_end]
             if len(after) == 0:
@@ -157,15 +176,14 @@ class WalkForwardEngine:
                         full_cleaned["asset_b"]["Close"].loc[:q_end],
                         method=cfg.data.hedge_ratio_method,
                     )
-                    quarter_spread = full_spread.copy()
-                    quarter_spread["spread"] = (
-                        quarter_spread["log_a"] - h * quarter_spread["log_b"]
-                    )
-                    quarter_spread["hedge_ratio"] = h
-                    train_spread = quarter_spread.loc[:q_end]
                 else:
-                    quarter_spread = full_spread
-                    h = float(full_spread["hedge_ratio"].iloc[-1])
+                    h = float(fixed_hedge)
+                quarter_spread = full_spread.copy()
+                quarter_spread["spread"] = (
+                    quarter_spread["log_a"] - h * quarter_spread["log_b"]
+                )
+                quarter_spread["hedge_ratio"] = h
+                train_spread = quarter_spread.loc[:q_end]
 
                 bundle = pipeline.fit_models(
                     train_spread,
@@ -173,6 +191,7 @@ class WalkForwardEngine:
                     train_end=str(q_end.date()),
                 )
                 artifacts = pipeline.compute_artifacts(quarter_spread, bundle)
+                entries_allowed = pipeline.entries_allowed(bundle)
 
                 if wf.tune_thresholds:
                     z_entry, z_exit, n_trials, _ = pipeline.tune_thresholds(
@@ -199,6 +218,10 @@ class WalkForwardEngine:
                     min_lambda_decay_pct=cfg.trading.min_lambda_decay_pct,
                     max_position_size=cfg.trading.max_position_size,
                     min_position_size=cfg.trading.min_position_size,
+                    min_hold_fraction=cfg.trading.min_hold_fraction,
+                    target_hold_fraction=cfg.trading.target_hold_fraction,
+                    max_hold_fraction=cfg.trading.max_hold_fraction,
+                    max_holding_period_cap=cfg.trading.max_holding_period_cap,
                     use_jump_entries=cfg.trading.use_jump_entries,
                     use_hawkes_regimes=bundle.use_hawkes_regimes,
                     z_lookback=cfg.trading.z_score_lookback,
@@ -206,6 +229,7 @@ class WalkForwardEngine:
                     regime_excess_calm=cfg.trading.regime_excess_calm,
                     regime_excess_elevated=cfg.trading.regime_excess_elevated,
                     regime_excess_crisis=cfg.trading.regime_excess_crisis,
+                    allow_entries=entries_allowed,
                     verbose=False,
                 )
                 generator.set_lambda_baseline(bundle.hawkes_params.get("lambda_bar", 0.01))
@@ -217,6 +241,15 @@ class WalkForwardEngine:
                     jump_indicator=indicator,
                     z_score=z_score,
                 )
+                # Per-bar sizing inputs, so the continuous book sizes each
+                # position with the parameters frozen for its own quarter
+                quarter_signals["hedge_ratio"] = h
+                quarter_signals["stop_reference_sd"] = bundle.spread_sd
+                if not entries_allowed and len(quarter_signals):
+                    # Close anything carried in from a tradeable quarter
+                    first = quarter_signals.index[0]
+                    quarter_signals.loc[first, "signal"] = 2.0
+                    quarter_signals.loc[first, "signal_exit_reason"] = "pair_untradeable"
                 signal_frames.append(quarter_signals)
                 hedge_by_period.append((eval_start, eval_end, h))
 
@@ -230,6 +263,9 @@ class WalkForwardEngine:
                         "half_life": bundle.half_life,
                         "z_entry": z_entry,
                         "z_exit": z_exit,
+                        "pair_tradeable": bundle.is_tradeable,
+                        "entries_allowed": entries_allowed,
+                        "stop_reference_sd": bundle.spread_sd,
                         "hawkes_active": bundle.hawkes_active,
                         "n_jumps_fdr": bundle.n_jumps_fdr,
                         "n_jumps_nominal": bundle.n_jumps_nominal,
@@ -242,7 +278,8 @@ class WalkForwardEngine:
                 )
                 self._log(
                     f"  {label}: h={h:.4f}, HL={bundle.half_life:.0f}d, "
-                    f"z=({z_entry},{z_exit}), hawkes={'on' if bundle.hawkes_active else 'off'}"
+                    f"z=({z_entry},{z_exit}), hawkes={'on' if bundle.hawkes_active else 'off'}, "
+                    f"tradeable={bundle.is_tradeable}"
                 )
 
             except Exception as exc:  # noqa: BLE001 -- recorded, never silent
@@ -270,8 +307,10 @@ class WalkForwardEngine:
         combined = combined[~combined.index.duplicated(keep="last")]
         self.signals = combined
 
-        spread_for_bt = full_spread.loc[combined.index]
-        mean_hedge = float(np.mean([h for _, _, h in hedge_by_period])) if hedge_by_period else 1.0
+        # The spread each quarter was SIGNALLED on (its own frozen hedge), not
+        # the full-sample-hedge spread
+        spread_for_bt = combined[["spread", "hedge_ratio"]]
+        first_hedge = float(hedge_by_period[0][2])
 
         bt = cfg.backtest
         engine = BacktestEngine(
@@ -308,9 +347,10 @@ class WalkForwardEngine:
             spread_for_bt,
             full_cleaned["asset_a"]["Close"].loc[combined.index],
             full_cleaned["asset_b"]["Close"].loc[combined.index],
-            hedge_ratio=mean_hedge,
+            hedge_ratio=first_hedge,
             asset_a_ohlc=full_cleaned["asset_a"].loc[combined.index],
             asset_b_ohlc=full_cleaned["asset_b"].loc[combined.index],
+            stop_reference_sd=float(combined["stop_reference_sd"].iloc[0]),
         )
 
         # Metrics from the REAL trade list on the REAL curve.
@@ -325,6 +365,9 @@ class WalkForwardEngine:
         )
 
         metrics["quarters_evaluated"] = len(self.quarterly_results)
+        metrics["quarters_entries_allowed"] = int(
+            sum(bool(q["entries_allowed"]) for q in self.quarterly_results)
+        )
         metrics["quarters_failed"] = len(self.failures)
         metrics["configurations_tried"] = self.total_configurations_tried
 
@@ -385,6 +428,7 @@ class WalkForwardEngine:
         self._log("WALK-FORWARD OUT-OF-SAMPLE SUMMARY")
         self._log("=" * 72)
         self._log(f"  Quarters evaluated : {m.get('quarters_evaluated', 0)}")
+        self._log(f"  Quarters tradeable : {m.get('quarters_entries_allowed', 0)}")
         self._log(f"  Quarters FAILED    : {m.get('quarters_failed', 0)}")
         if self.failures:
             kinds: Dict[str, int] = {}

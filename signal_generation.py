@@ -85,7 +85,7 @@ class TradingSignals:
         min_position_size: float = 0.10,
         min_hold_fraction: float = 0.5,
         target_hold_fraction: float = 0.8,
-        max_hold_fraction: float = 0.8,
+        max_hold_fraction: float = 1.5,
         max_holding_period_cap: int = 120,
         use_jump_entries: bool = True,
         use_hawkes_regimes: bool = True,
@@ -94,6 +94,7 @@ class TradingSignals:
         regime_excess_calm: float = 0.05,
         regime_excess_elevated: float = 1.0,
         regime_excess_crisis: float = 5.0,
+        allow_entries: bool = True,
         verbose: bool = True,
     ):
         self.z_entry = z_entry_threshold
@@ -119,6 +120,10 @@ class TradingSignals:
         self.regime_excess_elevated = regime_excess_elevated 
         self.regime_excess_crisis = regime_excess_crisis
 
+        # False when the training-window pair validation failed: the
+        # generator still computes regimes and manages exits, but opens nothing
+        self.allow_entries = allow_entries
+
         self.verbose = verbose 
 
         self.half_life: Optional[float] = None 
@@ -130,6 +135,7 @@ class TradingSignals:
         # Diagnostics -- reported, not silently accumulated 
         self.entries_blocked_by_regime = 0
         self.entries_blocked_by_decay = 0
+        self.entries_blocked_by_validation = 0
         self.jump_entries_taken = 0
         self.exit_reason_counts: Dict[str, int] = {}
 
@@ -284,8 +290,9 @@ class TradingSignals:
 
         Entry (ALL must hold, for both normal and jump-assisted entries):
             1. |z| above the regime-adjusted threshold (0.65x for jump entries)
-            2. regime is not CRISIS
-            3. lambda is in a decay phase 
+            2. the pair passed training-window validation (`allow_entries`)
+            3. regime is not CRISIS
+            4. lambda is in a decay phase
 
         Exit (evaluated INDEPENDENTLY, resolved by EXIT_PRIORITY):
             - emergency_stop: z moved `emergency_z_move` against the entry 
@@ -334,6 +341,7 @@ class TradingSignals:
 
         self.entries_blocked_by_regime = 0
         self.entries_blocked_by_decay = 0
+        self.entries_blocked_by_validation = 0
         self.jump_entries_taken = 0 
         self.exit_reason_counts = {}
 
@@ -367,8 +375,10 @@ class TradingSignals:
                 want_short = normal_short or jump_short 
 
                 if want_long or want_short:
-                    # Both entry paths pass through BOTH gates. 
-                    if regime == HawkesRegime.CRISIS:
+                    # Both entry paths pass through EVERY gate. 
+                    if not self.allow_entries:
+                        self.entries_blocked_by_validation += 1
+                    elif regime == HawkesRegime.CRISIS:
                         self.entries_blocked_by_regime += 1
                     elif not self._is_lambda_decaying(lambda_intensity, i):
                         self.entries_blocked_by_decay += 1
@@ -453,7 +463,8 @@ class TradingSignals:
         )
         self._log(
             f" blocked: {self.entries_blocked_by_regime} by CRISIS regime, "
-            f"{self.entries_blocked_by_decay} by lambda decay"
+            f"{self.entries_blocked_by_decay} by lambda decay, "
+            f"{self.entries_blocked_by_validation} by failed pair validation"
         )
         if self.exit_reason_counts:
             self._log(f" signal exit reasons: {self.exit_reason_counts}")
@@ -480,6 +491,7 @@ class TradingSignals:
             else 0.0,
             "entries_blocked_by_regime": self.entries_blocked_by_regime,
             "entries_blocked_by_decay": self.entries_blocked_by_decay,
+            "entries_blocked_by_validation": self.entries_blocked_by_validation,
             "jump_entries_taken": self.jump_entries_taken,
             "exit_reason_counts": dict(self.exit_reason_counts),
         }

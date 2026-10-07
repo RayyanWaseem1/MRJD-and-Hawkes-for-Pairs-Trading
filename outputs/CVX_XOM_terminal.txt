@@ -1,10 +1,8 @@
-(venv) (base) rayyanwaseem@Rayyans-MacBook-Pro MRJD-and-Hawkes-for-Pairs-Trading % python diagnostics.p
-y --pair CVX_XOM --which all
 ==============================================================================
 1. THEORETICAL CEILING  (idealised: perfect parameters, no costs)
 ==============================================================================
    pair  half_life_days  kappa  spread_sd  sharpe_ceiling  independent_trips_per_yr  edge_per_trip_pct  round_trip_cost_pct  borrow_pct  cost_share_of_edge_pct  hedge_ratio
-CVX_XOM          66.071   0.01      0.082           0.917                     1.907              7.124                 0.42       0.131                   7.736         0.72
+CVX_XOM          65.562  0.011      0.082           0.921                     1.922               7.17                 0.06        0.13                   2.651         0.71
 
   'independent_trips_per_yr' is the binding constraint: at ~2 per year,
   a two-year window carries roughly four effective observations.
@@ -18,27 +16,29 @@ CVX_XOM          66.071   0.01      0.082           0.917                     1.
            beta         r_squared          t_stat        
 window    train     val     train     val   train     val
 pair                                                     
-CVX_XOM -0.0031 -0.0004    0.0278  0.0011 -1.9421 -0.3748
+CVX_XOM -0.0031 -0.0005    0.0263  0.0013 -1.9152 -0.4012
 
 --- horizon 20 trading days ---
            beta         r_squared          t_stat        
 window    train     val     train     val   train     val
 pair                                                     
-CVX_XOM -0.0106 -0.0036    0.0953  0.0189 -2.5946 -0.9142
+CVX_XOM -0.0106 -0.0037    0.0941  0.0198 -2.5827 -0.9387
 
 --- horizon 60 trading days ---
            beta         r_squared          t_stat        
 window    train     val     train     val   train     val
 pair                                                     
-CVX_XOM -0.0096 -0.0161     0.046  0.1739 -2.1415 -3.1599
+CVX_XOM -0.0096 -0.0161    0.0459  0.1742 -2.0768 -3.2118
 
 ==============================================================================
 3. STOP SENSITIVITY  (TRAINING window -- diagnostic, NOT a result)
 ==============================================================================
 
    pair        config  daily_sd_pct  trades  sharpe  ann_return_pct  avg_duration_days  pct_exits_via_stop
-CVX_XOM as-shipped 3%         0.717      21   0.579           3.101             30.048               4.762
-CVX_XOM 2 daily sigma         0.717      21   0.579           3.101             30.048               4.762
-CVX_XOM 4 daily sigma         0.717      21   0.579           3.101             30.048               4.762
-CVX_XOM     stops off         0.717      21   0.579           3.101             30.048               4.762
-(venv) (base) rayyanwaseem@Rayyans-MacBook-Pro MRJD-and-Hawkes-for-Pairs-Trading % 
+CVX_XOM as-shipped 3%         0.725       0     0.0           2.018                0.0                 0.0
+CVX_XOM 2 daily sigma         0.725       0     0.0           2.018                0.0                 0.0
+CVX_XOM 4 daily sigma         0.725       0     0.0           2.018                0.0                 0.0
+CVX_XOM     stops off         0.725       0     0.0           2.018                0.0                 0.0
+    wrote 5 artifacts to /home/user/MRJD-and-Hawkes-for-Pairs-Trading/outputs/diagnostics/CVX_XOM
+
+Saved diagnostics under /home/user/MRJD-and-Hawkes-for-Pairs-Trading/outputs/diagnostics

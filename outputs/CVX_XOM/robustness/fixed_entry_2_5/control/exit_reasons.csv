@@ -1,2 +1,2 @@
-max_hold_count,max_hold_win_rate,max_hold_avg_return,max_hold_total_pnl,emergency_stop_count,emergency_stop_win_rate,emergency_stop_avg_return,emergency_stop_total_pnl,mean_reversion_count,mean_reversion_win_rate,mean_reversion_avg_return,mean_reversion_total_pnl
-8,37.5,-0.9909633155615918,-19477.339838925916,1,0.0,-5.512051188916781,-14690.690319140615,4,75.0,-0.2807943237594468,-3080.877352600134
+trailing_stop_count,trailing_stop_win_rate,trailing_stop_avg_return,trailing_stop_total_pnl,max_hold_count,max_hold_win_rate,max_hold_avg_return,max_hold_total_pnl,emergency_stop_count,emergency_stop_win_rate,emergency_stop_avg_return,emergency_stop_total_pnl
+1,100.0,10.982317495213374,27582.463842596466,2,50.0,0.6582683850781257,3395.5065163676327,1,0.0,-5.657102260161654,-15121.558983144843

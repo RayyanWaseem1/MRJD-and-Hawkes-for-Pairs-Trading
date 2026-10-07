@@ -1,2 +1,2 @@
-time_in_market,n_entries,entry_discipline,avg_position_size,entries_blocked_by_regime,entries_blocked_by_decay,jump_entries_taken,exit_reason_counts_max_hold,exit_reason_counts_mean_reversion,exit_reason_counts_profit_target,exit_reason_counts_emergency_stop
-0.5617529880478087,11,0.021912350597609563,0.24530022003874913,0,0,1,1,5,3,2
+time_in_market,n_entries,entry_discipline,avg_position_size,entries_blocked_by_regime,entries_blocked_by_decay,entries_blocked_by_validation,jump_entries_taken
+0.0,0,0.0,0.0,0,0,121,0

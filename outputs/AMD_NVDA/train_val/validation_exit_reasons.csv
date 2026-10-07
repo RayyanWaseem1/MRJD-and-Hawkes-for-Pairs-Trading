@@ -1,2 +1,2 @@
-mean_reversion_count,mean_reversion_win_rate,mean_reversion_avg_return,mean_reversion_total_pnl,max_hold_count,max_hold_win_rate,max_hold_avg_return,max_hold_total_pnl,forced_close_period_end_count,forced_close_period_end_win_rate,forced_close_period_end_avg_return,forced_close_period_end_total_pnl
-4,0.0,-3.5421299436807603,-34209.21711770802,2,0.0,-16.889513212033496,-82342.94642589906,1,0.0,-11.812651024035231,-26832.4831237428
+profit_target_count,profit_target_win_rate,profit_target_avg_return,profit_target_total_pnl,mean_reversion_count,mean_reversion_win_rate,mean_reversion_avg_return,mean_reversion_total_pnl,forced_close_period_end_count,forced_close_period_end_win_rate,forced_close_period_end_avg_return,forced_close_period_end_total_pnl
+1,100.0,4.754949821418862,11903.423262000348,4,25.0,-10.223239645179998,-102407.99956802139,1,0.0,-11.126774231883104,-26111.782145490168

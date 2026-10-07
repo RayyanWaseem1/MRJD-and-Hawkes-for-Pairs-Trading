@@ -1,2 +1,2 @@
-mean_reversion_count,mean_reversion_win_rate,mean_reversion_avg_return,mean_reversion_total_pnl,profit_target_count,profit_target_win_rate,profit_target_avg_return,profit_target_total_pnl,max_hold_count,max_hold_win_rate,max_hold_avg_return,max_hold_total_pnl
-6,66.66666666666666,0.6144532196553514,9288.418780139556,2,100.0,3.345801180319606,13151.290540078524,2,0.0,-3.2550653881580356,-16820.605113139954
+mean_reversion_count,mean_reversion_win_rate,mean_reversion_avg_return,mean_reversion_total_pnl,profit_target_count,profit_target_win_rate,profit_target_avg_return,profit_target_total_pnl
+7,57.14285714285714,0.06742287996394482,856.2844557380627,2,100.0,3.722343242041193,14844.486676802957

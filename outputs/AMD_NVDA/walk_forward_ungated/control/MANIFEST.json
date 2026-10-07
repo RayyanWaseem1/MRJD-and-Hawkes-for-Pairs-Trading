@@ -1,0 +1,14 @@
+{
+  "files": [
+    "MANIFEST.json",
+    "exit_reasons.csv",
+    "quarterly_parameters.csv",
+    "run_config.json",
+    "walk_forward_equity.png",
+    "walk_forward_equity_curve.csv",
+    "walk_forward_metrics.csv",
+    "walk_forward_signals.csv",
+    "walk_forward_trade_summary.csv"
+  ],
+  "n_files": 9
+}

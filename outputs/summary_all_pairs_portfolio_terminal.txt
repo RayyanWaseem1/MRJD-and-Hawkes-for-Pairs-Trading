@@ -1,39 +1,3 @@
-(venv) (base) rayyanwaseem@Rayyans-MacBook-Pro MRJD-and-Hawkes-for-Pairs-Trading % python main.py --pai
-r all --mode portfolio --seed 42
-========================================================================
-MRJD + HAWKES PAIRS TRADING
- pairs: AMD_NVDA, CVX_XOM, GLD_GDX, GS_MS, SPY_IVV
- modes: walk_forward
- seed: 42
-========================================================================
-
- DIVIDEND TREATMENT
-Dividends are exluded from this study, in both the spread construction and 
-the backtest PnL. This is a real, unmodelled cash flow for a long/short book:
-the position is long one name and short the other, so the strategy pays the 
-dividend on the short leg and receives it on the long leg, and the net is the 
-dividend *differential* between the two names. 
-
-Estimated size of the omission (trailing indicative gross yields):
-
-    CVX/XOM    ~4.2% vs ~3.3%   ->  ~0.9%/yr differential
-    GS/MS      ~2.2% vs ~3.0%   ->  ~0.8%/yr differential
-    GLD/GDX    0.0% vs ~1.3%    ->  ~1.3%/yr differential
-    SPY/IVV    ~1.2% vs ~1.2%   ->  ~0.0%/yr differential (near-identical)
-    AMD/NVDA   0.0% vs ~0.02%   ->  ~0.0%/yr differential
-    
-Against realized average gross exposure of roughly 10% of capital, a 0.9%/yr
-gross differential is on the order of 9bp/yr on total capital -- small next to 
-the strategy's own noise, but the SAME order of magnitude as the alpha being 
-tested for. It is therefore a material omission for the CVX/XOM, GS/MS and
-GLD/GDX pairs and must be stated, not assumed away.
-
-The SPY benchmark used for the beta regression is likewise a PRICE series, not 
-a total-return series. Comparisons against it understate the benchmark by 
-roughly its ~1.2%/yr dividend yield. Because the headline test is now a direct
-test of mean excess return (not a CAPM alpha), this affects only the 
-neutrality regression, where it is second-order.
-
 
 ========================================================================
 WALK-FORWARD (continuous book, quarterly parameter swap)
@@ -41,289 +5,289 @@ WALK-FORWARD (continuous book, quarterly parameter swap)
 ========================================================================
 
 Full sample 2018-05-01 -> 2026-02-17 (1960 obs), 23 quarters
-  Q1 2020-07-01->2020-09-30: h=0.5915, HL=72d, z=(2.5,0.5), hawkes=off
-  Q2 2020-10-01->2020-12-31: h=0.8746, HL=72d, z=(1.5,0.75), hawkes=on
-  Q3 2021-01-04->2021-03-31: h=0.9765, HL=73d, z=(2.0,0.75), hawkes=on
-  Q4 2021-04-01->2021-06-30: h=1.0153, HL=70d, z=(2.0,0.75), hawkes=on
-  Q5 2021-07-01->2021-09-30: h=0.9765, HL=71d, z=(2.0,0.75), hawkes=on
-  Q6 2021-10-01->2021-12-31: h=0.9474, HL=70d, z=(1.5,0.25), hawkes=on
-  Q7 2022-01-03->2022-03-31: h=0.9317, HL=69d, z=(1.5,0.25), hawkes=on
-  Q8 2022-04-01->2022-06-30: h=0.9196, HL=70d, z=(1.5,0.75), hawkes=on
-  Q9 2022-07-01->2022-09-30: h=0.9146, HL=69d, z=(1.5,0.25), hawkes=on
-  Q10 2022-10-03->2022-12-30: h=0.9161, HL=68d, z=(1.5,0.75), hawkes=on
-  Q11 2023-01-03->2023-03-31: h=0.9075, HL=70d, z=(1.5,0.75), hawkes=on
-  Q12 2023-04-03->2023-06-30: h=0.8818, HL=75d, z=(1.5,0.75), hawkes=on
-  Q13 2023-07-03->2023-09-29: h=0.8373, HL=83d, z=(2.0,0.25), hawkes=on
-  Q14 2023-10-02->2023-12-29: h=0.7750, HL=91d, z=(1.5,0.75), hawkes=on
-  Q15 2024-01-02->2024-03-28: h=0.7385, HL=86d, z=(1.5,0.25), hawkes=on
-  Q16 2024-04-01->2024-06-28: h=0.7148, HL=88d, z=(1.5,0.5), hawkes=on
-  Q17 2024-07-01->2024-09-30: h=0.6659, HL=99d, z=(1.5,0.75), hawkes=on
-  Q18 2024-10-01->2024-12-31: h=0.6196, HL=97d, z=(1.5,0.5), hawkes=on
-  Q19 2025-01-02->2025-03-31: h=0.5763, HL=116d, z=(1.5,0.25), hawkes=on
-  Q20 2025-04-01->2025-06-30: h=0.5379, HL=122d, z=(1.5,0.25), hawkes=on
-  Q21 2025-07-01->2025-09-30: h=0.5077, HL=118d, z=(1.5,0.25), hawkes=on
-  Q22 2025-10-01->2025-12-31: h=0.4920, HL=115d, z=(1.5,0.25), hawkes=on
-  Q23 2026-01-02->2026-02-17: h=0.4940, HL=107d, z=(1.5,0.25), hawkes=on
+  Q1 2020-07-01->2020-09-30: h=0.3555, HL=75d, z=(2.0,0.5), hawkes=on, tradeable=False
+  Q2 2020-10-01->2020-12-31: h=0.6375, HL=80d, z=(2.0,0.5), hawkes=off, tradeable=False
+  Q3 2021-01-04->2021-03-31: h=0.8556, HL=76d, z=(2.0,0.5), hawkes=on, tradeable=False
+  Q4 2021-04-01->2021-06-30: h=0.7928, HL=75d, z=(2.0,0.5), hawkes=on, tradeable=False
+  Q5 2021-07-01->2021-09-30: h=0.6752, HL=79d, z=(2.0,0.5), hawkes=on, tradeable=False
+  Q6 2021-10-01->2021-12-31: h=0.7224, HL=75d, z=(2.0,0.5), hawkes=on, tradeable=False
+  Q7 2022-01-03->2022-03-31: h=0.7381, HL=75d, z=(1.5,0.5), hawkes=on, tradeable=True
+  Q8 2022-04-01->2022-06-30: h=0.7009, HL=75d, z=(2.0,0.5), hawkes=on, tradeable=False
+  Q9 2022-07-01->2022-09-30: h=0.7523, HL=71d, z=(1.5,0.25), hawkes=on, tradeable=True
+  Q10 2022-10-03->2022-12-30: h=0.7581, HL=70d, z=(1.5,0.25), hawkes=on, tradeable=True
+  Q11 2023-01-03->2023-03-31: h=0.7325, HL=72d, z=(1.5,0.5), hawkes=on, tradeable=True
+  Q12 2023-04-03->2023-06-30: h=0.6732, HL=76d, z=(2.0,0.5), hawkes=on, tradeable=False
+  Q13 2023-07-03->2023-09-29: h=0.5791, HL=84d, z=(2.0,0.5), hawkes=on, tradeable=False
+  Q14 2023-10-02->2023-12-29: h=0.4996, HL=92d, z=(2.0,0.5), hawkes=on, tradeable=False
+  Q15 2024-01-02->2024-03-28: h=0.5601, HL=86d, z=(2.0,0.5), hawkes=on, tradeable=False
+  Q16 2024-04-01->2024-06-28: h=0.4901, HL=92d, z=(2.0,0.5), hawkes=on, tradeable=False
+  Q17 2024-07-01->2024-09-30: h=0.3722, HL=109d, z=(2.0,0.5), hawkes=on, tradeable=False
+  Q18 2024-10-01->2024-12-31: h=0.3915, HL=103d, z=(2.0,0.5), hawkes=on, tradeable=False
+  Q19 2025-01-02->2025-03-31: h=0.2766, HL=126d, z=(2.0,0.5), hawkes=on, tradeable=False
+  Q20 2025-04-01->2025-06-30: h=0.2830, HL=124d, z=(2.0,0.5), hawkes=on, tradeable=False
+  Q21 2025-07-01->2025-09-30: h=0.2766, HL=124d, z=(2.0,0.5), hawkes=on, tradeable=False
+  Q22 2025-10-01->2025-12-31: h=0.2922, HL=120d, z=(2.0,0.5), hawkes=on, tradeable=False
+  Q23 2026-01-02->2026-02-17: h=0.3576, HL=110d, z=(2.0,0.5), hawkes=on, tradeable=False
 
 Running ONE continuous backtest over 1414 bars
- Stops (scaled to stationary sigma 15.62%, daily 1.44%): stop 50.00%, trail 23.43%, target 50.00%
-Backtest: h = 0.7744 (sized), delay = 1 bar(s), fill at next open, intraday stops on
- 17 trades, final equity $1,164,234 (+16.42%)
- avg gross exposure 20.6%, flat 12 % of days, cash credit $99,703
- NOTE: open position force-closed at the final bar and RECORDED
- exit reasons: {'mean_reversion': 7, 'profit_target': 9, 'forced_close_period_end': 1}
+ Stops (scaled to stationary sigma 28.06%, frozen_training_sd): stop 50.00%, trail 42.09%, target 50.00%
+Backtest: h = per-bar (sized), delay = 1 bar(s), fill at next open, intraday stops on
+ 3 trades, final equity $1,045,605 (+4.56%)
+ avg gross exposure 3.4%, flat 86 % of days, cash credit $110,052
+ exit reasons: {'pair_untradeable': 1, 'profit_target': 1, 'mean_reversion': 1}
 
 ========================================================================
 WALK-FORWARD OUT-OF-SAMPLE SUMMARY
 ========================================================================
   Quarters evaluated : 23
+  Quarters tradeable : 4
   Quarters FAILED    : 0
 
-  Annualised return  : 2.747%
-  Annualised vol     : 5.349%
-  Sharpe             : 0.160 (HAC SE 0.383)
-  Max drawdown       : -10.31%
-  On capital at risk : 5.63% return, -50.10% drawdown (4.9x scale)
+  Annualised return  : 0.798%
+  Annualised vol     : 1.909%
+  Sharpe             : -0.622 (HAC SE 0.458)
+  Max drawdown       : -6.84%
+  On capital at risk : -33.33% return, -201.00% drawdown (29.4x scale)
 
   HEADLINE TEST -- H0: mean excess return = 0 (Newey-West)
-    mean excess     : +0.855%/yr
-    t-statistic     : 0.418
-    p-value         : 0.6763
-    95% CI          : [-3.158%, +4.869%]
+    mean excess     : -1.186%/yr
+    t-statistic     : -1.357
+    p-value         : 0.1750
+    95% CI          : [-2.900%, +0.527%]
 
   Neutrality check (CAPM vs SPY, NOT the headline)
-    beta            : 0.0079   R^2 0.00064
+    beta            : 0.0049   R^2 0.00191
 
-  Trades             : 17
-  Win rate           : 58.8%
-  Profit factor      : 1.548
-  Avg duration       : 73.5 trading days
+  Trades             : 3
+  Win rate           : 33.3%
+  Profit factor      : 0.180
+  Avg duration       : 64.7 trading days
 
-  Configurations tried : 207
-  Deflated Sharpe prob : 0.0083 (FAILS at 95%)
-
-  POWER: Over 5.6 years at 5.35% annualised volatility, the standard error of the mean return is 2.26%/yr. Power to detect a 1.0%/yr edge at alpha=0.05 is 7.3%; the smallest effect detectable at 80% power is 6.33%/yr. A null result here means the design could not resolve an edge of the size sought, not that no edge exists.
-========================================================================
-    (skipped empty quarter_failures.csv)
-    wrote 9 artifacts to /Users/rayyanwaseem/Desktop/Projects/MRJD-and-Hawkes-for-Pairs-Trading/outputs/AMD_NVDA/walk_forward/hawkes
-
-========================================================================
-WALK-FORWARD (continuous book, quarterly parameter swap)
-  min training: 504 days
-========================================================================
-
-Full sample 2018-05-01 -> 2026-02-17 (1960 obs), 23 quarters
-  Q1 2020-07-01->2020-09-30: h=0.5915, HL=72d, z=(2.5,0.5), hawkes=off
-  Q2 2020-10-01->2020-12-31: h=0.8746, HL=72d, z=(2.0,0.25), hawkes=on
-  Q3 2021-01-04->2021-03-31: h=0.9765, HL=73d, z=(2.5,0.25), hawkes=on
-  Q4 2021-04-01->2021-06-30: h=1.0153, HL=70d, z=(2.5,0.5), hawkes=on
-  Q5 2021-07-01->2021-09-30: h=0.9765, HL=71d, z=(2.5,0.25), hawkes=on
-  Q6 2021-10-01->2021-12-31: h=0.9474, HL=70d, z=(2.5,0.25), hawkes=on
-  Q7 2022-01-03->2022-03-31: h=0.9317, HL=69d, z=(2.0,0.75), hawkes=on
-  Q8 2022-04-01->2022-06-30: h=0.9196, HL=70d, z=(2.0,0.25), hawkes=on
-  Q9 2022-07-01->2022-09-30: h=0.9146, HL=69d, z=(2.0,0.25), hawkes=on
-  Q10 2022-10-03->2022-12-30: h=0.9161, HL=68d, z=(2.5,0.25), hawkes=on
-  Q11 2023-01-03->2023-03-31: h=0.9075, HL=70d, z=(2.0,0.25), hawkes=on
-  Q12 2023-04-03->2023-06-30: h=0.8818, HL=75d, z=(2.0,0.5), hawkes=on
-  Q13 2023-07-03->2023-09-29: h=0.8373, HL=83d, z=(2.5,0.5), hawkes=on
-  Q14 2023-10-02->2023-12-29: h=0.7750, HL=91d, z=(2.5,0.5), hawkes=on
-  Q15 2024-01-02->2024-03-28: h=0.7385, HL=86d, z=(2.5,0.25), hawkes=on
-  Q16 2024-04-01->2024-06-28: h=0.7148, HL=88d, z=(2.5,0.5), hawkes=on
-  Q17 2024-07-01->2024-09-30: h=0.6659, HL=99d, z=(2.5,0.75), hawkes=on
-  Q18 2024-10-01->2024-12-31: h=0.6196, HL=97d, z=(2.5,0.5), hawkes=on
-  Q19 2025-01-02->2025-03-31: h=0.5763, HL=116d, z=(2.5,0.5), hawkes=on
-  Q20 2025-04-01->2025-06-30: h=0.5379, HL=122d, z=(2.5,0.5), hawkes=on
-  Q21 2025-07-01->2025-09-30: h=0.5077, HL=118d, z=(2.5,0.5), hawkes=on
-  Q22 2025-10-01->2025-12-31: h=0.4920, HL=115d, z=(2.5,0.5), hawkes=on
-  Q23 2026-01-02->2026-02-17: h=0.4940, HL=107d, z=(1.5,0.75), hawkes=on
-
-Running ONE continuous backtest over 1414 bars
- Stops (scaled to stationary sigma 15.62%, daily 1.44%): stop 50.00%, trail 23.43%, target 50.00%
-Backtest: h = 0.7744 (sized), delay = 1 bar(s), fill at next open, intraday stops on
- 10 trades, final equity $1,089,346 (+8.93%)
- avg gross exposure 16.3%, flat 18 % of days, cash credit $102,394
- NOTE: open position force-closed at the final bar and RECORDED
- exit reasons: {'mean_reversion': 3, 'max_hold': 2, 'profit_target': 3, 'stop_loss': 1, 'forced_close_period_end': 1}
-
-========================================================================
-WALK-FORWARD OUT-OF-SAMPLE SUMMARY
-========================================================================
-  Quarters evaluated : 23
-  Quarters FAILED    : 0
-
-  Annualised return  : 1.537%
-  Annualised vol     : 4.632%
-  Sharpe             : -0.079 (HAC SE 0.410)
-  Max drawdown       : -13.93%
-  On capital at risk : -0.84% return, -85.45% drawdown (6.1x scale)
-
-  HEADLINE TEST -- H0: mean excess return = 0 (Newey-West)
-    mean excess     : -0.367%/yr
-    t-statistic     : -0.193
-    p-value         : 0.8468
-    95% CI          : [-4.087%, +3.353%]
-
-  Neutrality check (CAPM vs SPY, NOT the headline)
-    beta            : 0.0132   R^2 0.00238
-
-  Trades             : 10
-  Win rate           : 70.0%
-  Profit factor      : 0.932
-  Avg duration       : 116.2 trading days
-
-  Configurations tried : 207
-  Deflated Sharpe prob : 0.0015 (FAILS at 95%)
-
-  POWER: Over 5.6 years at 4.63% annualised volatility, the standard error of the mean return is 1.96%/yr. Power to detect a 1.0%/yr edge at alpha=0.05 is 8.0%; the smallest effect detectable at 80% power is 5.48%/yr. A null result here means the design could not resolve an edge of the size sought, not that no edge exists.
-========================================================================
-    (skipped empty quarter_failures.csv)
-    wrote 9 artifacts to /Users/rayyanwaseem/Desktop/Projects/MRJD-and-Hawkes-for-Pairs-Trading/outputs/AMD_NVDA/walk_forward/control
-    wrote 3 artifacts to /Users/rayyanwaseem/Desktop/Projects/MRJD-and-Hawkes-for-Pairs-Trading/outputs/AMD_NVDA/walk_forward
-
-========================================================================
-WALK-FORWARD (continuous book, quarterly parameter swap)
-  min training: 504 days
-========================================================================
-
-Full sample 2018-05-01 -> 2026-02-12 (1958 obs), 23 quarters
-  Q1 2020-07-01->2020-09-30: h=0.5942, HL=12d, z=(2.0,0.25), hawkes=on
-  Q2 2020-10-01->2020-12-31: h=0.5867, HL=11d, z=(2.0,0.25), hawkes=on
-  Q3 2021-01-04->2021-03-31: h=0.5803, HL=12d, z=(2.0,0.25), hawkes=on
-  Q4 2021-04-01->2021-06-30: h=0.5805, HL=12d, z=(2.0,0.25), hawkes=on
-  Q5 2021-07-01->2021-09-30: h=0.5799, HL=12d, z=(2.0,0.25), hawkes=on
-  Q6 2021-10-01->2021-12-31: h=0.5813, HL=12d, z=(2.0,0.25), hawkes=on
-  Q7 2022-01-03->2022-03-31: h=0.5827, HL=15d, z=(2.0,0.25), hawkes=on
-  Q8 2022-04-01->2022-06-30: h=0.6189, HL=39d, z=(2.5,0.5), hawkes=on
-  Q9 2022-07-01->2022-09-30: h=0.6746, HL=45d, z=(2.0,0.5), hawkes=on
-  Q10 2022-10-03->2022-12-30: h=0.6941, HL=46d, z=(1.5,0.5), hawkes=on
-  Q11 2023-01-03->2023-03-31: h=0.7201, HL=50d, z=(2.0,0.25), hawkes=on
-  Q12 2023-04-03->2023-06-30: h=0.7214, HL=48d, z=(2.0,0.25), hawkes=on
-  Q13 2023-07-03->2023-09-29: h=0.7148, HL=47d, z=(2.0,0.25), hawkes=on
-  Q14 2023-10-02->2023-12-29: h=0.7103, HL=47d, z=(1.5,0.25), hawkes=on
-  Q15 2024-01-02->2024-03-28: h=0.7018, HL=47d, z=(2.0,0.25), hawkes=on
-  Q16 2024-04-01->2024-06-28: h=0.6950, HL=48d, z=(1.5,0.25), hawkes=on
-  Q17 2024-07-01->2024-09-30: h=0.6847, HL=48d, z=(2.0,0.5), hawkes=on
-  Q18 2024-10-01->2024-12-31: h=0.6672, HL=55d, z=(1.5,0.5), hawkes=on
-  Q19 2025-01-02->2025-03-31: h=0.6551, HL=54d, z=(1.5,0.5), hawkes=on
-  Q20 2025-04-01->2025-06-30: h=0.6530, HL=51d, z=(1.5,0.25), hawkes=on
-  Q21 2025-07-01->2025-09-30: h=0.6440, HL=54d, z=(1.5,0.25), hawkes=on
-  Q22 2025-10-01->2025-12-31: h=0.6414, HL=52d, z=(1.5,0.25), hawkes=on
-  Q23 2026-01-02->2026-02-12: h=0.6343, HL=54d, z=(1.5,0.25), hawkes=on
-
-Running ONE continuous backtest over 1412 bars
- Stops (scaled to stationary sigma 4.51%, daily 0.58%): stop 18.05%, trail 6.77%, target 22.56%
-Backtest: h = 0.6485 (sized), delay = 1 bar(s), fill at next open, intraday stops on
- 35 trades, final equity $1,102,733 (+10.27%)
- avg gross exposure 13.1%, flat 43 % of days, cash credit $103,182
- NOTE: open position force-closed at the final bar and RECORDED
- exit reasons: {'profit_target': 4, 'mean_reversion': 12, 'max_hold': 16, 'emergency_stop': 2, 'forced_close_period_end': 1}
-
-========================================================================
-WALK-FORWARD OUT-OF-SAMPLE SUMMARY
-========================================================================
-  Quarters evaluated : 23
-  Quarters FAILED    : 0
-
-  Annualised return  : 1.761%
-  Annualised vol     : 1.686%
-  Sharpe             : -0.142 (HAC SE 0.428)
-  Max drawdown       : -3.08%
-  On capital at risk : 0.17% return, -23.49% drawdown (7.6x scale)
-
-  HEADLINE TEST -- H0: mean excess return = 0 (Newey-West)
-    mean excess     : -0.239%/yr
-    t-statistic     : -0.331
-    p-value         : 0.7404
-    95% CI          : [-1.654%, +1.176%]
-
-  Neutrality check (CAPM vs SPY, NOT the headline)
-    beta            : -0.0122   R^2 0.01532
-
-  Trades             : 35
-  Win rate           : 54.3%
-  Profit factor      : 1.204
-  Avg duration       : 23.1 trading days
-
-  Configurations tried : 207
-  Deflated Sharpe prob : 0.0009 (FAILS at 95%)
-
-  POWER: Over 5.6 years at 1.69% annualised volatility, the standard error of the mean return is 0.71%/yr. Power to detect a 1.0%/yr edge at alpha=0.05 is 29.0%; the smallest effect detectable at 80% power is 2.00%/yr. A null result here means the design could not resolve an edge of the size sought, not that no edge exists.
-========================================================================
-    (skipped empty quarter_failures.csv)
-    wrote 9 artifacts to /Users/rayyanwaseem/Desktop/Projects/MRJD-and-Hawkes-for-Pairs-Trading/outputs/CVX_XOM/walk_forward/hawkes
-
-========================================================================
-WALK-FORWARD (continuous book, quarterly parameter swap)
-  min training: 504 days
-========================================================================
-
-Full sample 2018-05-01 -> 2026-02-12 (1958 obs), 23 quarters
-  Q1 2020-07-01->2020-09-30: h=0.5942, HL=12d, z=(2.5,0.25), hawkes=on
-  Q2 2020-10-01->2020-12-31: h=0.5867, HL=11d, z=(2.0,0.25), hawkes=on
-  Q3 2021-01-04->2021-03-31: h=0.5803, HL=12d, z=(2.0,0.25), hawkes=on
-  Q4 2021-04-01->2021-06-30: h=0.5805, HL=12d, z=(2.0,0.5), hawkes=on
-  Q5 2021-07-01->2021-09-30: h=0.5799, HL=12d, z=(2.0,0.25), hawkes=on
-  Q6 2021-10-01->2021-12-31: h=0.5813, HL=12d, z=(2.0,0.5), hawkes=on
-  Q7 2022-01-03->2022-03-31: h=0.5827, HL=15d, z=(2.0,0.5), hawkes=on
-  Q8 2022-04-01->2022-06-30: h=0.6189, HL=39d, z=(1.5,0.5), hawkes=on
-  Q9 2022-07-01->2022-09-30: h=0.6746, HL=45d, z=(2.0,0.25), hawkes=on
-  Q10 2022-10-03->2022-12-30: h=0.6941, HL=46d, z=(2.0,0.25), hawkes=on
-  Q11 2023-01-03->2023-03-31: h=0.7201, HL=50d, z=(1.5,0.25), hawkes=on
-  Q12 2023-04-03->2023-06-30: h=0.7214, HL=48d, z=(1.5,0.75), hawkes=on
-  Q13 2023-07-03->2023-09-29: h=0.7148, HL=47d, z=(1.5,0.25), hawkes=on
-  Q14 2023-10-02->2023-12-29: h=0.7103, HL=47d, z=(1.5,0.25), hawkes=on
-  Q15 2024-01-02->2024-03-28: h=0.7018, HL=47d, z=(1.5,0.25), hawkes=on
-  Q16 2024-04-01->2024-06-28: h=0.6950, HL=48d, z=(1.5,0.25), hawkes=on
-  Q17 2024-07-01->2024-09-30: h=0.6847, HL=48d, z=(1.5,0.25), hawkes=on
-  Q18 2024-10-01->2024-12-31: h=0.6672, HL=55d, z=(2.5,0.25), hawkes=on
-  Q19 2025-01-02->2025-03-31: h=0.6551, HL=54d, z=(1.5,0.25), hawkes=on
-  Q20 2025-04-01->2025-06-30: h=0.6530, HL=51d, z=(1.5,0.25), hawkes=on
-  Q21 2025-07-01->2025-09-30: h=0.6440, HL=54d, z=(1.5,0.5), hawkes=on
-  Q22 2025-10-01->2025-12-31: h=0.6414, HL=52d, z=(1.5,0.25), hawkes=on
-  Q23 2026-01-02->2026-02-12: h=0.6343, HL=54d, z=(1.5,0.25), hawkes=on
-
-Running ONE continuous backtest over 1412 bars
- Stops (scaled to stationary sigma 4.51%, daily 0.58%): stop 18.05%, trail 6.77%, target 22.56%
-Backtest: h = 0.6485 (sized), delay = 1 bar(s), fill at next open, intraday stops on
- 29 trades, final equity $1,088,868 (+8.89%)
- avg gross exposure 9.8%, flat 45 % of days, cash credit $105,506
- NOTE: open position force-closed at the final bar and RECORDED
- exit reasons: {'mean_reversion': 10, 'max_hold': 13, 'emergency_stop': 2, 'profit_target': 3, 'forced_close_period_end': 1}
-
-========================================================================
-WALK-FORWARD OUT-OF-SAMPLE SUMMARY
-========================================================================
-  Quarters evaluated : 23
-  Quarters FAILED    : 0
-
-  Annualised return  : 1.531%
-  Annualised vol     : 1.302%
-  Sharpe             : -0.362 (HAC SE 0.419)
-  Max drawdown       : -1.80%
-  On capital at risk : -2.79% return, -18.42% drawdown (10.2x scale)
-
-  HEADLINE TEST -- H0: mean excess return = 0 (Newey-West)
-    mean excess     : -0.471%/yr
-    t-statistic     : -0.863
-    p-value         : 0.3881
-    95% CI          : [-1.540%, +0.598%]
-
-  Neutrality check (CAPM vs SPY, NOT the headline)
-    beta            : -0.0068   R^2 0.00808
-
-  Trades             : 29
-  Win rate           : 55.2%
-  Profit factor      : 0.919
-  Avg duration       : 26.6 trading days
-
-  Configurations tried : 207
+  Configurations tried : 36
   Deflated Sharpe prob : 0.0001 (FAILS at 95%)
 
-  POWER: Over 5.6 years at 1.30% annualised volatility, the standard error of the mean return is 0.55%/yr. Power to detect a 1.0%/yr edge at alpha=0.05 is 44.4%; the smallest effect detectable at 80% power is 1.54%/yr. A null result here means the design could not resolve an edge of the size sought, not that no edge exists.
+  POWER: Over 5.6 years at 1.91% annualised volatility, the standard error of the mean return is 0.81%/yr. Power to detect a 1.0%/yr edge at alpha=0.05 is 23.7%; the smallest effect detectable at 80% power is 2.26%/yr. A null result here means the design could not resolve an edge of the size sought, not that no edge exists.
 ========================================================================
     (skipped empty quarter_failures.csv)
-    wrote 9 artifacts to /Users/rayyanwaseem/Desktop/Projects/MRJD-and-Hawkes-for-Pairs-Trading/outputs/CVX_XOM/walk_forward/control
-    wrote 3 artifacts to /Users/rayyanwaseem/Desktop/Projects/MRJD-and-Hawkes-for-Pairs-Trading/outputs/CVX_XOM/walk_forward
+    wrote 9 artifacts to /home/user/MRJD-and-Hawkes-for-Pairs-Trading/outputs/AMD_NVDA/walk_forward/hawkes
+
+========================================================================
+WALK-FORWARD (continuous book, quarterly parameter swap)
+  min training: 504 days
+========================================================================
+
+Full sample 2018-05-01 -> 2026-02-17 (1960 obs), 23 quarters
+  Q1 2020-07-01->2020-09-30: h=0.3555, HL=75d, z=(2.0,0.5), hawkes=on, tradeable=False
+  Q2 2020-10-01->2020-12-31: h=0.6375, HL=80d, z=(2.0,0.5), hawkes=off, tradeable=False
+  Q3 2021-01-04->2021-03-31: h=0.8556, HL=76d, z=(2.0,0.5), hawkes=on, tradeable=False
+  Q4 2021-04-01->2021-06-30: h=0.7928, HL=75d, z=(2.0,0.5), hawkes=on, tradeable=False
+  Q5 2021-07-01->2021-09-30: h=0.6752, HL=79d, z=(2.0,0.5), hawkes=on, tradeable=False
+  Q6 2021-10-01->2021-12-31: h=0.7224, HL=75d, z=(2.0,0.5), hawkes=on, tradeable=False
+  Q7 2022-01-03->2022-03-31: h=0.7381, HL=75d, z=(2.5,0.25), hawkes=on, tradeable=True
+  Q8 2022-04-01->2022-06-30: h=0.7009, HL=75d, z=(2.0,0.5), hawkes=on, tradeable=False
+  Q9 2022-07-01->2022-09-30: h=0.7523, HL=71d, z=(1.5,0.25), hawkes=on, tradeable=True
+  Q10 2022-10-03->2022-12-30: h=0.7581, HL=70d, z=(1.5,0.75), hawkes=on, tradeable=True
+  Q11 2023-01-03->2023-03-31: h=0.7325, HL=72d, z=(1.5,0.25), hawkes=on, tradeable=True
+  Q12 2023-04-03->2023-06-30: h=0.6732, HL=76d, z=(2.0,0.5), hawkes=on, tradeable=False
+  Q13 2023-07-03->2023-09-29: h=0.5791, HL=84d, z=(2.0,0.5), hawkes=on, tradeable=False
+  Q14 2023-10-02->2023-12-29: h=0.4996, HL=92d, z=(2.0,0.5), hawkes=on, tradeable=False
+  Q15 2024-01-02->2024-03-28: h=0.5601, HL=86d, z=(2.0,0.5), hawkes=on, tradeable=False
+  Q16 2024-04-01->2024-06-28: h=0.4901, HL=92d, z=(2.0,0.5), hawkes=on, tradeable=False
+  Q17 2024-07-01->2024-09-30: h=0.3722, HL=109d, z=(2.0,0.5), hawkes=on, tradeable=False
+  Q18 2024-10-01->2024-12-31: h=0.3915, HL=103d, z=(2.0,0.5), hawkes=on, tradeable=False
+  Q19 2025-01-02->2025-03-31: h=0.2766, HL=126d, z=(2.0,0.5), hawkes=on, tradeable=False
+  Q20 2025-04-01->2025-06-30: h=0.2830, HL=124d, z=(2.0,0.5), hawkes=on, tradeable=False
+  Q21 2025-07-01->2025-09-30: h=0.2766, HL=124d, z=(2.0,0.5), hawkes=on, tradeable=False
+  Q22 2025-10-01->2025-12-31: h=0.2922, HL=120d, z=(2.0,0.5), hawkes=on, tradeable=False
+  Q23 2026-01-02->2026-02-17: h=0.3576, HL=110d, z=(2.0,0.5), hawkes=on, tradeable=False
+
+Running ONE continuous backtest over 1414 bars
+ Stops (scaled to stationary sigma 28.06%, frozen_training_sd): stop 50.00%, trail 42.09%, target 50.00%
+Backtest: h = per-bar (sized), delay = 1 bar(s), fill at next open, intraday stops on
+ 3 trades, final equity $1,115,054 (+11.51%)
+ avg gross exposure 2.0%, flat 88 % of days, cash credit $115,941
+ exit reasons: {'pair_untradeable': 1, 'mean_reversion': 1, 'profit_target': 1}
+
+========================================================================
+WALK-FORWARD OUT-OF-SAMPLE SUMMARY
+========================================================================
+  Quarters evaluated : 23
+  Quarters tradeable : 4
+  Quarters FAILED    : 0
+
+  Annualised return  : 1.960%
+  Annualised vol     : 1.390%
+  Sharpe             : -0.035 (HAC SE 0.419)
+  Max drawdown       : -3.26%
+  On capital at risk : -0.02% return, -163.65% drawdown (50.2x scale)
+
+  HEADLINE TEST -- H0: mean excess return = 0 (Newey-West)
+    mean excess     : -0.048%/yr
+    t-statistic     : -0.083
+    p-value         : 0.9343
+    95% CI          : [-1.190%, +1.093%]
+
+  Neutrality check (CAPM vs SPY, NOT the headline)
+    beta            : 0.0053   R^2 0.00428
+
+  Trades             : 3
+  Win rate           : 66.7%
+  Profit factor      : 0.956
+  Avg duration       : 55.7 trading days
+
+  Configurations tried : 36
+  Deflated Sharpe prob : 0.0129 (FAILS at 95%)
+
+  POWER: Over 5.6 years at 1.39% annualised volatility, the standard error of the mean return is 0.59%/yr. Power to detect a 1.0%/yr edge at alpha=0.05 is 39.9%; the smallest effect detectable at 80% power is 1.64%/yr. A null result here means the design could not resolve an edge of the size sought, not that no edge exists.
+========================================================================
+    (skipped empty quarter_failures.csv)
+    wrote 9 artifacts to /home/user/MRJD-and-Hawkes-for-Pairs-Trading/outputs/AMD_NVDA/walk_forward/control
+    wrote 3 artifacts to /home/user/MRJD-and-Hawkes-for-Pairs-Trading/outputs/AMD_NVDA/walk_forward
+
+========================================================================
+WALK-FORWARD (continuous book, quarterly parameter swap)
+  min training: 504 days
+========================================================================
+
+Full sample 2018-05-01 -> 2026-02-12 (1958 obs), 23 quarters
+  Q1 2020-07-01->2020-09-30: h=0.5683, HL=11d, z=(2.0,0.5), hawkes=on, tradeable=True
+  Q2 2020-10-01->2020-12-31: h=0.5904, HL=11d, z=(1.5,0.25), hawkes=on, tradeable=True
+  Q3 2021-01-04->2021-03-31: h=0.5595, HL=12d, z=(2.0,0.25), hawkes=on, tradeable=True
+  Q4 2021-04-01->2021-06-30: h=0.5587, HL=12d, z=(2.0,0.25), hawkes=on, tradeable=True
+  Q5 2021-07-01->2021-09-30: h=0.5588, HL=12d, z=(2.0,0.25), hawkes=on, tradeable=True
+  Q6 2021-10-01->2021-12-31: h=0.5598, HL=12d, z=(2.0,0.25), hawkes=on, tradeable=True
+  Q7 2022-01-03->2022-03-31: h=0.5540, HL=15d, z=(2.0,0.25), hawkes=on, tradeable=True
+  Q8 2022-04-01->2022-06-30: h=0.6434, HL=40d, z=(2.0,0.5), hawkes=on, tradeable=False
+  Q9 2022-07-01->2022-09-30: h=0.6469, HL=44d, z=(2.0,0.5), hawkes=on, tradeable=False
+  Q10 2022-10-03->2022-12-30: h=0.6635, HL=45d, z=(2.0,0.5), hawkes=on, tradeable=False
+  Q11 2023-01-03->2023-03-31: h=0.7096, HL=49d, z=(2.0,0.5), hawkes=on, tradeable=False
+  Q12 2023-04-03->2023-06-30: h=0.6806, HL=47d, z=(2.0,0.5), hawkes=on, tradeable=False
+  Q13 2023-07-03->2023-09-29: h=0.6743, HL=47d, z=(2.0,0.5), hawkes=on, tradeable=False
+  Q14 2023-10-02->2023-12-29: h=0.6707, HL=46d, z=(2.0,0.5), hawkes=on, tradeable=False
+  Q15 2024-01-02->2024-03-28: h=0.6701, HL=46d, z=(2.0,0.5), hawkes=on, tradeable=False
+  Q16 2024-04-01->2024-06-28: h=0.6469, HL=47d, z=(2.0,0.5), hawkes=on, tradeable=False
+  Q17 2024-07-01->2024-09-30: h=0.6413, HL=47d, z=(2.0,0.5), hawkes=on, tradeable=False
+  Q18 2024-10-01->2024-12-31: h=0.6026, HL=54d, z=(2.0,0.5), hawkes=on, tradeable=False
+  Q19 2025-01-02->2025-03-31: h=0.6110, HL=53d, z=(2.0,0.5), hawkes=on, tradeable=False
+  Q20 2025-04-01->2025-06-30: h=0.6209, HL=51d, z=(2.0,0.5), hawkes=on, tradeable=False
+  Q21 2025-07-01->2025-09-30: h=0.5980, HL=53d, z=(2.0,0.5), hawkes=on, tradeable=False
+  Q22 2025-10-01->2025-12-31: h=0.6046, HL=51d, z=(2.0,0.5), hawkes=on, tradeable=False
+  Q23 2026-01-02->2026-02-12: h=0.5855, HL=53d, z=(2.0,0.5), hawkes=on, tradeable=False
+
+Running ONE continuous backtest over 1412 bars
+ Stops (scaled to stationary sigma 2.94%, frozen_training_sd): stop 11.75%, trail 4.41%, target 14.69%
+Backtest: h = per-bar (sized), delay = 1 bar(s), fill at next open, intraday stops on
+ 13 trades, final equity $1,108,041 (+10.80%)
+ avg gross exposure 5.2%, flat 78 % of days, cash credit $112,203
+ exit reasons: {'profit_target': 3, 'mean_reversion': 4, 'max_hold': 4, 'emergency_stop': 1, 'pair_untradeable': 1}
+
+========================================================================
+WALK-FORWARD OUT-OF-SAMPLE SUMMARY
+========================================================================
+  Quarters evaluated : 23
+  Quarters tradeable : 7
+  Quarters FAILED    : 0
+
+  Annualised return  : 1.848%
+  Annualised vol     : 1.166%
+  Sharpe             : -0.138 (HAC SE 0.411)
+  Max drawdown       : -3.09%
+  On capital at risk : -0.91% return, -59.17% drawdown (19.1x scale)
+
+  HEADLINE TEST -- H0: mean excess return = 0 (Newey-West)
+    mean excess     : -0.161%/yr
+    t-statistic     : -0.336
+    p-value         : 0.7373
+    95% CI          : [-1.100%, +0.779%]
+
+  Neutrality check (CAPM vs SPY, NOT the headline)
+    beta            : 0.0028   R^2 0.00174
+
+  Trades             : 13
+  Win rate           : 53.8%
+  Profit factor      : 0.925
+  Avg duration       : 23.4 trading days
+
+  Configurations tried : 63
+  Deflated Sharpe prob : 0.0036 (FAILS at 95%)
+
+  POWER: Over 5.6 years at 1.17% annualised volatility, the standard error of the mean return is 0.49%/yr. Power to detect a 1.0%/yr edge at alpha=0.05 is 52.8%; the smallest effect detectable at 80% power is 1.38%/yr. A null result here means the design could not resolve an edge of the size sought, not that no edge exists.
+========================================================================
+    (skipped empty quarter_failures.csv)
+    wrote 9 artifacts to /home/user/MRJD-and-Hawkes-for-Pairs-Trading/outputs/CVX_XOM/walk_forward/hawkes
+
+========================================================================
+WALK-FORWARD (continuous book, quarterly parameter swap)
+  min training: 504 days
+========================================================================
+
+Full sample 2018-05-01 -> 2026-02-12 (1958 obs), 23 quarters
+  Q1 2020-07-01->2020-09-30: h=0.5683, HL=11d, z=(2.0,0.25), hawkes=on, tradeable=True
+  Q2 2020-10-01->2020-12-31: h=0.5904, HL=11d, z=(2.0,0.25), hawkes=on, tradeable=True
+  Q3 2021-01-04->2021-03-31: h=0.5595, HL=12d, z=(2.0,0.25), hawkes=on, tradeable=True
+  Q4 2021-04-01->2021-06-30: h=0.5587, HL=12d, z=(2.0,0.25), hawkes=on, tradeable=True
+  Q5 2021-07-01->2021-09-30: h=0.5588, HL=12d, z=(2.0,0.25), hawkes=on, tradeable=True
+  Q6 2021-10-01->2021-12-31: h=0.5598, HL=12d, z=(2.0,0.25), hawkes=on, tradeable=True
+  Q7 2022-01-03->2022-03-31: h=0.5540, HL=15d, z=(2.0,0.25), hawkes=on, tradeable=True
+  Q8 2022-04-01->2022-06-30: h=0.6434, HL=40d, z=(2.0,0.5), hawkes=on, tradeable=False
+  Q9 2022-07-01->2022-09-30: h=0.6469, HL=44d, z=(2.0,0.5), hawkes=on, tradeable=False
+  Q10 2022-10-03->2022-12-30: h=0.6635, HL=45d, z=(2.0,0.5), hawkes=on, tradeable=False
+  Q11 2023-01-03->2023-03-31: h=0.7096, HL=49d, z=(2.0,0.5), hawkes=on, tradeable=False
+  Q12 2023-04-03->2023-06-30: h=0.6806, HL=47d, z=(2.0,0.5), hawkes=on, tradeable=False
+  Q13 2023-07-03->2023-09-29: h=0.6743, HL=47d, z=(2.0,0.5), hawkes=on, tradeable=False
+  Q14 2023-10-02->2023-12-29: h=0.6707, HL=46d, z=(2.0,0.5), hawkes=on, tradeable=False
+  Q15 2024-01-02->2024-03-28: h=0.6701, HL=46d, z=(2.0,0.5), hawkes=on, tradeable=False
+  Q16 2024-04-01->2024-06-28: h=0.6469, HL=47d, z=(2.0,0.5), hawkes=on, tradeable=False
+  Q17 2024-07-01->2024-09-30: h=0.6413, HL=47d, z=(2.0,0.5), hawkes=on, tradeable=False
+  Q18 2024-10-01->2024-12-31: h=0.6026, HL=54d, z=(2.0,0.5), hawkes=on, tradeable=False
+  Q19 2025-01-02->2025-03-31: h=0.6110, HL=53d, z=(2.0,0.5), hawkes=on, tradeable=False
+  Q20 2025-04-01->2025-06-30: h=0.6209, HL=51d, z=(2.0,0.5), hawkes=on, tradeable=False
+  Q21 2025-07-01->2025-09-30: h=0.5980, HL=53d, z=(2.0,0.5), hawkes=on, tradeable=False
+  Q22 2025-10-01->2025-12-31: h=0.6046, HL=51d, z=(2.0,0.5), hawkes=on, tradeable=False
+  Q23 2026-01-02->2026-02-12: h=0.5855, HL=53d, z=(2.0,0.5), hawkes=on, tradeable=False
+
+Running ONE continuous backtest over 1412 bars
+ Stops (scaled to stationary sigma 2.94%, frozen_training_sd): stop 11.75%, trail 4.41%, target 14.69%
+Backtest: h = per-bar (sized), delay = 1 bar(s), fill at next open, intraday stops on
+ 12 trades, final equity $1,111,044 (+11.10%)
+ avg gross exposure 3.5%, flat 83 % of days, cash credit $114,104
+ exit reasons: {'mean_reversion': 6, 'max_hold': 4, 'profit_target': 1, 'emergency_stop': 1}
+
+========================================================================
+WALK-FORWARD OUT-OF-SAMPLE SUMMARY
+========================================================================
+  Quarters evaluated : 23
+  Quarters tradeable : 7
+  Quarters FAILED    : 0
+
+  Annualised return  : 1.897%
+  Annualised vol     : 0.900%
+  Sharpe             : -0.128 (HAC SE 0.403)
+  Max drawdown       : -1.80%
+  On capital at risk : -0.95% return, -51.51% drawdown (28.6x scale)
+
+  HEADLINE TEST -- H0: mean excess return = 0 (Newey-West)
+    mean excess     : -0.115%/yr
+    t-statistic     : -0.318
+    p-value         : 0.7506
+    95% CI          : [-0.826%, +0.595%]
+
+  Neutrality check (CAPM vs SPY, NOT the headline)
+    beta            : 0.0010   R^2 0.00038
+
+  Trades             : 12
+  Win rate           : 50.0%
+  Profit factor      : 0.915
+  Avg duration       : 20.5 trading days
+
+  Configurations tried : 63
+  Deflated Sharpe prob : 0.0038 (FAILS at 95%)
+
+  POWER: Over 5.6 years at 0.90% annualised volatility, the standard error of the mean return is 0.38%/yr. Power to detect a 1.0%/yr edge at alpha=0.05 is 74.9%; the smallest effect detectable at 80% power is 1.06%/yr. A null result here means the design could not resolve an edge of the size sought, not that no edge exists.
+========================================================================
+    (skipped empty quarter_failures.csv)
+    wrote 9 artifacts to /home/user/MRJD-and-Hawkes-for-Pairs-Trading/outputs/CVX_XOM/walk_forward/control
+    wrote 3 artifacts to /home/user/MRJD-and-Hawkes-for-Pairs-Trading/outputs/CVX_XOM/walk_forward
 
 ========================================================================
 WALK-FORWARD (continuous book, quarterly parameter swap)
@@ -331,360 +295,144 @@ WALK-FORWARD (continuous book, quarterly parameter swap)
 ========================================================================
 
 Full sample 2018-05-01 -> 2026-02-19 (1962 obs), 23 quarters
-  Q1 2020-07-01->2020-09-30: h=0.5953, HL=17d, z=(1.5,0.75), hawkes=off
-  Q2 2020-10-01->2020-12-31: h=0.5988, HL=16d, z=(2.0,0.75), hawkes=off
-  Q3 2021-01-04->2021-03-31: h=0.6152, HL=16d, z=(2.5,0.5), hawkes=off
-  Q4 2021-04-01->2021-06-30: h=0.6261, HL=15d, z=(2.5,0.5), hawkes=off
-  Q5 2021-07-01->2021-09-30: h=0.6247, HL=15d, z=(2.5,0.5), hawkes=off
-  Q6 2021-10-01->2021-12-31: h=0.6333, HL=19d, z=(2.0,0.75), hawkes=off
-  Q7 2022-01-03->2022-03-31: h=0.6417, HL=21d, z=(2.0,0.5), hawkes=off
-  Q8 2022-04-01->2022-06-30: h=0.6509, HL=22d, z=(2.5,0.75), hawkes=on
-  Q9 2022-07-01->2022-09-30: h=0.6555, HL=29d, z=(2.5,0.75), hawkes=on
-  Q10 2022-10-03->2022-12-30: h=0.6325, HL=50d, z=(2.5,0.75), hawkes=on
-  Q11 2023-01-03->2023-03-31: h=0.6221, HL=57d, z=(2.5,0.75), hawkes=on
-  Q12 2023-04-03->2023-06-30: h=0.6273, HL=63d, z=(2.5,0.75), hawkes=on
-  Q13 2023-07-03->2023-09-29: h=0.6395, HL=69d, z=(2.5,0.75), hawkes=on
-  Q14 2023-10-02->2023-12-29: h=0.6415, HL=84d, z=(1.5,0.75), hawkes=on
-  Q15 2024-01-02->2024-03-28: h=0.6432, HL=99d, z=(1.5,0.75), hawkes=on
-  Q16 2024-04-01->2024-06-28: h=0.6390, HL=152d, z=(2.0,0.25), hawkes=on
-  Q17 2024-07-01->2024-09-30: h=0.6729, HL=145d, z=(2.0,0.25), hawkes=on
-  Q18 2024-10-01->2024-12-31: h=0.7171, HL=131d, z=(1.5,0.5), hawkes=off
-  Q19 2025-01-02->2025-03-31: h=0.7668, HL=161d, z=(2.0,0.25), hawkes=on
-  Q20 2025-04-01->2025-06-30: h=0.8204, HL=119d, z=(2.5,0.5), hawkes=on
-  Q21 2025-07-01->2025-09-30: h=0.8786, HL=94d, z=(2.5,0.75), hawkes=on
-  Q22 2025-10-01->2025-12-31: h=0.8862, HL=89d, z=(2.0,0.5), hawkes=on
-  Q23 2026-01-02->2026-02-19: h=0.8743, HL=89d, z=(2.0,0.5), hawkes=on
+  Q1 2020-07-01->2020-09-30: h=0.6672, HL=15d, z=(2.0,0.5), hawkes=on, tradeable=False
+  Q2 2020-10-01->2020-12-31: h=0.6485, HL=14d, z=(2.5,0.25), hawkes=on, tradeable=True
+  Q3 2021-01-04->2021-03-31: h=0.6706, HL=15d, z=(2.0,0.5), hawkes=on, tradeable=False
+  Q4 2021-04-01->2021-06-30: h=0.6695, HL=14d, z=(2.5,0.25), hawkes=on, tradeable=True
+  Q5 2021-07-01->2021-09-30: h=0.6645, HL=14d, z=(1.5,0.75), hawkes=off, tradeable=True
+  Q6 2021-10-01->2021-12-31: h=0.6884, HL=17d, z=(2.0,0.5), hawkes=off, tradeable=False
+  Q7 2022-01-03->2022-03-31: h=0.7066, HL=19d, z=(2.0,0.5), hawkes=on, tradeable=False
+  Q8 2022-04-01->2022-06-30: h=0.7121, HL=20d, z=(2.0,0.5), hawkes=off, tradeable=False
+  Q9 2022-07-01->2022-09-30: h=0.7569, HL=25d, z=(2.0,0.5), hawkes=on, tradeable=False
+  Q10 2022-10-03->2022-12-30: h=0.7613, HL=40d, z=(2.0,0.5), hawkes=on, tradeable=False
+  Q11 2023-01-03->2023-03-31: h=0.8211, HL=42d, z=(2.0,0.5), hawkes=on, tradeable=False
+  Q12 2023-04-03->2023-06-30: h=0.8766, HL=44d, z=(2.0,0.5), hawkes=on, tradeable=False
+  Q13 2023-07-03->2023-09-29: h=0.9183, HL=47d, z=(2.0,0.5), hawkes=on, tradeable=False
+  Q14 2023-10-02->2023-12-29: h=0.9862, HL=53d, z=(2.0,0.5), hawkes=on, tradeable=False
+  Q15 2024-01-02->2024-03-28: h=1.1145, HL=55d, z=(2.0,0.5), hawkes=on, tradeable=False
+  Q16 2024-04-01->2024-06-28: h=1.3662, HL=63d, z=(2.0,0.5), hawkes=on, tradeable=False
+  Q17 2024-07-01->2024-09-30: h=1.3730, HL=61d, z=(2.0,0.5), hawkes=on, tradeable=False
+  Q18 2024-10-01->2024-12-31: h=1.2895, HL=59d, z=(2.0,0.5), hawkes=on, tradeable=False
+  Q19 2025-01-02->2025-03-31: h=1.6210, HL=63d, z=(2.0,0.5), hawkes=on, tradeable=False
+  Q20 2025-04-01->2025-06-30: h=1.3452, HL=58d, z=(2.0,0.5), hawkes=on, tradeable=False
+  Q21 2025-07-01->2025-09-30: h=1.2462, HL=57d, z=(2.0,0.5), hawkes=on, tradeable=False
+  Q22 2025-10-01->2025-12-31: h=1.0043, HL=73d, z=(2.0,0.5), hawkes=on, tradeable=False
+  Q23 2026-01-02->2026-02-19: h=0.9629, HL=76d, z=(2.0,0.5), hawkes=on, tradeable=False
 
 Running ONE continuous backtest over 1416 bars
- Stops (scaled to stationary sigma 7.10%, daily 0.75%): stop 28.39%, trail 10.65%, target 35.49%
-Backtest: h = 0.6827 (sized), delay = 1 bar(s), fill at next open, intraday stops on
- 17 trades, final equity $1,110,874 (+11.09%)
- avg gross exposure 13.3%, flat 43 % of days, cash credit $101,648
- NOTE: open position force-closed at the final bar and RECORDED
- exit reasons: {'mean_reversion': 9, 'max_hold': 6, 'trailing_stop': 1, 'forced_close_period_end': 1}
+ Stops (scaled to stationary sigma 2.41%, frozen_training_sd): stop 9.62%, trail 3.61%, target 12.03%
+Backtest: h = per-bar (sized), delay = 1 bar(s), fill at next open, intraday stops on
+ 6 trades, final equity $1,119,626 (+11.96%)
+ avg gross exposure 1.5%, flat 93 % of days, cash credit $117,299
+ exit reasons: {'mean_reversion': 3, 'max_hold': 2, 'pair_untradeable': 1}
 
 ========================================================================
 WALK-FORWARD OUT-OF-SAMPLE SUMMARY
 ========================================================================
   Quarters evaluated : 23
+  Quarters tradeable : 3
   Quarters FAILED    : 0
 
-  Annualised return  : 1.889%
-  Annualised vol     : 2.033%
-  Sharpe             : -0.052 (HAC SE 0.364)
-  Max drawdown       : -2.06%
-  On capital at risk : 1.17% return, -15.43% drawdown (7.5x scale)
-
-  HEADLINE TEST -- H0: mean excess return = 0 (Newey-West)
-    mean excess     : -0.107%/yr
-    t-statistic     : -0.144
-    p-value         : 0.8853
-    95% CI          : [-1.556%, +1.342%]
-
-  Neutrality check (CAPM vs SPY, NOT the headline)
-    beta            : 0.0094   R^2 0.00635
-
-  Trades             : 17
-  Win rate           : 58.8%
-  Profit factor      : 1.571
-  Avg duration       : 47.6 trading days
-
-  Configurations tried : 207
-  Deflated Sharpe prob : 0.0019 (FAILS at 95%)
-
-  POWER: Over 5.6 years at 2.03% annualised volatility, the standard error of the mean return is 0.86%/yr. Power to detect a 1.0%/yr edge at alpha=0.05 is 21.4%; the smallest effect detectable at 80% power is 2.40%/yr. A null result here means the design could not resolve an edge of the size sought, not that no edge exists.
-========================================================================
-    (skipped empty quarter_failures.csv)
-    wrote 9 artifacts to /Users/rayyanwaseem/Desktop/Projects/MRJD-and-Hawkes-for-Pairs-Trading/outputs/GLD_GDX/walk_forward/hawkes
-
-========================================================================
-WALK-FORWARD (continuous book, quarterly parameter swap)
-  min training: 504 days
-========================================================================
-
-Full sample 2018-05-01 -> 2026-02-19 (1962 obs), 23 quarters
-  Q1 2020-07-01->2020-09-30: h=0.5953, HL=17d, z=(1.5,0.75), hawkes=off
-  Q2 2020-10-01->2020-12-31: h=0.5988, HL=16d, z=(2.0,0.75), hawkes=off
-  Q3 2021-01-04->2021-03-31: h=0.6152, HL=16d, z=(2.5,0.5), hawkes=off
-  Q4 2021-04-01->2021-06-30: h=0.6261, HL=15d, z=(2.5,0.5), hawkes=off
-  Q5 2021-07-01->2021-09-30: h=0.6247, HL=15d, z=(2.5,0.5), hawkes=off
-  Q6 2021-10-01->2021-12-31: h=0.6333, HL=19d, z=(2.0,0.75), hawkes=off
-  Q7 2022-01-03->2022-03-31: h=0.6417, HL=21d, z=(2.0,0.5), hawkes=off
-  Q8 2022-04-01->2022-06-30: h=0.6509, HL=22d, z=(2.0,0.75), hawkes=on
-  Q9 2022-07-01->2022-09-30: h=0.6555, HL=29d, z=(2.0,0.5), hawkes=on
-  Q10 2022-10-03->2022-12-30: h=0.6325, HL=50d, z=(1.5,0.5), hawkes=on
-  Q11 2023-01-03->2023-03-31: h=0.6221, HL=57d, z=(1.5,0.5), hawkes=on
-  Q12 2023-04-03->2023-06-30: h=0.6273, HL=63d, z=(2.0,0.25), hawkes=on
-  Q13 2023-07-03->2023-09-29: h=0.6395, HL=69d, z=(2.0,0.25), hawkes=on
-  Q14 2023-10-02->2023-12-29: h=0.6415, HL=84d, z=(1.5,0.5), hawkes=on
-  Q15 2024-01-02->2024-03-28: h=0.6432, HL=99d, z=(1.5,0.75), hawkes=on
-  Q16 2024-04-01->2024-06-28: h=0.6390, HL=152d, z=(1.5,0.25), hawkes=on
-  Q17 2024-07-01->2024-09-30: h=0.6729, HL=145d, z=(2.0,0.25), hawkes=on
-  Q18 2024-10-01->2024-12-31: h=0.7171, HL=131d, z=(1.5,0.5), hawkes=off
-  Q19 2025-01-02->2025-03-31: h=0.7668, HL=161d, z=(2.5,0.25), hawkes=on
-  Q20 2025-04-01->2025-06-30: h=0.8204, HL=119d, z=(2.5,0.25), hawkes=on
-  Q21 2025-07-01->2025-09-30: h=0.8786, HL=94d, z=(2.0,0.75), hawkes=on
-  Q22 2025-10-01->2025-12-31: h=0.8862, HL=89d, z=(1.5,0.75), hawkes=on
-  Q23 2026-01-02->2026-02-19: h=0.8743, HL=89d, z=(1.5,0.75), hawkes=on
-
-Running ONE continuous backtest over 1416 bars
- Stops (scaled to stationary sigma 7.10%, daily 0.75%): stop 28.39%, trail 10.65%, target 35.49%
-Backtest: h = 0.6827 (sized), delay = 1 bar(s), fill at next open, intraday stops on
- 20 trades, final equity $1,117,136 (+11.71%)
- avg gross exposure 9.1%, flat 40 % of days, cash credit $107,481
- NOTE: open position force-closed at the final bar and RECORDED
- exit reasons: {'mean_reversion': 11, 'max_hold': 7, 'trailing_stop': 1, 'forced_close_period_end': 1}
-
-========================================================================
-WALK-FORWARD OUT-OF-SAMPLE SUMMARY
-========================================================================
-  Quarters evaluated : 23
-  Quarters FAILED    : 0
-
-  Annualised return  : 1.991%
-  Annualised vol     : 1.330%
-  Sharpe             : -0.014 (HAC SE 0.345)
-  Max drawdown       : -0.96%
-  On capital at risk : 1.90% return, -10.53% drawdown (11.0x scale)
-
-  HEADLINE TEST -- H0: mean excess return = 0 (Newey-West)
-    mean excess     : -0.018%/yr
-    t-statistic     : -0.040
-    p-value         : 0.9681
-    95% CI          : [-0.919%, +0.882%]
-
-  Neutrality check (CAPM vs SPY, NOT the headline)
-    beta            : 0.0171   R^2 0.04888
-
-  Trades             : 20
-  Win rate           : 70.0%
-  Profit factor      : 2.002
-  Avg duration       : 42.4 trading days
-
-  Configurations tried : 207
-  Deflated Sharpe prob : 0.0025 (FAILS at 95%)
-
-  POWER: Over 5.6 years at 1.33% annualised volatility, the standard error of the mean return is 0.56%/yr. Power to detect a 1.0%/yr edge at alpha=0.05 is 42.9%; the smallest effect detectable at 80% power is 1.57%/yr. A null result here means the design could not resolve an edge of the size sought, not that no edge exists.
-========================================================================
-    (skipped empty quarter_failures.csv)
-    wrote 9 artifacts to /Users/rayyanwaseem/Desktop/Projects/MRJD-and-Hawkes-for-Pairs-Trading/outputs/GLD_GDX/walk_forward/control
-    wrote 3 artifacts to /Users/rayyanwaseem/Desktop/Projects/MRJD-and-Hawkes-for-Pairs-Trading/outputs/GLD_GDX/walk_forward
-
-========================================================================
-WALK-FORWARD (continuous book, quarterly parameter swap)
-  min training: 504 days
-========================================================================
-
-Full sample 2018-05-01 -> 2026-02-17 (1960 obs), 23 quarters
-  Q1 2020-07-01->2020-09-30: h=0.9096, HL=28d, z=(2.5,0.25), hawkes=on
-  Q2 2020-10-01->2020-12-31: h=0.8069, HL=40d, z=(2.5,0.25), hawkes=on
-  Q3 2021-01-04->2021-03-31: h=0.6765, HL=40d, z=(2.0,0.25), hawkes=off
-  Q4 2021-04-01->2021-06-30: h=0.7495, HL=46d, z=(2.0,0.75), hawkes=off
-  Q5 2021-07-01->2021-09-30: h=0.8104, HL=48d, z=(2.5,0.75), hawkes=on
-  Q6 2021-10-01->2021-12-31: h=0.8179, HL=45d, z=(2.5,0.75), hawkes=on
-  Q7 2022-01-03->2022-03-31: h=0.8247, HL=44d, z=(2.5,0.25), hawkes=on
-  Q8 2022-04-01->2022-06-30: h=0.8030, HL=47d, z=(2.5,0.25), hawkes=on
-  Q9 2022-07-01->2022-09-30: h=0.7938, HL=47d, z=(2.5,0.5), hawkes=on
-  Q10 2022-10-03->2022-12-30: h=0.7888, HL=48d, z=(2.5,0.5), hawkes=on
-  Q11 2023-01-03->2023-03-31: h=0.7948, HL=46d, z=(2.5,0.25), hawkes=on
-  Q12 2023-04-03->2023-06-30: h=0.7879, HL=41d, z=(2.5,0.5), hawkes=on
-  Q13 2023-07-03->2023-09-29: h=0.7849, HL=40d, z=(2.5,0.5), hawkes=on
-  Q14 2023-10-02->2023-12-29: h=0.7829, HL=38d, z=(2.5,0.5), hawkes=on
-  Q15 2024-01-02->2024-03-28: h=0.7869, HL=40d, z=(2.5,0.5), hawkes=on
-  Q16 2024-04-01->2024-06-28: h=0.7995, HL=50d, z=(2.5,0.5), hawkes=on
-  Q17 2024-07-01->2024-09-30: h=0.8215, HL=69d, z=(2.5,0.5), hawkes=on
-  Q18 2024-10-01->2024-12-31: h=0.8513, HL=94d, z=(2.0,0.5), hawkes=on
-  Q19 2025-01-02->2025-03-31: h=0.8794, HL=94d, z=(2.0,0.5), hawkes=on
-  Q20 2025-04-01->2025-06-30: h=0.9064, HL=103d, z=(2.0,0.75), hawkes=on
-  Q21 2025-07-01->2025-09-30: h=0.9272, HL=125d, z=(2.0,0.5), hawkes=on
-  Q22 2025-10-01->2025-12-31: h=0.9612, HL=128d, z=(2.5,0.25), hawkes=on
-  Q23 2026-01-02->2026-02-17: h=0.9868, HL=123d, z=(2.0,0.25), hawkes=on
-
-Running ONE continuous backtest over 1414 bars
- Stops (scaled to stationary sigma 5.58%, daily 0.57%): stop 22.32%, trail 8.37%, target 27.90%
-Backtest: h = 0.8283 (sized), delay = 1 bar(s), fill at next open, intraday stops on
- 21 trades, final equity $1,113,914 (+11.39%)
- avg gross exposure 13.6%, flat 39 % of days, cash credit $102,644
- NOTE: open position force-closed at the final bar and RECORDED
- exit reasons: {'max_hold': 4, 'profit_target': 5, 'mean_reversion': 10, 'emergency_stop': 1, 'forced_close_period_end': 1}
-
-========================================================================
-WALK-FORWARD OUT-OF-SAMPLE SUMMARY
-========================================================================
-  Quarters evaluated : 23
-  Quarters FAILED    : 0
-
-  Annualised return  : 1.941%
-  Annualised vol     : 1.596%
-  Sharpe             : -0.040 (HAC SE 0.427)
-  Max drawdown       : -1.81%
-  On capital at risk : 1.57% return, -13.31% drawdown (7.4x scale)
-
-  HEADLINE TEST -- H0: mean excess return = 0 (Newey-West)
-    mean excess     : -0.063%/yr
-    t-statistic     : -0.093
-    p-value         : 0.9262
-    95% CI          : [-1.400%, +1.274%]
-
-  Neutrality check (CAPM vs SPY, NOT the headline)
-    beta            : 0.0053   R^2 0.00328
-
-  Trades             : 21
-  Win rate           : 61.9%
-  Profit factor      : 1.356
-  Avg duration       : 40.9 trading days
-
-  Configurations tried : 207
-  Deflated Sharpe prob : 0.0021 (FAILS at 95%)
-
-  POWER: Over 5.6 years at 1.60% annualised volatility, the standard error of the mean return is 0.67%/yr. Power to detect a 1.0%/yr edge at alpha=0.05 is 31.7%; the smallest effect detectable at 80% power is 1.89%/yr. A null result here means the design could not resolve an edge of the size sought, not that no edge exists.
-========================================================================
-    (skipped empty quarter_failures.csv)
-    wrote 9 artifacts to /Users/rayyanwaseem/Desktop/Projects/MRJD-and-Hawkes-for-Pairs-Trading/outputs/GS_MS/walk_forward/hawkes
-
-========================================================================
-WALK-FORWARD (continuous book, quarterly parameter swap)
-  min training: 504 days
-========================================================================
-
-Full sample 2018-05-01 -> 2026-02-17 (1960 obs), 23 quarters
-  Q1 2020-07-01->2020-09-30: h=0.9096, HL=28d, z=(2.5,0.25), hawkes=on
-  Q2 2020-10-01->2020-12-31: h=0.8069, HL=40d, z=(2.5,0.25), hawkes=on
-  Q3 2021-01-04->2021-03-31: h=0.6765, HL=40d, z=(2.0,0.25), hawkes=off
-  Q4 2021-04-01->2021-06-30: h=0.7495, HL=46d, z=(2.0,0.75), hawkes=off
-  Q5 2021-07-01->2021-09-30: h=0.8104, HL=48d, z=(2.5,0.75), hawkes=on
-  Q6 2021-10-01->2021-12-31: h=0.8179, HL=45d, z=(2.5,0.5), hawkes=on
-  Q7 2022-01-03->2022-03-31: h=0.8247, HL=44d, z=(2.0,0.25), hawkes=on
-  Q8 2022-04-01->2022-06-30: h=0.8030, HL=47d, z=(2.5,0.5), hawkes=on
-  Q9 2022-07-01->2022-09-30: h=0.7938, HL=47d, z=(2.5,0.5), hawkes=on
-  Q10 2022-10-03->2022-12-30: h=0.7888, HL=48d, z=(2.5,0.25), hawkes=on
-  Q11 2023-01-03->2023-03-31: h=0.7948, HL=46d, z=(2.5,0.25), hawkes=on
-  Q12 2023-04-03->2023-06-30: h=0.7879, HL=41d, z=(2.5,0.25), hawkes=on
-  Q13 2023-07-03->2023-09-29: h=0.7849, HL=40d, z=(2.5,0.25), hawkes=on
-  Q14 2023-10-02->2023-12-29: h=0.7829, HL=38d, z=(2.5,0.25), hawkes=on
-  Q15 2024-01-02->2024-03-28: h=0.7869, HL=40d, z=(2.5,0.25), hawkes=on
-  Q16 2024-04-01->2024-06-28: h=0.7995, HL=50d, z=(2.5,0.5), hawkes=on
-  Q17 2024-07-01->2024-09-30: h=0.8215, HL=69d, z=(2.5,0.5), hawkes=on
-  Q18 2024-10-01->2024-12-31: h=0.8513, HL=94d, z=(2.5,0.5), hawkes=on
-  Q19 2025-01-02->2025-03-31: h=0.8794, HL=94d, z=(2.5,0.75), hawkes=on
-  Q20 2025-04-01->2025-06-30: h=0.9064, HL=103d, z=(1.5,0.5), hawkes=on
-  Q21 2025-07-01->2025-09-30: h=0.9272, HL=125d, z=(2.0,0.25), hawkes=on
-  Q22 2025-10-01->2025-12-31: h=0.9612, HL=128d, z=(2.0,0.5), hawkes=on
-  Q23 2026-01-02->2026-02-17: h=0.9868, HL=123d, z=(2.5,0.25), hawkes=on
-
-Running ONE continuous backtest over 1414 bars
- Stops (scaled to stationary sigma 5.58%, daily 0.57%): stop 22.32%, trail 8.37%, target 27.90%
-Backtest: h = 0.8283 (sized), delay = 1 bar(s), fill at next open, intraday stops on
- 18 trades, final equity $1,117,157 (+11.72%)
- avg gross exposure 11.4%, flat 50 % of days, cash credit $105,005
- NOTE: open position force-closed at the final bar and RECORDED
- exit reasons: {'profit_target': 4, 'max_hold': 5, 'mean_reversion': 7, 'emergency_stop': 1, 'forced_close_period_end': 1}
-
-========================================================================
-WALK-FORWARD OUT-OF-SAMPLE SUMMARY
-========================================================================
-  Quarters evaluated : 23
-  Quarters FAILED    : 0
-
-  Annualised return  : 1.994%
-  Annualised vol     : 1.399%
-  Sharpe             : -0.010 (HAC SE 0.417)
-  Max drawdown       : -1.43%
-  On capital at risk : 1.95% return, -12.51% drawdown (8.8x scale)
-
-  HEADLINE TEST -- H0: mean excess return = 0 (Newey-West)
-    mean excess     : -0.014%/yr
-    t-statistic     : -0.025
-    p-value         : 0.9804
-    95% CI          : [-1.157%, +1.129%]
-
-  Neutrality check (CAPM vs SPY, NOT the headline)
-    beta            : -0.0001   R^2 0.00000
-
-  Trades             : 18
-  Win rate           : 44.4%
-  Profit factor      : 1.419
-  Avg duration       : 39.4 trading days
-
-  Configurations tried : 207
-  Deflated Sharpe prob : 0.0026 (FAILS at 95%)
-
-  POWER: Over 5.6 years at 1.40% annualised volatility, the standard error of the mean return is 0.59%/yr. Power to detect a 1.0%/yr edge at alpha=0.05 is 39.5%; the smallest effect detectable at 80% power is 1.65%/yr. A null result here means the design could not resolve an edge of the size sought, not that no edge exists.
-========================================================================
-    (skipped empty quarter_failures.csv)
-    wrote 9 artifacts to /Users/rayyanwaseem/Desktop/Projects/MRJD-and-Hawkes-for-Pairs-Trading/outputs/GS_MS/walk_forward/control
-    wrote 3 artifacts to /Users/rayyanwaseem/Desktop/Projects/MRJD-and-Hawkes-for-Pairs-Trading/outputs/GS_MS/walk_forward
-
-========================================================================
-WALK-FORWARD (continuous book, quarterly parameter swap)
-  min training: 504 days
-========================================================================
-
-Full sample 2018-05-01 -> 2026-02-17 (1960 obs), 23 quarters
-  Q1 2020-07-01->2020-09-30: h=1.0076, HL=2d, z=(2.5,0.25), hawkes=on
-  Q2 2020-10-01->2020-12-31: h=1.0089, HL=2d, z=(2.5,0.25), hawkes=on
-  Q3 2021-01-04->2021-03-31: h=1.0097, HL=2d, z=(2.5,0.25), hawkes=on
-  Q4 2021-04-01->2021-06-30: h=1.0080, HL=2d, z=(2.5,0.25), hawkes=on
-  Q5 2021-07-01->2021-09-30: h=1.0071, HL=2d, z=(2.5,0.25), hawkes=on
-  Q6 2021-10-01->2021-12-31: h=1.0054, HL=2d, z=(2.5,0.25), hawkes=on
-  Q7 2022-01-03->2022-03-31: h=1.0050, HL=2d, z=(2.5,0.25), hawkes=on
-  Q8 2022-04-01->2022-06-30: h=1.0044, HL=2d, z=(2.5,0.25), hawkes=on
-  Q9 2022-07-01->2022-09-30: h=1.0044, HL=2d, z=(2.5,0.25), hawkes=on
-  Q10 2022-10-03->2022-12-30: h=1.0041, HL=2d, z=(2.5,0.25), hawkes=on
-  Q11 2023-01-03->2023-03-31: h=1.0041, HL=2d, z=(2.5,0.25), hawkes=on
-  Q12 2023-04-03->2023-06-30: h=1.0040, HL=2d, z=(2.5,0.25), hawkes=on
-  Q13 2023-07-03->2023-09-29: h=1.0040, HL=2d, z=(2.5,0.25), hawkes=on
-  Q14 2023-10-02->2023-12-29: h=1.0035, HL=2d, z=(2.5,0.25), hawkes=on
-  Q15 2024-01-02->2024-03-28: h=1.0033, HL=2d, z=(2.5,0.25), hawkes=on
-  Q16 2024-04-01->2024-06-28: h=1.0029, HL=2d, z=(2.5,0.25), hawkes=on
-  Q17 2024-07-01->2024-09-30: h=1.0026, HL=2d, z=(2.5,0.75), hawkes=on
-  Q18 2024-10-01->2024-12-31: h=1.0020, HL=2d, z=(2.5,0.75), hawkes=on
-  Q19 2025-01-02->2025-03-31: h=1.0018, HL=2d, z=(2.5,0.75), hawkes=on
-  Q20 2025-04-01->2025-06-30: h=1.0016, HL=2d, z=(2.5,0.75), hawkes=on
-  Q21 2025-07-01->2025-09-30: h=1.0016, HL=2d, z=(2.5,0.75), hawkes=on
-  Q22 2025-10-01->2025-12-31: h=1.0014, HL=2d, z=(2.5,0.75), hawkes=on
-  Q23 2026-01-02->2026-02-17: h=1.0013, HL=2d, z=(2.5,0.75), hawkes=on
-
-Running ONE continuous backtest over 1414 bars
- Stops (scaled to stationary sigma 0.07%, daily 0.06%): stop 1.00%, trail 1.00%, target 1.00%
-Backtest: h = 1.0043 (sized), delay = 1 bar(s), fill at next open, intraday stops on
- 46 trades, final equity $1,043,037 (+4.30%)
- avg gross exposure 2.2%, flat 91 % of days, cash credit $111,651
- exit reasons: {'max_hold': 24, 'stop_loss': 22}
-
-========================================================================
-WALK-FORWARD OUT-OF-SAMPLE SUMMARY
-========================================================================
-  Quarters evaluated : 23
-  Quarters FAILED    : 0
-
-  Annualised return  : 0.754%
-  Annualised vol     : 0.328%
-  Sharpe             : -3.803 (HAC SE 0.549)
+  Annualised return  : 2.031%
+  Annualised vol     : 0.477%
+  Sharpe             : 0.028 (HAC SE 0.367)
   Max drawdown       : -0.55%
-  On capital at risk : -55.36% return, -25.54% drawdown (46.0x scale)
+  On capital at risk : 4.12% return, -37.29% drawdown (67.7x scale)
 
   HEADLINE TEST -- H0: mean excess return = 0 (Newey-West)
-    mean excess     : -1.248%/yr
-    t-statistic     : -7.029
-    p-value         : 0.0000
-    95% CI          : [-1.596%, -0.900%]
+    mean excess     : +0.014%/yr
+    t-statistic     : 0.077
+    p-value         : 0.9383
+    95% CI          : [-0.330%, +0.357%]
 
   Neutrality check (CAPM vs SPY, NOT the headline)
-    beta            : 0.0014   R^2 0.00548
+    beta            : 0.0016   R^2 0.00346
 
-  Trades             : 46
-  Win rate           : 0.0%
-  Profit factor      : 0.000
-  Avg duration       : 2.9 trading days
+  Trades             : 6
+  Win rate           : 50.0%
+  Profit factor      : 1.541
+  Avg duration       : 16.0 trading days
 
-  Configurations tried : 207
-  Deflated Sharpe prob : 0.0000 (FAILS at 95%)
+  Configurations tried : 27
+  Deflated Sharpe prob : 0.0249 (FAILS at 95%)
 
-  POWER: Over 5.6 years at 0.33% annualised volatility, the standard error of the mean return is 0.14%/yr. Power to detect a 1.0%/yr edge at alpha=0.05 is 100.0%; the smallest effect detectable at 80% power is 0.39%/yr. A null result here means the design could not resolve an edge of the size sought, not that no edge exists.
+  POWER: Over 5.6 years at 0.48% annualised volatility, the standard error of the mean return is 0.20%/yr. Power to detect a 1.0%/yr edge at alpha=0.05 is 99.9%; the smallest effect detectable at 80% power is 0.56%/yr. A null result here means the design could not resolve an edge of the size sought, not that no edge exists.
 ========================================================================
     (skipped empty quarter_failures.csv)
-    wrote 9 artifacts to /Users/rayyanwaseem/Desktop/Projects/MRJD-and-Hawkes-for-Pairs-Trading/outputs/SPY_IVV/walk_forward/hawkes
+    wrote 9 artifacts to /home/user/MRJD-and-Hawkes-for-Pairs-Trading/outputs/GLD_GDX/walk_forward/hawkes
+
+========================================================================
+WALK-FORWARD (continuous book, quarterly parameter swap)
+  min training: 504 days
+========================================================================
+
+Full sample 2018-05-01 -> 2026-02-19 (1962 obs), 23 quarters
+  Q1 2020-07-01->2020-09-30: h=0.6672, HL=15d, z=(2.0,0.5), hawkes=on, tradeable=False
+  Q2 2020-10-01->2020-12-31: h=0.6485, HL=14d, z=(1.5,0.75), hawkes=on, tradeable=True
+  Q3 2021-01-04->2021-03-31: h=0.6706, HL=15d, z=(2.0,0.5), hawkes=on, tradeable=False
+  Q4 2021-04-01->2021-06-30: h=0.6695, HL=14d, z=(2.5,0.25), hawkes=on, tradeable=True
+  Q5 2021-07-01->2021-09-30: h=0.6645, HL=14d, z=(1.5,0.75), hawkes=off, tradeable=True
+  Q6 2021-10-01->2021-12-31: h=0.6884, HL=17d, z=(2.0,0.5), hawkes=off, tradeable=False
+  Q7 2022-01-03->2022-03-31: h=0.7066, HL=19d, z=(2.0,0.5), hawkes=on, tradeable=False
+  Q8 2022-04-01->2022-06-30: h=0.7121, HL=20d, z=(2.0,0.5), hawkes=off, tradeable=False
+  Q9 2022-07-01->2022-09-30: h=0.7569, HL=25d, z=(2.0,0.5), hawkes=on, tradeable=False
+  Q10 2022-10-03->2022-12-30: h=0.7613, HL=40d, z=(2.0,0.5), hawkes=on, tradeable=False
+  Q11 2023-01-03->2023-03-31: h=0.8211, HL=42d, z=(2.0,0.5), hawkes=on, tradeable=False
+  Q12 2023-04-03->2023-06-30: h=0.8766, HL=44d, z=(2.0,0.5), hawkes=on, tradeable=False
+  Q13 2023-07-03->2023-09-29: h=0.9183, HL=47d, z=(2.0,0.5), hawkes=on, tradeable=False
+  Q14 2023-10-02->2023-12-29: h=0.9862, HL=53d, z=(2.0,0.5), hawkes=on, tradeable=False
+  Q15 2024-01-02->2024-03-28: h=1.1145, HL=55d, z=(2.0,0.5), hawkes=on, tradeable=False
+  Q16 2024-04-01->2024-06-28: h=1.3662, HL=63d, z=(2.0,0.5), hawkes=on, tradeable=False
+  Q17 2024-07-01->2024-09-30: h=1.3730, HL=61d, z=(2.0,0.5), hawkes=on, tradeable=False
+  Q18 2024-10-01->2024-12-31: h=1.2895, HL=59d, z=(2.0,0.5), hawkes=on, tradeable=False
+  Q19 2025-01-02->2025-03-31: h=1.6210, HL=63d, z=(2.0,0.5), hawkes=on, tradeable=False
+  Q20 2025-04-01->2025-06-30: h=1.3452, HL=58d, z=(2.0,0.5), hawkes=on, tradeable=False
+  Q21 2025-07-01->2025-09-30: h=1.2462, HL=57d, z=(2.0,0.5), hawkes=on, tradeable=False
+  Q22 2025-10-01->2025-12-31: h=1.0043, HL=73d, z=(2.0,0.5), hawkes=on, tradeable=False
+  Q23 2026-01-02->2026-02-19: h=0.9629, HL=76d, z=(2.0,0.5), hawkes=on, tradeable=False
+
+Running ONE continuous backtest over 1416 bars
+ Stops (scaled to stationary sigma 2.41%, frozen_training_sd): stop 9.62%, trail 3.61%, target 12.03%
+Backtest: h = per-bar (sized), delay = 1 bar(s), fill at next open, intraday stops on
+ 7 trades, final equity $1,119,807 (+11.98%)
+ avg gross exposure 1.3%, flat 92 % of days, cash credit $117,467
+ exit reasons: {'mean_reversion': 3, 'pair_untradeable': 2, 'max_hold': 2}
+
+========================================================================
+WALK-FORWARD OUT-OF-SAMPLE SUMMARY
+========================================================================
+  Quarters evaluated : 23
+  Quarters tradeable : 3
+  Quarters FAILED    : 0
+
+  Annualised return  : 2.034%
+  Annualised vol     : 0.394%
+  Sharpe             : 0.041 (HAC SE 0.358)
+  Max drawdown       : -0.46%
+  On capital at risk : 4.58% return, -34.63% drawdown (75.3x scale)
+
+  HEADLINE TEST -- H0: mean excess return = 0 (Newey-West)
+    mean excess     : +0.016%/yr
+    t-statistic     : 0.114
+    p-value         : 0.9091
+    95% CI          : [-0.260%, +0.292%]
+
+  Neutrality check (CAPM vs SPY, NOT the headline)
+    beta            : 0.0011   R^2 0.00247
+
+  Trades             : 7
+  Win rate           : 57.1%
+  Profit factor      : 2.005
+  Avg duration       : 15.4 trading days
+
+  Configurations tried : 27
+  Deflated Sharpe prob : 0.0267 (FAILS at 95%)
+
+  POWER: Over 5.6 years at 0.39% annualised volatility, the standard error of the mean return is 0.17%/yr. Power to detect a 1.0%/yr edge at alpha=0.05 is 100.0%; the smallest effect detectable at 80% power is 0.47%/yr. A null result here means the design could not resolve an edge of the size sought, not that no edge exists.
+========================================================================
+    (skipped empty quarter_failures.csv)
+    wrote 9 artifacts to /home/user/MRJD-and-Hawkes-for-Pairs-Trading/outputs/GLD_GDX/walk_forward/control
+    wrote 3 artifacts to /home/user/MRJD-and-Hawkes-for-Pairs-Trading/outputs/GLD_GDX/walk_forward
 
 ========================================================================
 WALK-FORWARD (continuous book, quarterly parameter swap)
@@ -692,118 +440,276 @@ WALK-FORWARD (continuous book, quarterly parameter swap)
 ========================================================================
 
 Full sample 2018-05-01 -> 2026-02-17 (1960 obs), 23 quarters
-  Q1 2020-07-01->2020-09-30: h=1.0076, HL=2d, z=(2.5,0.75), hawkes=on
-  Q2 2020-10-01->2020-12-31: h=1.0089, HL=2d, z=(2.5,0.75), hawkes=on
-  Q3 2021-01-04->2021-03-31: h=1.0097, HL=2d, z=(2.5,0.75), hawkes=on
-  Q4 2021-04-01->2021-06-30: h=1.0080, HL=2d, z=(2.5,0.75), hawkes=on
-  Q5 2021-07-01->2021-09-30: h=1.0071, HL=2d, z=(2.5,0.75), hawkes=on
-  Q6 2021-10-01->2021-12-31: h=1.0054, HL=2d, z=(2.5,0.75), hawkes=on
-  Q7 2022-01-03->2022-03-31: h=1.0050, HL=2d, z=(2.5,0.75), hawkes=on
-  Q8 2022-04-01->2022-06-30: h=1.0044, HL=2d, z=(2.5,0.75), hawkes=on
-  Q9 2022-07-01->2022-09-30: h=1.0044, HL=2d, z=(2.5,0.75), hawkes=on
-  Q10 2022-10-03->2022-12-30: h=1.0041, HL=2d, z=(2.5,0.75), hawkes=on
-  Q11 2023-01-03->2023-03-31: h=1.0041, HL=2d, z=(2.5,0.75), hawkes=on
-  Q12 2023-04-03->2023-06-30: h=1.0040, HL=2d, z=(2.5,0.75), hawkes=on
-  Q13 2023-07-03->2023-09-29: h=1.0040, HL=2d, z=(2.5,0.75), hawkes=on
-  Q14 2023-10-02->2023-12-29: h=1.0035, HL=2d, z=(2.5,0.75), hawkes=on
-  Q15 2024-01-02->2024-03-28: h=1.0033, HL=2d, z=(2.5,0.75), hawkes=on
-  Q16 2024-04-01->2024-06-28: h=1.0029, HL=2d, z=(2.5,0.75), hawkes=on
-  Q17 2024-07-01->2024-09-30: h=1.0026, HL=2d, z=(2.5,0.75), hawkes=on
-  Q18 2024-10-01->2024-12-31: h=1.0020, HL=2d, z=(2.5,0.5), hawkes=on
-  Q19 2025-01-02->2025-03-31: h=1.0018, HL=2d, z=(2.5,0.5), hawkes=on
-  Q20 2025-04-01->2025-06-30: h=1.0016, HL=2d, z=(2.5,0.5), hawkes=on
-  Q21 2025-07-01->2025-09-30: h=1.0016, HL=2d, z=(2.5,0.5), hawkes=on
-  Q22 2025-10-01->2025-12-31: h=1.0014, HL=2d, z=(2.5,0.5), hawkes=on
-  Q23 2026-01-02->2026-02-17: h=1.0013, HL=2d, z=(2.5,0.5), hawkes=on
+  Q1 2020-07-01->2020-09-30: h=0.6954, HL=33d, z=(2.0,0.5), hawkes=off, tradeable=False
+  Q2 2020-10-01->2020-12-31: h=0.2225, HL=30d, z=(2.0,0.5), hawkes=on, tradeable=False
+  Q3 2021-01-04->2021-03-31: h=0.5775, HL=36d, z=(2.0,0.5), hawkes=off, tradeable=False
+  Q4 2021-04-01->2021-06-30: h=0.8248, HL=47d, z=(2.0,0.5), hawkes=on, tradeable=False
+  Q5 2021-07-01->2021-09-30: h=0.8888, HL=49d, z=(2.0,0.5), hawkes=on, tradeable=False
+  Q6 2021-10-01->2021-12-31: h=0.8415, HL=45d, z=(2.0,0.5), hawkes=on, tradeable=False
+  Q7 2022-01-03->2022-03-31: h=0.8410, HL=44d, z=(2.0,0.5), hawkes=on, tradeable=False
+  Q8 2022-04-01->2022-06-30: h=0.7974, HL=47d, z=(2.0,0.5), hawkes=on, tradeable=False
+  Q9 2022-07-01->2022-09-30: h=0.7861, HL=47d, z=(2.0,0.5), hawkes=on, tradeable=False
+  Q10 2022-10-03->2022-12-30: h=0.7731, HL=48d, z=(2.0,0.5), hawkes=on, tradeable=False
+  Q11 2023-01-03->2023-03-31: h=0.7947, HL=46d, z=(2.5,0.25), hawkes=on, tradeable=True
+  Q12 2023-04-03->2023-06-30: h=0.7788, HL=41d, z=(2.5,0.25), hawkes=on, tradeable=True
+  Q13 2023-07-03->2023-09-29: h=0.7776, HL=40d, z=(2.5,0.25), hawkes=on, tradeable=True
+  Q14 2023-10-02->2023-12-29: h=0.7807, HL=38d, z=(2.5,0.25), hawkes=on, tradeable=True
+  Q15 2024-01-02->2024-03-28: h=0.7938, HL=40d, z=(2.5,0.25), hawkes=on, tradeable=True
+  Q16 2024-04-01->2024-06-28: h=0.8221, HL=50d, z=(2.0,0.5), hawkes=on, tradeable=False
+  Q17 2024-07-01->2024-09-30: h=0.8710, HL=67d, z=(2.0,0.5), hawkes=on, tradeable=False
+  Q18 2024-10-01->2024-12-31: h=0.9332, HL=90d, z=(2.0,0.5), hawkes=on, tradeable=False
+  Q19 2025-01-02->2025-03-31: h=0.9447, HL=89d, z=(2.0,0.5), hawkes=on, tradeable=False
+  Q20 2025-04-01->2025-06-30: h=0.9893, HL=97d, z=(2.0,0.5), hawkes=on, tradeable=False
+  Q21 2025-07-01->2025-09-30: h=1.0496, HL=109d, z=(2.0,0.5), hawkes=on, tradeable=False
+  Q22 2025-10-01->2025-12-31: h=1.0650, HL=112d, z=(2.0,0.5), hawkes=on, tradeable=False
+  Q23 2026-01-02->2026-02-17: h=1.0715, HL=110d, z=(2.0,0.5), hawkes=on, tradeable=False
 
 Running ONE continuous backtest over 1414 bars
- Stops (scaled to stationary sigma 0.07%, daily 0.06%): stop 1.00%, trail 1.00%, target 1.00%
-Backtest: h = 1.0043 (sized), delay = 1 bar(s), fill at next open, intraday stops on
- 39 trades, final equity $1,052,545 (+5.25%)
- avg gross exposure 2.0%, flat 92 % of days, cash credit $112,302
- exit reasons: {'stop_loss': 23, 'max_hold': 16}
+ Stops (scaled to stationary sigma 3.01%, frozen_training_sd): stop 12.05%, trail 4.52%, target 15.06%
+Backtest: h = per-bar (sized), delay = 1 bar(s), fill at next open, intraday stops on
+ 3 trades, final equity $1,120,221 (+12.02%)
+ avg gross exposure 4.4%, flat 82 % of days, cash credit $113,520
+ exit reasons: {'mean_reversion': 2, 'profit_target': 1}
 
 ========================================================================
 WALK-FORWARD OUT-OF-SAMPLE SUMMARY
 ========================================================================
   Quarters evaluated : 23
+  Quarters tradeable : 5
   Quarters FAILED    : 0
 
-  Annualised return  : 0.917%
-  Annualised vol     : 0.306%
-  Sharpe             : -3.551 (HAC SE 0.583)
-  Max drawdown       : -0.43%
-  On capital at risk : -53.16% return, -21.77% drawdown (50.9x scale)
+  Annualised return  : 2.044%
+  Annualised vol     : 0.969%
+  Sharpe             : 0.030 (HAC SE 0.351)
+  Max drawdown       : -1.24%
+  On capital at risk : 2.99% return, -28.17% drawdown (22.7x scale)
 
   HEADLINE TEST -- H0: mean excess return = 0 (Newey-West)
-    mean excess     : -1.086%/yr
-    t-statistic     : -6.172
-    p-value         : 0.0000
-    95% CI          : [-1.431%, -0.741%]
+    mean excess     : +0.029%/yr
+    t-statistic     : 0.086
+    p-value         : 0.9311
+    95% CI          : [-0.638%, +0.696%]
 
   Neutrality check (CAPM vs SPY, NOT the headline)
-    beta            : 0.0012   R^2 0.00487
+    beta            : 0.0005   R^2 0.00008
 
-  Trades             : 39
-  Win rate           : 0.0%
-  Profit factor      : 0.000
-  Avg duration       : 2.9 trading days
+  Trades             : 3
+  Win rate           : 66.7%
+  Profit factor      : 1.882
+  Avg duration       : 85.3 trading days
 
-  Configurations tried : 207
-  Deflated Sharpe prob : 0.0000 (FAILS at 95%)
+  Configurations tried : 45
+  Deflated Sharpe prob : 0.0153 (FAILS at 95%)
 
-  POWER: Over 5.6 years at 0.31% annualised volatility, the standard error of the mean return is 0.13%/yr. Power to detect a 1.0%/yr edge at alpha=0.05 is 100.0%; the smallest effect detectable at 80% power is 0.36%/yr. A null result here means the design could not resolve an edge of the size sought, not that no edge exists.
+  POWER: Over 5.6 years at 0.97% annualised volatility, the standard error of the mean return is 0.41%/yr. Power to detect a 1.0%/yr edge at alpha=0.05 is 68.6%; the smallest effect detectable at 80% power is 1.15%/yr. A null result here means the design could not resolve an edge of the size sought, not that no edge exists.
 ========================================================================
     (skipped empty quarter_failures.csv)
-    wrote 9 artifacts to /Users/rayyanwaseem/Desktop/Projects/MRJD-and-Hawkes-for-Pairs-Trading/outputs/SPY_IVV/walk_forward/control
-    wrote 3 artifacts to /Users/rayyanwaseem/Desktop/Projects/MRJD-and-Hawkes-for-Pairs-Trading/outputs/SPY_IVV/walk_forward
+    wrote 9 artifacts to /home/user/MRJD-and-Hawkes-for-Pairs-Trading/outputs/GS_MS/walk_forward/hawkes
 
-==============================================================================
-SUMMARY -- ALL PAIRS
-==============================================================================
-    pair         mode     arm window  total_trades  annualized_return_pct  sharpe_ratio  nw_tstat    nw_pvalue
-AMD_NVDA walk_forward  hawkes    oos            17               2.747100      0.159872  0.417603 6.763007e-01
-AMD_NVDA walk_forward control    oos            10               1.536839     -0.079184 -0.193235 8.468024e-01
- CVX_XOM walk_forward  hawkes    oos            35               1.760610     -0.141894 -0.331397 7.403940e-01
- CVX_XOM walk_forward control    oos            29               1.531069     -0.361717 -0.863284 3.881282e-01
- GLD_GDX walk_forward  hawkes    oos            17               1.888886     -0.052457 -0.144296 8.852870e-01
- GLD_GDX walk_forward control    oos            20               1.990852     -0.013827 -0.040032 9.680731e-01
-   GS_MS walk_forward  hawkes    oos            21               1.941214     -0.039617 -0.092680 9.261709e-01
-   GS_MS walk_forward control    oos            18               1.994051     -0.010236 -0.024551 9.804165e-01
- SPY_IVV walk_forward  hawkes    oos            46               0.753781     -3.803358 -7.028573 3.237594e-12
- SPY_IVV walk_forward control    oos            39               0.916855     -3.551496 -6.172063 8.790777e-10
+========================================================================
+WALK-FORWARD (continuous book, quarterly parameter swap)
+  min training: 504 days
+========================================================================
 
- Wrote /Users/rayyanwaseem/Desktop/Projects/MRJD-and-Hawkes-for-Pairs-Trading/outputs/summary_all_pairs.csv
-    wrote 7 artifacts to /Users/rayyanwaseem/Desktop/Projects/MRJD-and-Hawkes-for-Pairs-Trading/outputs/portfolio/walk_forward/hawkes
+Full sample 2018-05-01 -> 2026-02-17 (1960 obs), 23 quarters
+  Q1 2020-07-01->2020-09-30: h=0.6954, HL=33d, z=(2.0,0.5), hawkes=off, tradeable=False
+  Q2 2020-10-01->2020-12-31: h=0.2225, HL=30d, z=(2.0,0.5), hawkes=on, tradeable=False
+  Q3 2021-01-04->2021-03-31: h=0.5775, HL=36d, z=(2.0,0.5), hawkes=off, tradeable=False
+  Q4 2021-04-01->2021-06-30: h=0.8248, HL=47d, z=(2.0,0.5), hawkes=on, tradeable=False
+  Q5 2021-07-01->2021-09-30: h=0.8888, HL=49d, z=(2.0,0.5), hawkes=on, tradeable=False
+  Q6 2021-10-01->2021-12-31: h=0.8415, HL=45d, z=(2.0,0.5), hawkes=on, tradeable=False
+  Q7 2022-01-03->2022-03-31: h=0.8410, HL=44d, z=(2.0,0.5), hawkes=on, tradeable=False
+  Q8 2022-04-01->2022-06-30: h=0.7974, HL=47d, z=(2.0,0.5), hawkes=on, tradeable=False
+  Q9 2022-07-01->2022-09-30: h=0.7861, HL=47d, z=(2.0,0.5), hawkes=on, tradeable=False
+  Q10 2022-10-03->2022-12-30: h=0.7731, HL=48d, z=(2.0,0.5), hawkes=on, tradeable=False
+  Q11 2023-01-03->2023-03-31: h=0.7947, HL=46d, z=(2.5,0.5), hawkes=on, tradeable=True
+  Q12 2023-04-03->2023-06-30: h=0.7788, HL=41d, z=(2.5,0.5), hawkes=on, tradeable=True
+  Q13 2023-07-03->2023-09-29: h=0.7776, HL=40d, z=(2.5,0.5), hawkes=on, tradeable=True
+  Q14 2023-10-02->2023-12-29: h=0.7807, HL=38d, z=(2.5,0.75), hawkes=on, tradeable=True
+  Q15 2024-01-02->2024-03-28: h=0.7938, HL=40d, z=(2.5,0.5), hawkes=on, tradeable=True
+  Q16 2024-04-01->2024-06-28: h=0.8221, HL=50d, z=(2.0,0.5), hawkes=on, tradeable=False
+  Q17 2024-07-01->2024-09-30: h=0.8710, HL=67d, z=(2.0,0.5), hawkes=on, tradeable=False
+  Q18 2024-10-01->2024-12-31: h=0.9332, HL=90d, z=(2.0,0.5), hawkes=on, tradeable=False
+  Q19 2025-01-02->2025-03-31: h=0.9447, HL=89d, z=(2.0,0.5), hawkes=on, tradeable=False
+  Q20 2025-04-01->2025-06-30: h=0.9893, HL=97d, z=(2.0,0.5), hawkes=on, tradeable=False
+  Q21 2025-07-01->2025-09-30: h=1.0496, HL=109d, z=(2.0,0.5), hawkes=on, tradeable=False
+  Q22 2025-10-01->2025-12-31: h=1.0650, HL=112d, z=(2.0,0.5), hawkes=on, tradeable=False
+  Q23 2026-01-02->2026-02-17: h=1.0715, HL=110d, z=(2.0,0.5), hawkes=on, tradeable=False
 
-==============================================================================
-EQUAL-WEIGHT PORTFOLIO ACROSS PAIRS (walk-forward OOS, hawkes)
-==============================================================================
- pairs pooled 5
- mean pairwise correlation -0.028
- effective independent pairs 5.00
- breadth gain vs one pair 2.24x
+Running ONE continuous backtest over 1414 bars
+ Stops (scaled to stationary sigma 3.01%, frozen_training_sd): stop 12.05%, trail 4.52%, target 15.06%
+Backtest: h = per-bar (sized), delay = 1 bar(s), fill at next open, intraday stops on
+ 3 trades, final equity $1,118,823 (+11.88%)
+ avg gross exposure 1.7%, flat 93 % of days, cash credit $116,731
+ exit reasons: {'mean_reversion': 3}
 
- pooled mean excess -0.164%/yr
- pooled t-statistic -0.351
- pooled p-value 0.7256
- pooled Sharpe -0.140 (HAC SE 0.398)
- artifacts /Users/rayyanwaseem/Desktop/Projects/MRJD-and-Hawkes-for-Pairs-Trading/outputs/portfolio/walk_forward/hawkes
-==============================================================================
-    wrote 7 artifacts to /Users/rayyanwaseem/Desktop/Projects/MRJD-and-Hawkes-for-Pairs-Trading/outputs/portfolio/walk_forward/control
+========================================================================
+WALK-FORWARD OUT-OF-SAMPLE SUMMARY
+========================================================================
+  Quarters evaluated : 23
+  Quarters tradeable : 5
+  Quarters FAILED    : 0
 
-==============================================================================
-EQUAL-WEIGHT PORTFOLIO ACROSS PAIRS (walk-forward OOS, control)
-==============================================================================
- pairs pooled 5
- mean pairwise correlation +0.001
- effective independent pairs 4.98
- breadth gain vs one pair 2.23x
+  Annualised return  : 2.021%
+  Annualised vol     : 0.578%
+  Sharpe             : 0.007 (HAC SE 0.326)
+  Max drawdown       : -0.95%
+  On capital at risk : 3.25% return, -55.92% drawdown (59.1x scale)
 
- pooled mean excess -0.395%/yr
- pooled t-statistic -0.923
- pooled p-value 0.3561
- pooled Sharpe -0.378 (HAC SE 0.410)
- artifacts /Users/rayyanwaseem/Desktop/Projects/MRJD-and-Hawkes-for-Pairs-Trading/outputs/portfolio/walk_forward/control
-==============================================================================
-(venv) (base) rayyanwaseem@Rayyans-MacBook-Pro MRJD-and-Hawkes-for-Pairs-Trading % 
+  HEADLINE TEST -- H0: mean excess return = 0 (Newey-West)
+    mean excess     : +0.004%/yr
+    t-statistic     : 0.022
+    p-value         : 0.9825
+    95% CI          : [-0.366%, +0.374%]
+
+  Neutrality check (CAPM vs SPY, NOT the headline)
+    beta            : -0.0016   R^2 0.00231
+
+  Trades             : 3
+  Win rate           : 66.7%
+  Profit factor      : 1.447
+  Avg duration       : 34.3 trading days
+
+  Configurations tried : 45
+  Deflated Sharpe prob : 0.0133 (FAILS at 95%)
+
+  POWER: Over 5.6 years at 0.58% annualised volatility, the standard error of the mean return is 0.24%/yr. Power to detect a 1.0%/yr edge at alpha=0.05 is 98.4%; the smallest effect detectable at 80% power is 0.68%/yr. A null result here means the design could not resolve an edge of the size sought, not that no edge exists.
+========================================================================
+    (skipped empty quarter_failures.csv)
+    wrote 9 artifacts to /home/user/MRJD-and-Hawkes-for-Pairs-Trading/outputs/GS_MS/walk_forward/control
+    wrote 3 artifacts to /home/user/MRJD-and-Hawkes-for-Pairs-Trading/outputs/GS_MS/walk_forward
+
+========================================================================
+WALK-FORWARD (continuous book, quarterly parameter swap)
+  min training: 504 days
+========================================================================
+
+Full sample 2018-05-01 -> 2026-02-17 (1960 obs), 23 quarters
+  Q1 2020-07-01->2020-09-30: h=1.0076, HL=2d, z=(2.0,0.5), hawkes=on, tradeable=False
+  Q2 2020-10-01->2020-12-31: h=1.0092, HL=2d, z=(2.0,0.5), hawkes=on, tradeable=False
+  Q3 2021-01-04->2021-03-31: h=1.0098, HL=2d, z=(2.0,0.5), hawkes=on, tradeable=False
+  Q4 2021-04-01->2021-06-30: h=1.0080, HL=2d, z=(2.0,0.5), hawkes=on, tradeable=False
+  Q5 2021-07-01->2021-09-30: h=1.0070, HL=2d, z=(2.0,0.5), hawkes=on, tradeable=False
+  Q6 2021-10-01->2021-12-31: h=1.0053, HL=2d, z=(2.0,0.5), hawkes=on, tradeable=False
+  Q7 2022-01-03->2022-03-31: h=1.0048, HL=2d, z=(2.0,0.5), hawkes=on, tradeable=False
+  Q8 2022-04-01->2022-06-30: h=1.0043, HL=2d, z=(2.0,0.5), hawkes=on, tradeable=False
+  Q9 2022-07-01->2022-09-30: h=1.0044, HL=2d, z=(2.0,0.5), hawkes=on, tradeable=False
+  Q10 2022-10-03->2022-12-30: h=1.0041, HL=2d, z=(2.0,0.5), hawkes=on, tradeable=False
+  Q11 2023-01-03->2023-03-31: h=1.0042, HL=2d, z=(2.0,0.5), hawkes=on, tradeable=False
+  Q12 2023-04-03->2023-06-30: h=1.0040, HL=2d, z=(2.0,0.5), hawkes=on, tradeable=False
+  Q13 2023-07-03->2023-09-29: h=1.0040, HL=2d, z=(2.0,0.5), hawkes=on, tradeable=False
+  Q14 2023-10-02->2023-12-29: h=1.0035, HL=2d, z=(2.0,0.5), hawkes=on, tradeable=False
+  Q15 2024-01-02->2024-03-28: h=1.0033, HL=2d, z=(2.0,0.5), hawkes=on, tradeable=False
+  Q16 2024-04-01->2024-06-28: h=1.0028, HL=2d, z=(2.0,0.5), hawkes=on, tradeable=False
+  Q17 2024-07-01->2024-09-30: h=1.0026, HL=2d, z=(2.0,0.5), hawkes=on, tradeable=False
+  Q18 2024-10-01->2024-12-31: h=1.0020, HL=2d, z=(2.0,0.5), hawkes=on, tradeable=False
+  Q19 2025-01-02->2025-03-31: h=1.0017, HL=2d, z=(2.0,0.5), hawkes=on, tradeable=False
+  Q20 2025-04-01->2025-06-30: h=1.0016, HL=2d, z=(2.0,0.5), hawkes=on, tradeable=False
+  Q21 2025-07-01->2025-09-30: h=1.0016, HL=2d, z=(2.0,0.5), hawkes=on, tradeable=False
+  Q22 2025-10-01->2025-12-31: h=1.0014, HL=2d, z=(2.0,0.5), hawkes=on, tradeable=False
+  Q23 2026-01-02->2026-02-17: h=1.0013, HL=2d, z=(2.0,0.5), hawkes=on, tradeable=False
+
+Running ONE continuous backtest over 1414 bars
+ Stops (scaled to stationary sigma 0.10%, frozen_training_sd): stop 1.00%, trail 1.00%, target 1.00%
+Backtest: h = per-bar (sized), delay = 1 bar(s), fill at next open, intraday stops on
+ 0 trades, final equity $1,118,668 (+11.87%)
+ avg gross exposure 0.0%, flat 100 % of days, cash credit $118,668
+
+========================================================================
+WALK-FORWARD OUT-OF-SAMPLE SUMMARY
+========================================================================
+  Quarters evaluated : 23
+  Quarters tradeable : 0
+  Quarters FAILED    : 0
+
+  Annualised return  : 2.019%
+  Annualised vol     : 0.000%
+  Sharpe             : 0.000 (HAC SE nan)
+  Max drawdown       : 0.00%
+
+  HEADLINE TEST -- H0: mean excess return = 0 (Newey-West)
+    mean excess     : +0.000%/yr
+    t-statistic     : 0.000
+    p-value         : 1.0000
+    95% CI          : [-0.000%, +0.000%]
+
+  Neutrality check (CAPM vs SPY, NOT the headline)
+    beta            : -0.0000   R^2 0.00023
+
+  Trades             : 0
+  Win rate           : 0.0%
+  Profit factor      : nan
+  Avg duration       : 0.0 trading days
+========================================================================
+    (skipped empty quarter_failures.csv)
+    wrote 9 artifacts to /home/user/MRJD-and-Hawkes-for-Pairs-Trading/outputs/SPY_IVV/walk_forward/hawkes
+
+========================================================================
+WALK-FORWARD (continuous book, quarterly parameter swap)
+  min training: 504 days
+========================================================================
+
+Full sample 2018-05-01 -> 2026-02-17 (1960 obs), 23 quarters
+  Q1 2020-07-01->2020-09-30: h=1.0076, HL=2d, z=(2.0,0.5), hawkes=on, tradeable=False
+  Q2 2020-10-01->2020-12-31: h=1.0092, HL=2d, z=(2.0,0.5), hawkes=on, tradeable=False
+  Q3 2021-01-04->2021-03-31: h=1.0098, HL=2d, z=(2.0,0.5), hawkes=on, tradeable=False
+  Q4 2021-04-01->2021-06-30: h=1.0080, HL=2d, z=(2.0,0.5), hawkes=on, tradeable=False
+  Q5 2021-07-01->2021-09-30: h=1.0070, HL=2d, z=(2.0,0.5), hawkes=on, tradeable=False
+  Q6 2021-10-01->2021-12-31: h=1.0053, HL=2d, z=(2.0,0.5), hawkes=on, tradeable=False
+  Q7 2022-01-03->2022-03-31: h=1.0048, HL=2d, z=(2.0,0.5), hawkes=on, tradeable=False
+  Q8 2022-04-01->2022-06-30: h=1.0043, HL=2d, z=(2.0,0.5), hawkes=on, tradeable=False
+  Q9 2022-07-01->2022-09-30: h=1.0044, HL=2d, z=(2.0,0.5), hawkes=on, tradeable=False
+  Q10 2022-10-03->2022-12-30: h=1.0041, HL=2d, z=(2.0,0.5), hawkes=on, tradeable=False
+  Q11 2023-01-03->2023-03-31: h=1.0042, HL=2d, z=(2.0,0.5), hawkes=on, tradeable=False
+  Q12 2023-04-03->2023-06-30: h=1.0040, HL=2d, z=(2.0,0.5), hawkes=on, tradeable=False
+  Q13 2023-07-03->2023-09-29: h=1.0040, HL=2d, z=(2.0,0.5), hawkes=on, tradeable=False
+  Q14 2023-10-02->2023-12-29: h=1.0035, HL=2d, z=(2.0,0.5), hawkes=on, tradeable=False
+  Q15 2024-01-02->2024-03-28: h=1.0033, HL=2d, z=(2.0,0.5), hawkes=on, tradeable=False
+  Q16 2024-04-01->2024-06-28: h=1.0028, HL=2d, z=(2.0,0.5), hawkes=on, tradeable=False
+  Q17 2024-07-01->2024-09-30: h=1.0026, HL=2d, z=(2.0,0.5), hawkes=on, tradeable=False
+  Q18 2024-10-01->2024-12-31: h=1.0020, HL=2d, z=(2.0,0.5), hawkes=on, tradeable=False
+  Q19 2025-01-02->2025-03-31: h=1.0017, HL=2d, z=(2.0,0.5), hawkes=on, tradeable=False
+  Q20 2025-04-01->2025-06-30: h=1.0016, HL=2d, z=(2.0,0.5), hawkes=on, tradeable=False
+  Q21 2025-07-01->2025-09-30: h=1.0016, HL=2d, z=(2.0,0.5), hawkes=on, tradeable=False
+  Q22 2025-10-01->2025-12-31: h=1.0014, HL=2d, z=(2.0,0.5), hawkes=on, tradeable=False
+  Q23 2026-01-02->2026-02-17: h=1.0013, HL=2d, z=(2.0,0.5), hawkes=on, tradeable=False
+
+Running ONE continuous backtest over 1414 bars
+ Stops (scaled to stationary sigma 0.10%, frozen_training_sd): stop 1.00%, trail 1.00%, target 1.00%
+Backtest: h = per-bar (sized), delay = 1 bar(s), fill at next open, intraday stops on
+ 0 trades, final equity $1,118,668 (+11.87%)
+ avg gross exposure 0.0%, flat 100 % of days, cash credit $118,668
+
+========================================================================
+WALK-FORWARD OUT-OF-SAMPLE SUMMARY
+========================================================================
+  Quarters evaluated : 23
+  Quarters tradeable : 0
+  Quarters FAILED    : 0
+
+  Annualised return  : 2.019%
+  Annualised vol     : 0.000%
+  Sharpe             : 0.000 (HAC SE nan)
+  Max drawdown       : 0.00%
+
+  HEADLINE TEST -- H0: mean excess return = 0 (Newey-West)
+    mean excess     : +0.000%/yr
+    t-statistic     : 0.000
+    p-value         : 1.0000
+    95% CI          : [-0.000%, +0.000%]
+
+  Neutrality check (CAPM vs SPY, NOT the headline)
+    beta            : -0.0000   R^2 0.00023
+
+  Trades             : 0
+  Win rate           : 0.0%
+  Profit factor      : nan
+  Avg duration       : 0.0 trading days
+========================================================================
+    (skipped empty quarter_failures.csv)
+    wrote 9 artifacts to /home/user/MRJD-and-Hawkes-for-Pairs-Trading/outputs/SPY_IVV/walk_forward/control
+    wrote 3 artifacts to /home/user/MRJD-and-Hawkes-for-Pairs-Trading/outputs/SPY_IVV/walk_forward
+    wrote 7 artifacts to /home/user/MRJD-and-Hawkes-for-Pairs-Trading/outputs/portfolio/walk_forward/hawkes
+hawkes {'n_pairs': 5, 'mean_pairwise_correlation': 0.011822640756602212, 'effective_independent_pairs': 4.774224247329457, 'breadth_gain_vs_single': 2.184999827764171, 'n_obs': 1416, 'pooled_mean_annualized_excess_pct': -0.26449139927351595, 'pooled_se_annualized_pct': 0.21780900685915874, 'pooled_t_statistic': -1.214327190080543, 'pooled_p_value': 0.22482542413833667, 'pooled_ci95_low_pct': -0.6913970527174671, 'pooled_ci95_high_pct': 0.16241425417043515, 'pooled_sharpe_annualized': np.float64(-0.5247314476233823), 'pooled_se_annualized_hac': np.float64(0.4322350408053869), 'pooled_t_statistic_hac': -1.2139956229500646}
+    wrote 7 artifacts to /home/user/MRJD-and-Hawkes-for-Pairs-Trading/outputs/portfolio/walk_forward/control
+control {'n_pairs': 5, 'mean_pairwise_correlation': 0.017078095417350312, 'effective_independent_pairs': 4.6802789949759225, 'breadth_gain_vs_single': 2.1633952470540194, 'n_obs': 1416, 'pooled_mean_annualized_excess_pct': -0.032758618346568597, 'pooled_se_annualized_pct': 0.1578162589415492, 'pooled_t_statistic': -0.20757441955775605, 'pooled_p_value': 0.835591148647978, 'pooled_ci95_low_pct': -0.34207848587200496, 'pooled_ci95_high_pct': 0.2765612491788678, 'pooled_sharpe_annualized': np.float64(-0.08916078701791431), 'pooled_se_annualized_hac': np.float64(0.42953987479006844), 'pooled_t_statistic_hac': -0.20757278253035388}

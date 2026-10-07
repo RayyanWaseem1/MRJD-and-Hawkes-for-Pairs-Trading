@@ -2,7 +2,7 @@
 
 from __future__ import annotations 
 
-from dataclasses import asdict, dataclass 
+from dataclasses import asdict, dataclass, fields
 from typing import Dict, List, Optional 
 
 import numpy as np 
@@ -10,6 +10,7 @@ import pandas as pd
 
 from statistics_tools import (
     TRADING_DAYS,
+    VOL_EPS,
     bootstrap_metric_ci,
     newey_west_mean_test,
     sharpe_standard_error,
@@ -139,6 +140,7 @@ class _OpenPosition:
         "gross_notional", "capital_at_risk", "position_size",
         "max_adverse", "max_favorable", "trailing_stop_level", "trailing_activated",
         "financing", "borrow", "costs", "hedge_ratio",
+        "stop_loss_pct", "trailing_stop_pct", "trailing_activation_pct", "profit_target_pct",
     )
 
     def __init__(self, **kwargs):
@@ -226,21 +228,52 @@ class BacktestEngine:
 
     ### Helpers ###
 
-    def _resolve_stops(self, spread_df: pd.DataFrame, hedge_ratio: float) -> None:
+    def _stop_levels(self, spread_sd: float, hedge_ratio: float) -> Optional[Dict]:
         """
-        Set the stop levels used for this run.
+        Volatility-scaled stop levels for one spread standard deviation.
+
+        A one-unit move in the log spread produces a return of 1/(1+h) on gross
+        notional, so a stop at k stationary sigma is k * sd(spread) / (1 + h).
+        Returns None when the volatility estimate is degenerate.
+        """
+        stationary_sd = float(spread_sd) / (1.0 + abs(float(hedge_ratio)))
+        if not np.isfinite(stationary_sd) or stationary_sd <= 0:
+            return None
+
+        def clamp(x: float) -> float:
+            return float(min(max(x, self.stop_floor_pct), self.stop_cap_pct))
+
+        return {
+            "stationary_sd_pct": 100 * stationary_sd,
+            "stop_loss_pct": clamp(self.stop_loss_sigma * stationary_sd),
+            "trailing_stop_pct": clamp(self.trailing_activation_sigma * stationary_sd),
+            "trailing_activation_pct": clamp(self.trailing_activation_sigma * stationary_sd),
+            "profit_target_pct": clamp(self.profit_target_sigma * stationary_sd),
+        }
+
+    def _resolve_stops(
+        self,
+        spread_df: pd.DataFrame,
+        hedge_ratio: float,
+        reference_sd: Optional[float] = None,
+    ) -> None:
+        """
+        Set the default stop levels used for this run.
 
         In 'volatility' mode the levels are multiples of the spread's 
-        STATIONARY standard deviation, converted to position-return units. A 
-        one-unit move in the log spread produces a return of 1/(1+h) on gross 
-        notional, so
-            stop_pct = k * sd(spread) / (1 + h)
+        STATIONARY standard deviation, converted to position-return units.
         Stationary sigma, not daily sigma, is the right scale: entry happens at 
         z = 2, so a stop at k = 4 fires only after a further 2 sigma of adverse
         movement. Using daily sigma at a 60-day half-life gives ~3%, which 
         reproduces the very defect this is meant to fix -- the spread moves 
         several percent against the position before reverting, because that is
         what mean reversion is.
+
+        `reference_sd` should be the spread standard deviation from the
+        TRAINING window. Measuring it on the window being traded sizes every
+        stop with knowledge of that window's realised volatility, a look-ahead.
+        The evaluation-window value is used only as a labelled fallback when no
+        reference is supplied (unit tests, ad-hoc use).
         """
         if self.stop_mode != "volatility":
             self.resolved_stops = {
@@ -252,34 +285,27 @@ class BacktestEngine:
             }
             return 
 
-        stationary_sd = float(spread_df["spread"].std() / (1.0 + abs(hedge_ratio)))
-        daily_sd = float(spread_df["spread"].diff().std() / (1.0 + abs(hedge_ratio)))
-        if not np.isfinite(stationary_sd) or stationary_sd <= 0:
+        if reference_sd is not None:
+            spread_sd, source = float(reference_sd), "frozen_training_sd"
+        else:
+            spread_sd, source = float(spread_df["spread"].std()), "evaluation_window_sd"
+
+        levels = self._stop_levels(spread_sd, hedge_ratio)
+        if levels is None:
             self._log(" WARNING: degenerate spread volatility; falling back to fixed stops")
             self.resolved_stops = {"mode": "fixed_fallback"}
             return 
 
-        def clamp(x: float) -> float:
-            return float(min(max(x, self.stop_floor_pct), self.stop_cap_pct))
+        self.stop_loss_pct = levels["stop_loss_pct"]
+        self.trailing_stop_pct = levels["trailing_stop_pct"]
+        self.trailing_activation_pct = levels["trailing_activation_pct"]
+        self.profit_target_pct = levels["profit_target_pct"]
 
-        self.stop_loss_pct = clamp(self.stop_loss_sigma * stationary_sd)
-        self.trailing_stop_pct = clamp(self.trailing_activation_sigma * stationary_sd)
-        self.trailing_activation_pct = clamp(self.trailing_activation_sigma * stationary_sd)
-        self.profit_target_pct = clamp(self.profit_target_sigma * stationary_sd) 
-
-        self.resolved_stops = {
-            "mode": "volatility",
-            "stationary_sd_pct": 100 * stationary_sd,
-            "daily_sd_pct": 100 * daily_sd,
-            "stop_loss_pct": self.stop_loss_pct,
-            "trailing_stop_pct": self.trailing_stop_pct,
-            "trailing_activation_pct": self.trailing_activation_pct,
-            "profit_target_pct": self.profit_target_pct,
-        }
+        self.resolved_stops = {"mode": "volatility", "sd_source": source, **levels}
         self._log(
-            f" Stops (scaled to stationary sigma {100 * stationary_sd:.2f}%, "
-            f"daily {100 * daily_sd:.2f}%): "
-            f"stop {100 * self.stop_loss_pct:.2f}%, trail {100 * self.trailing_stop_pct:.2f}%, "
+            f" Stops (scaled to stationary sigma {levels['stationary_sd_pct']:.2f}%, "
+            f"{source}): stop {100 * self.stop_loss_pct:.2f}%, "
+            f"trail {100 * self.trailing_stop_pct:.2f}%, "
             f"target {100 * self.profit_target_pct:.2f}%"
         )
 
@@ -363,8 +389,19 @@ class BacktestEngine:
         hedge_ratio: Optional[float] = None,
         asset_a_ohlc: Optional[pd.DataFrame] = None, 
         asset_b_ohlc: Optional[pd.DataFrame] = None,
+        stop_reference_sd: Optional[float] = None,
     ) -> pd.DataFrame:
-        """ Run the backtest. `hedge_ratio` drives POSITION SIZING, not just logging"""
+        """
+        Run the backtest. `hedge_ratio` drives POSITION SIZING, not just logging.
+
+        Per-bar overrides, read from `signals_df` when present:
+            hedge_ratio        -- hedge used to size a position entered on that
+                                  bar (walk-forward passes each quarter's own h,
+                                  so no position is sized with a later estimate)
+            stop_reference_sd  -- training spread sd used to scale that
+                                  position's stops
+        Otherwise `hedge_ratio` and `stop_reference_sd` apply to every position.
+        """
         common = signals_df.index
         for other in (spread_df.index, asset_a_prices.index, asset_b_prices.index):
             common = common.intersection(other)
@@ -395,10 +432,22 @@ class BacktestEngine:
 
         use_open = has_ohlc and self.execution_price == "next_open"
 
-        self._resolve_stops(spread_df, hedge_ratio)
+        self._resolve_stops(spread_df, hedge_ratio, stop_reference_sd)
+
+        hedge_values = (
+            signals_df["hedge_ratio"].astype(float).to_numpy()
+            if "hedge_ratio" in signals_df.columns
+            else np.full(len(common), hedge_ratio)
+        )
+        stop_sd_values = (
+            signals_df["stop_reference_sd"].astype(float).to_numpy()
+            if "stop_reference_sd" in signals_df.columns
+            else None
+        )
+        per_bar_hedge = "hedge_ratio" in signals_df.columns
 
         self._log(
-            f"Backtest: h = {hedge_ratio:.4f} (sized), delay = {self.execution_delay} bar(s), "
+            f"Backtest: h = {'per-bar' if per_bar_hedge else f'{hedge_ratio:.4f}'} (sized), delay = {self.execution_delay} bar(s), "
             f"fill at {'next open' if use_open else 'close'}, "
             f"intraday stops {'on' if (self.use_intraday_stops and has_ohlc) else 'off'}"
         )
@@ -467,11 +516,11 @@ class BacktestEngine:
                 pos.max_adverse = min(pos.max_adverse, current_return)
                 pos.max_favorable = max(pos.max_favorable, current_return)
 
-                if current_return > self.trailing_activation_pct:
+                if current_return > pos.trailing_activation_pct:
                     pos.trailing_activated = True 
                 if pos.trailing_activated:
                     pos.trailing_stop_level = max(
-                        pos.trailing_stop_level, pos.max_favorable - self.trailing_stop_pct
+                        pos.trailing_stop_level, pos.max_favorable - pos.trailing_stop_pct
                     )
 
             # 2. decide on an exit 
@@ -498,7 +547,7 @@ class BacktestEngine:
                         forced_a, forced_b = float(open_a.iloc[i]), float(open_b.iloc[i])
                     else:
                         forced_a, forced_b = price_a, price_b 
-                elif self._net_return(pos, price_a, price_b) > self.profit_target_pct:
+                elif self._net_return(pos, price_a, price_b) > pos.profit_target_pct:
                     reason = "profit_target"
                     forced_a, forced_b = price_a, price_b
 
@@ -529,6 +578,10 @@ class BacktestEngine:
             # 4. Register an entry 
             if pos is None and pending_entry is None and signal_values[i] in (1, -1):
                 pending_entry = {
+                    "hedge_ratio": float(hedge_values[i]),
+                    "stop_sd": (
+                        float(stop_sd_values[i]) if stop_sd_values is not None else None
+                    ),
                     "direction": int(signal_values[i]),
                     "size": float(size_values[i]),
                     "lambda": float(lambda_values[i]),
@@ -542,12 +595,26 @@ class BacktestEngine:
                 px_a, px_b = fill(i, "a"), fill(i, "b")
                 sign = pending_entry["direction"]
                 size = min(pending_entry["size"], self.max_position_pct)
+                entry_hedge = pending_entry["hedge_ratio"]
+
+                # Stop levels for THIS position: from its own frozen reference
+                # when one is supplied per bar, else the run-level defaults
+                levels = None
+                if self.stop_mode == "volatility" and pending_entry["stop_sd"] is not None:
+                    levels = self._stop_levels(pending_entry["stop_sd"], entry_hedge)
+                if levels is None:
+                    levels = {
+                        "stop_loss_pct": self.stop_loss_pct,
+                        "trailing_stop_pct": self.trailing_stop_pct,
+                        "trailing_activation_pct": self.trailing_activation_pct,
+                        "profit_target_pct": self.profit_target_pct,
+                    }
 
                 #Leg B carries h times leg A's dollars, so the book matches 
                 # log(A) - h * log(B) -- the spread that is actually modelled
-                capital_per_leg = size * cash / (1.0 + abs(hedge_ratio))
+                capital_per_leg = size * cash / (1.0 + abs(entry_hedge))
                 shares_a = sign * capital_per_leg / px_a
-                shares_b = -sign * hedge_ratio * capital_per_leg / px_b
+                shares_b = -sign * entry_hedge * capital_per_leg / px_b
                 gross_notional = abs(shares_a * px_a) + abs(shares_b * px_b)
                 capital_at_risk = size * cash 
 
@@ -561,10 +628,14 @@ class BacktestEngine:
                     entry_lambda = pending_entry["lambda"], entry_z = pending_entry["z"],
                     entry_regime = pending_entry["regime"],
                     gross_notional = gross_notional, capital_at_risk = capital_at_risk,
-                    position_size = size, hedge_ratio = hedge_ratio,
+                    position_size = size, hedge_ratio = entry_hedge,
                     max_adverse = 0.0, max_favorable = 0.0,
-                    trailing_stop_level =-self.stop_loss_pct, trailing_activated = False, 
+                    trailing_stop_level = -levels["stop_loss_pct"], trailing_activated = False, 
                     financing = 0.0, borrow = 0.0, costs = entry_costs,
+                    stop_loss_pct = levels["stop_loss_pct"],
+                    trailing_stop_pct = levels["trailing_stop_pct"],
+                    trailing_activation_pct = levels["trailing_activation_pct"],
+                    profit_target_pct = levels["profit_target_pct"],
                 )
                 pending_entry = None 
 
@@ -630,7 +701,7 @@ class BacktestEngine:
             "total_cash_credit": float(np.sum(cash_credit_track)),
             "total_financing_and_borrow": float(np.sum(financing_track)),
             "forced_close_at_end": forced_close,
-            "hedge_ratio_used": hedge_ratio,
+            "hedge_ratio_used": "per-bar" if per_bar_hedge else hedge_ratio,
             **{f"stop_{k}": v for k, v in self.resolved_stops.items()},
         }
 
@@ -677,7 +748,7 @@ class BacktestEngine:
         excess = returns - daily_rf
         sharpe = (
             float(np.sqrt(TRADING_DAYS) * np.mean(excess) / returns_std)
-            if returns_std > 0
+            if returns_std > VOL_EPS
             else 0.0
         )
 
@@ -688,7 +759,7 @@ class BacktestEngine:
         )
         sortino = (
             float(np.sqrt(TRADING_DAYS) * np.mean(excess) / downside_std)
-            if downside_std > 0
+            if downside_std > VOL_EPS
             else 0.0
         )
 
@@ -887,5 +958,6 @@ class BacktestEngine:
 
     def get_trade_summary(self) -> pd.DataFrame:
         if not self.trades:
-            return pd.DataFrame()
+            # Keep the columns so a zero-trade run writes a header-only file
+            return pd.DataFrame(columns=[f.name for f in fields(Trade)])
         return pd.DataFrame([asdict(t) for t in self.trades])

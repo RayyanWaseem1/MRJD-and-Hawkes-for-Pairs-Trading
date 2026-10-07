@@ -1,13 +1,13 @@
 {
   "pair": "CVX_XOM",
   "analysis_requested": "all",
-  "command": "diagnostics.py --pair all --which all",
+  "command": "diagnostics.py --pair CVX_XOM --which all",
   "config": {
     "data": {
       "asset_a_symbol": "CVX",
       "asset_b_symbol": "XOM",
-      "asset_a_csv": "/Users/rayyanwaseem/Desktop/Projects/MRJD-and-Hawkes-for-Pairs-Trading/OHLCV_CVX.csv",
-      "asset_b_csv": "/Users/rayyanwaseem/Desktop/Projects/MRJD-and-Hawkes-for-Pairs-Trading/OHLCV_XOM.csv",
+      "asset_a_csv": "/home/user/MRJD-and-Hawkes-for-Pairs-Trading/OHLCV_CVX.csv",
+      "asset_b_csv": "/home/user/MRJD-and-Hawkes-for-Pairs-Trading/OHLCV_XOM.csv",
       "date_columns": "ts_event",
       "hedge_ratio_method": "johansen",
       "hedge_mode": "static",
@@ -59,6 +59,7 @@
       "min_position_size": 0.1,
       "use_hawkes_regimes": true,
       "use_jump_entries": true,
+      "require_tradeable": true,
       "regime_excess_calm": 0.05,
       "regime_excess_elevated": 1.0,
       "regime_excess_crisis": 5.0,
@@ -73,7 +74,7 @@
     },
     "backtest": {
       "initial_capital": 1000000.0,
-      "commission_rate": 0.002,
+      "commission_rate": 0.0002,
       "slippage_bps": 1.0,
       "execution_delay": 1,
       "execution_price": "next_open",
@@ -110,7 +111,7 @@
       "regime_threshold": 0.3,
       "report_capital_at_risk": true,
       "target_volatility": 0.1,
-      "benchmark_csv": "/Users/rayyanwaseem/Desktop/Projects/MRJD-and-Hawkes-for-Pairs-Trading/OHLCV_SPY.csv"
+      "benchmark_csv": "/home/user/MRJD-and-Hawkes-for-Pairs-Trading/OHLCV_SPY.csv"
     },
     "train_val": {
       "train_start": "2018-05-01",
