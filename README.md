@@ -120,7 +120,7 @@ With a 30-day rolling OLS, the third term, an estimation artefact multiplied by 
 
 **Stationarity testing.** $S_t$ is a residual from an *estimated* cointegrating vector, so a standard ADF test, whose Dickey–Fuller critical values assume an observed series, over-rejects. Stationarity is therefore judged with the **Engle–Granger** test using Phillips–Ouliaris residual-based critical values. The naive ADF *p*-value is reported alongside so the size of the over-rejection is visible.
 
-**Pair validation.** Five checks are computed on the training window: EG stationarity ($p<0.05$); AR(1) half-life in $[5, 120]$ trading days; rolling-mean stability ($\operatorname{sd}(\bar S^{(252)}_t)/\operatorname{sd}(S_t) < 0.5$); range below $10\,\operatorname{sd}$; and a recent-vs-full-sample mean shift below $1\,\operatorname{sd}$. All five feed `is_tradeable`, and **a pair that fails any of them opens no positions** in either arm (`TradingConfig.require_tradeable`). In walk-forward the gate is re-evaluated at every quarterly refit. A position carried into a quarter that fails is closed at that quarter's first bar. `--ignore-validation` disables the gate and reproduces the ungated behaviour.
+**Pair validation.** Five checks are computed on the training window: EG stationarity ($p<0.05$); AR(1) half-life in $[5, 120]$ trading days; rolling-mean stability ($\mathrm{sd}(\bar S^{(252)}_t)/\mathrm{sd}(S_t) < 0.5$); range below $10\,\mathrm{sd}$; and a recent-vs-full-sample mean shift below $1\,\mathrm{sd}$. All five feed `is_tradeable`, and **a pair that fails any of them opens no positions** in either arm (`TradingConfig.require_tradeable`). In walk-forward the gate is re-evaluated at every quarterly refit. A position carried into a quarter that fails is closed at that quarter's first bar. `--ignore-validation` disables the gate and reproduces the ungated behaviour.
 
 ### 5.2 Mean-reverting jump diffusion (MRJD)
 
@@ -146,14 +146,14 @@ This is an AR(1) regression $S_{t+1} = c + \phi S_t + \varepsilon_t$, so the con
 \theta = \frac{c}{1-\phi},\qquad
 \sigma = s\sqrt{2\kappa},\qquad
 t_{1/2} = \frac{\ln 2}{\kappa},\qquad
-\operatorname{sd}_\infty(S) = \frac{\sigma}{\sqrt{2\kappa}} .
+\mathrm{sd}_\infty(S) = \frac{\sigma}{\sqrt{2\kappa}} .
 ```
 
 Transitions that *end* on a detected jump are excluded, so $(\kappa,\theta,\sigma)$ describe the continuous component. $(\mu_J,\sigma_J)$ are the sample moments of $\Delta S_t$ on jump days. The estimator raises `MRJDFitError` if $\phi \le 0$ (not mean-reverting) or $\phi \ge 1$ (unit root).
 
 Why reparameterise? A 50-day half-life implies $\phi \approx 0.986$, close to a unit root, where the likelihood in $(\kappa,\sigma)$ is nearly flat. Direct numerical optimisation in the earlier version produced an implied stationary s.d. 15.6× the empirical one (GS/MS), and AMD/NVDA pinned $\sigma$ at its upper bound. An optional joint MLE over $(\phi,\theta,s,\mu_J,\sigma_J)$, using a Gaussian mixture on jump days, is available (`MRJDConfig.joint_refinement`). The model's half-life is compared against the empirical one and reported, **never silently overwritten**.
 
-The MRJD feeds the strategy through the half-life (which sets the holding period) and optionally through a parametric z-score $(S_t-\theta)/\operatorname{sd}_\infty$ and an expected reversion time $t = \ln(z_0/z_1)/\kappa$.
+The MRJD feeds the strategy through the half-life (which sets the holding period) and optionally through a parametric z-score $(S_t-\theta)/\mathrm{sd}_\infty$ and an expected reversion time $t = \ln(z_0/z_1)/\kappa$.
 
 ### 5.3 Jump detection
 
@@ -206,7 +206,7 @@ The **branching ratio** $\eta = \alpha/\beta$ is the expected number of direct "
 **Unconstrained reparameterisation.** The model is fitted in $u\in\mathbb R^3$ with
 
 ```math
-\bar\lambda = e^{u_0},\qquad \beta = e^{u_1},\qquad \eta = \operatorname{logistic}(u_2),\qquad \alpha = \eta\beta ,
+\bar\lambda = e^{u_0},\qquad \beta = e^{u_1},\qquad \eta = \mathrm{logistic}(u_2),\qquad \alpha = \eta\beta ,
 ```
 
 so $0<\eta<1$ holds *by construction*, the objective is smooth everywhere, and L-BFGS-B is run from four starting points. This replaces a penalty that returned the constant $10^{10}$ whenever $\eta > 0.85$. Finite-difference gradients see that as a cliff, and in the earlier version every reported branching ratio landed within 2% of the 0.85 wall, where standard errors are meaningless.
@@ -215,7 +215,7 @@ so $0<\eta<1$ holds *by construction*, the objective is smooth everywhere, and L
 
 | Quantity | Method |
 |---|---|
-| $\operatorname{se}(\bar\lambda,\alpha,\beta)$ | Inverse of the numerical Hessian of $-\ell$ in natural parameters |
+| $\mathrm{se}(\bar\lambda,\alpha,\beta)$ | Inverse of the numerical Hessian of $-\ell$ in natural parameters |
 | CI on $\eta$ | Delta method: $\nabla\eta = (1/\beta,\, -\alpha/\beta^2)$ |
 | $H_0: \alpha = 0$ | $LR = 2(\ell_{\text{Hawkes}} - \ell_{\text{Poisson}})$, with $\ell_{\text{Poisson}} = n\log(n/T) - n$. Under $H_0$ the decay $\beta$ is **unidentified** (the Davies problem), so $LR \not\sim \chi^2$. The $\chi^2_2$ *p*-value is reported only as a reference; the quoted *p*-value comes from a **parametric bootstrap** (200 Poisson replications refitted with the full Hawkes MLE). |
 | Goodness of fit | Time-rescaling theorem: $\tau_i = \Lambda(t_i) - \Lambda(t_{i-1}) \overset{iid}{\sim}\text{Exp}(1)$ under correct specification. Tested by KS and visualised by QQ plot. |
@@ -248,8 +248,8 @@ where $\bar\lambda$ is frozen from the training bundle:
 **Position sizing.**
 
 ```math
-w_t = \operatorname{clip}\Big(0.25 \cdot \min\!\big(\tfrac{|z_t|}{3},\,1.5\big)\cdot f_\lambda \cdot f_{\text{regime}},\;0.10,\;0.25\Big),
-\qquad f_\lambda = \operatorname{clip}\big(1.5 - e_t,\;0.5,\;1.5\big).
+w_t = \mathrm{clip}\Big(0.25 \cdot \min\!\big(\tfrac{|z_t|}{3},\,1.5\big)\cdot f_\lambda \cdot f_{\text{regime}},\;0.10,\;0.25\Big),
+\qquad f_\lambda = \mathrm{clip}\big(1.5 - e_t,\;0.5,\;1.5\big).
 ```
 
 **Control arm** (`Config.as_control_arm`): `use_hawkes_regimes=False`, `use_jump_entries=False`. Every observation is NORMAL, $f_\lambda = 1$, and there is no decay gate and no jump entries. Everything else is identical.
@@ -258,7 +258,7 @@ w_t = \operatorname{clip}\Big(0.25 \cdot \min\!\big(\tfrac{|z_t|}{3},\,1.5\big)\
 
 ## 6. Strategy and Execution Model
 
-**Signal.** The default is an empirical z-score with a 60-day *strictly lagged* window, $z_t = (S_t - \bar S_{t-60:t-1})/\operatorname{sd}(S_{t-60:t-1})$, so the current bar never enters its own normalisation. Long the spread when $z_t < -z_{\text{in}}$, short when $z_t > z_{\text{in}}$ (base $z_{\text{in}}=2.0$, $z_{\text{out}}=0.5$, tuned in walk-forward).
+**Signal.** The default is an empirical z-score with a 60-day *strictly lagged* window, $z_t = (S_t - \bar S_{t-60:t-1})/\mathrm{sd}(S_{t-60:t-1})$, so the current bar never enters its own normalisation. Long the spread when $z_t < -z_{\text{in}}$, short when $z_t > z_{\text{in}}$ (base $z_{\text{in}}=2.0$, $z_{\text{out}}=0.5$, tuned in walk-forward).
 
 **Exits.** All conditions are evaluated **independently** each bar and resolved by a fixed priority. An earlier `elif` chain made three of the five exits unreachable, which every committed trade log confirmed.
 
@@ -268,7 +268,7 @@ w_t = \operatorname{clip}\Big(0.25 \cdot \min\!\big(\tfrac{|z_t|}{3},\,1.5\big)\
 | 2 | `regime_crisis` | Regime escalates to CRISIS after a non-CRISIS entry |
 | 3 | `max_hold` | Holding period ≥ regime-adjusted maximum |
 | 4 | `profit_target` | $z$ crosses through the mean past $z_{\text{out}}$ (after min hold) |
-| 5 | `mean_reversion` | $|z| < z_{\text{out}}$ (after min hold) |
+| 5 | `mean_reversion` | $\lvert z\rvert < z_{\text{out}}$ (after min hold) |
 
 Holding periods scale with the training half-life: minimum $0.5\,t_{1/2}$, maximum $1.5\,t_{1/2}$ (capped at 120 days, and scaled by the regime multiplier in the Hawkes arm).
 
@@ -276,12 +276,12 @@ Holding periods scale with the training half-life: minimum $0.5\,t_{1/2}$, maxim
 
 | Component | Implementation |
 |---|---|
-| Sizing | Leg A gets $w\cdot\text{cash}/(1+|h|)$ dollars and leg B gets $h$ times that, opposite sign, so the book tracks $\log A - h\log B$. Gross notional is ≈ $w\cdot$cash. In walk-forward, $h$ is the hedge ratio frozen for the quarter in which the position is *entered*. |
+| Sizing | Leg A gets $w\cdot\text{cash}/(1+\lvert h\rvert)$ dollars and leg B gets $h$ times that, opposite sign, so the book tracks $\log A - h\log B$. Gross notional is ≈ $w\cdot$cash. In walk-forward, $h$ is the hedge ratio frozen for the quarter in which the position is *entered*. |
 | Execution | Signals on bar $t$, fills at the **open of $t+1$** (`execution_delay=1`) |
 | Costs | Commission 2 bp + slippage 1 bp per side on gross notional, at entry and exit (6 bp round trip) |
 | Financing | Long financing 2%/yr, short rebate 1.5%/yr, per-symbol borrow 20–100 bp/yr, accrued daily |
 | Idle cash | Credited at $r_f = 2\%$ on the undeployed share of equity. Without this a dollar-neutral book that is flat about 90% of the time shows a CAPM "alpha" of almost exactly $-r_f$, which is what the earlier version reported. |
-| Stops | Volatility-scaled backstops in units of the spread's stationary s.d.: hard stop $4\,\operatorname{sd}$, profit target $5\,\operatorname{sd}$, trailing stop activated at $1.5\,\operatorname{sd}$. All are clamped to $[1\%, 50\%]$ of notional. The s.d. is the **training-window** spread s.d. from the frozen bundle, and each position keeps the levels set at its entry. Measuring it on the window being traded would size stops with knowledge of that window's realised volatility. Fixed 3% stops structurally conflict with mean reversion: in an earlier run they caused 85–100% of trades to exit via stop at 1.7–12 days (see Section 11.2(b)). |
+| Stops | Volatility-scaled backstops in units of the spread's stationary s.d.: hard stop $4\,\mathrm{sd}$, profit target $5\,\mathrm{sd}$, trailing stop activated at $1.5\,\mathrm{sd}$. All are clamped to $[1\%, 50\%]$ of notional. The s.d. is the **training-window** spread s.d. from the frozen bundle, and each position keeps the levels set at its entry. Measuring it on the window being traded would size stops with knowledge of that window's realised volatility. Fixed 3% stops structurally conflict with mean reversion: in an earlier run they caused 85–100% of trades to exit via stop at 1.7–12 days (see Section 11.2(b)). |
 | Stop fills | Checked against the intraday High/Low. If the open already gaps through the level, the fill is at the open. |
 | End of sample | Open positions are force-closed and **recorded** |
 | Integrity | Raises if equity ≤ 0. The earlier `max(equity, 1)` denominator floor has been removed. |
@@ -335,7 +335,7 @@ The book is **one continuous backtest**: parameters are swapped at quarter bound
 | Statistic | Definition and rationale |
 |---|---|
 | **Headline test** | $H_0: \mathbb{E}[r_t - r_f]=0$ with a Newey–West (Bartlett) long-run variance, lag $\lfloor 4(n/100)^{2/9}\rfloor$. For a dollar-neutral book $\beta\approx 0$ by construction, so a CAPM intercept mostly measures cash accounting. The CAPM regression vs. SPY (HAC, 5 lags) is reported **only to demonstrate neutrality**. |
-| Sharpe SE | Lo's approximation: $\operatorname{se}(\widehat{SR}) \approx \sqrt{(1+\widehat{SR}^2/2)/n}$ per period, inflated by $\sqrt{\widehat{LRV}/\hat\sigma^2}$ to account for serial dependence from multi-week holding |
+| Sharpe SE | Lo's approximation: $\mathrm{se}(\widehat{SR}) \approx \sqrt{(1+\widehat{SR}^2/2)/n}$ per period, inflated by $\sqrt{\widehat{LRV}/\hat\sigma^2}$ to account for serial dependence from multi-week holding |
 | Bootstrap CIs | Politis–Romano stationary bootstrap, mean block 20 days, 1,000 replications, for Sharpe, mean return and max drawdown |
 | Deflated Sharpe | Bailey & López de Prado (2014), with expected maximum Sharpe under no skill after $N$ trials $E[\max SR] \approx \sqrt{V}\big[(1-\gamma)\Phi^{-1}(1-\tfrac1N) + \gamma\Phi^{-1}(1-\tfrac1{Ne})\big]$ |
 | Power / MDE | $\text{MDE}_{80\%} = (z_{0.975}+z_{0.80})\,\sigma_{\text{ann}}/\sqrt{\text{years}}$; achieved power against a 1%/yr target |
@@ -362,7 +362,7 @@ The ADF–EG gap is substantial (0.108 vs. 0.266 on CVX/XOM), which confirms tha
 
 ### 9.2 MRJD estimates (training)
 
-| Pair | $\kappa$ (1/day) | Model $t_{1/2}$ | $\sigma$ | $\operatorname{sd}_\infty$ implied / actual | $\mu_J$ | $\sigma_J$ | $|t^{\text{model}}_{1/2}/t^{\text{emp}}_{1/2}-1|$ |
+| Pair | $\kappa$ (1/day) | Model $t_{1/2}$ | $\sigma$ | $\mathrm{sd}_\infty$ implied / actual | $\mu_J$ | $\sigma_J$ | $\lvert t^{\text{model}}_{1/2}/t^{\text{emp}}_{1/2}-1\rvert$ |
 |---|---:|---:|---:|---:|---:|---:|---:|
 | SPY/IVV | 0.4114 | 1.7 | 0.0015 | 0.94 | −0.0012 | 0.0061 | 11% |
 | CVX/XOM | 0.0106 | 65.6 | 0.0119 | 1.12 | −0.0041 | 0.0488 | 33% |
@@ -507,7 +507,7 @@ No pre-specified perturbation produces a significant result in either direction.
 | AMD/NVDA | 70.6 | 1.8 | 0.89 | 14.20 | 0.06 + 0.28 | 2.4% | −0.48 / +0.18 | −0.41 / −0.37 |
 | GLD/GDX | 58.7 | 2.1 | 0.97 | 7.09 | 0.06 + 0.47 | 7.4% | −0.93 / −2.66 | −4.07 / −2.04 |
 
-The ceiling assumes OU trading with position proportional to $(\theta - S_t)$: daily Sharpe $=\kappa\,\mathbb E|\theta-S|/\sigma = \sqrt{\kappa/\pi}$. It assumes perfect parameters, continuous rebalancing and zero cost, so it is an *upper bound*, not a forecast. "Edge/trip" is $(2.0-0.5)\operatorname{sd}_\infty/(1+h)$.
+The ceiling assumes OU trading with position proportional to $(\theta - S_t)$: daily Sharpe $=\kappa\,\mathbb E|\theta-S|/\sigma = \sqrt{\kappa/\pi}$. It assumes perfect parameters, continuous rebalancing and zero cost, so it is an *upper bound*, not a forecast. "Edge/trip" is $(2.0-0.5)\mathrm{sd}_\infty/(1+h)$.
 
 Three conclusions follow:
 
